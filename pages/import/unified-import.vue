@@ -5,5 +5,6 @@
 </template>
 
 <script setup lang="ts">
-// TODO: implement Unified Import page
+definePageMeta({
+});
 </script>

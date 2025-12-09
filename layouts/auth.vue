@@ -1,14 +1,7 @@
 <template>
-  <div class="layout-auth">
-    <header>
-      <!-- TODO: add header / navigation -->
-    </header>
-    <main>
+  <div class="min-h-screen bg-background text-foreground">
+    <div class="mx-auto flex w-full max-w-5xl flex-col items-center justify-center px-4 py-12">
       <slot />
-    </main>
+    </div>
   </div>
 </template>
-
-<script setup lang="ts">
-// TODO: implement Auth layout logic if needed
-</script>

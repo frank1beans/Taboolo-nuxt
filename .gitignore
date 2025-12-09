@@ -1,4 +1,8 @@
 # Nuxt dev/build outputs
+REACTPROJECT
+python-backend/
+python-import/.venv/
+python-import/__pycache__/
 .output
 .data
 .nuxt

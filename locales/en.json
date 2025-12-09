@@ -1,0 +1,72 @@
+{
+  "common": {
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "search": "Search",
+    "filter": "Filter",
+    "export": "Export",
+    "import": "Import",
+    "loading": "Loading...",
+    "error": "An error occurred",
+    "success": "Success",
+    "actions": "Actions"
+  },
+  "auth": {
+    "login": "Login",
+    "logout": "Logout",
+    "register": "Register",
+    "email": "Email",
+    "password": "Password",
+    "forgotPassword": "Forgot password?",
+    "sessionExpired": "Session expired. Please login again."
+  },
+  "project": {
+    "title": "Projects",
+    "create": "Create Project",
+    "edit": "Edit Project",
+    "delete": "Delete Project",
+    "name": "Project Name",
+    "code": "Project Code",
+    "status": "Status",
+    "businessUnit": "Business Unit",
+    "createdAt": "Created At",
+    "updatedAt": "Updated At"
+  },
+  "estimate": {
+    "title": "Estimate",
+    "baseline": "Baseline",
+    "revision": "Revision",
+    "total": "Total",
+    "quantity": "Quantity",
+    "unitPrice": "Unit Price",
+    "unit": "Unit",
+    "description": "Description",
+    "code": "Code"
+  },
+  "analysis": {
+    "title": "Analysis",
+    "advanced": "Advanced Analysis",
+    "comparison": "Comparison",
+    "trend": "Trend",
+    "criticality": "Criticality"
+  },
+  "priceCatalog": {
+    "title": "Price Catalog",
+    "search": "Search prices",
+    "semanticSearch": "Semantic Search"
+  },
+  "wbs": {
+    "title": "WBS",
+    "structure": "WBS Structure",
+    "settings": "WBS Settings"
+  },
+  "settings": {
+    "title": "Settings",
+    "profile": "Profile",
+    "global": "Global Settings",
+    "project": "Project Settings"
+  }
+}

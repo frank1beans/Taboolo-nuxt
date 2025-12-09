@@ -1,0 +1,72 @@
+{
+  "common": {
+    "cancel": "Annulla",
+    "save": "Salva",
+    "delete": "Elimina",
+    "edit": "Modifica",
+    "create": "Crea",
+    "search": "Cerca",
+    "filter": "Filtra",
+    "export": "Esporta",
+    "import": "Importa",
+    "loading": "Caricamento...",
+    "error": "Si è verificato un errore",
+    "success": "Successo",
+    "actions": "Azioni"
+  },
+  "auth": {
+    "login": "Accedi",
+    "logout": "Esci",
+    "register": "Registrati",
+    "email": "Email",
+    "password": "Password",
+    "forgotPassword": "Password dimenticata?",
+    "sessionExpired": "Sessione scaduta. Effettua nuovamente il login."
+  },
+  "project": {
+    "title": "Progetti",
+    "create": "Crea Progetto",
+    "edit": "Modifica Progetto",
+    "delete": "Elimina Progetto",
+    "name": "Nome Progetto",
+    "code": "Codice Progetto",
+    "status": "Stato",
+    "businessUnit": "Business Unit",
+    "createdAt": "Creato il",
+    "updatedAt": "Aggiornato il"
+  },
+  "estimate": {
+    "title": "Preventivo",
+    "baseline": "Baseline",
+    "revision": "Revisione",
+    "total": "Totale",
+    "quantity": "Quantità",
+    "unitPrice": "Prezzo Unitario",
+    "unit": "Unità di Misura",
+    "description": "Descrizione",
+    "code": "Codice"
+  },
+  "analysis": {
+    "title": "Analisi",
+    "advanced": "Analisi Avanzate",
+    "comparison": "Confronto",
+    "trend": "Trend",
+    "criticality": "Criticità"
+  },
+  "priceCatalog": {
+    "title": "Catalogo Prezzi",
+    "search": "Cerca prezzi",
+    "semanticSearch": "Ricerca Semantica"
+  },
+  "wbs": {
+    "title": "WBS",
+    "structure": "Struttura WBS",
+    "settings": "Impostazioni WBS"
+  },
+  "settings": {
+    "title": "Impostazioni",
+    "profile": "Profilo",
+    "global": "Impostazioni Globali",
+    "project": "Impostazioni Progetto"
+  }
+}

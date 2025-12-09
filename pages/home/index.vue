@@ -1,9 +1,12 @@
 <template>
-  <div class="page-wrapper">
-    <h1>Home</h1>
-  </div>
+  <div class="text-sm text-muted-foreground">Reindirizzamento alla dashboard...</div>
 </template>
 
 <script setup lang="ts">
-// TODO: implement Home page
+definePageMeta({
+});
+
+onMounted(() => {
+  navigateTo("/");
+});
 </script>

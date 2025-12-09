@@ -1,9 +1,15 @@
 <template>
-  <div class="page-wrapper">
-    <h1>Project Detail</h1>
-  </div>
+  <div class="text-sm text-muted-foreground">Redirecting to project overview...</div>
 </template>
 
 <script setup lang="ts">
-// TODO: implement Project Detail page
+definePageMeta({
+  alias: ["/commesse/:id"],
+});
+
+const route = useRoute();
+
+onMounted(() => {
+  navigateTo(`/projects/${route.params.id}/overview`, { replace: true });
+});
 </script>

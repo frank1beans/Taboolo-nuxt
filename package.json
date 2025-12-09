@@ -7,11 +7,41 @@
     "dev": "nuxt dev",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
-    "postinstall": "nuxt prepare"
+    "postinstall": "nuxt prepare",
+    "start": "nuxt start",
+    "nuxi": "npx nuxi",
+    "lint": "eslint . --ext .ts,.js,.vue"
   },
   "dependencies": {
+    "@nuxtjs/i18n": "^10.2.1",
+    "@pinia/nuxt": "^0.11.3",
+    "@tanstack/vue-query": "^5.92.1",
+    "ag-grid-community": "^34.3.1",
+    "ag-grid-vue3": "^34.3.1",
+    "appwrite": "^21.5.0",
+    "exceljs": "^4.4.0",
+    "mongoose": "^9.0.1",
     "nuxt": "^4.2.1",
+    "pinia": "^3.0.4",
+    "vee-validate": "^4.15.1",
+    "vite-tsconfig-paths": "^5.1.4",
     "vue": "^3.5.25",
-    "vue-router": "^4.6.3"
+    "vue-router": "^4.6.3",
+    "vue-sonner": "^2.0.9",
+    "yup": "^1.7.1"
+  },
+  "devDependencies": {
+    "@nuxt/eslint": "^1.11.0",
+    "@nuxt/eslint-config": "^1.11.0",
+    "@nuxtjs/tailwindcss": "^6.14.0",
+    "@types/mongoose": "^5.11.97",
+    "@typescript-eslint/eslint-plugin": "^8.49.0",
+    "@typescript-eslint/parser": "^8.49.0",
+    "autoprefixer": "^10.4.20",
+    "eslint": "^9.39.1",
+    "nuxi": "^3.31.1",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.14",
+    "typescript": "^5.9.3"
   }
 }

@@ -1,14 +1,9 @@
 <template>
-  <div class="layout-default">
-    <header>
-      <!-- TODO: add header / navigation -->
-    </header>
-    <main>
-      <slot />
-    </main>
-  </div>
+  <AppShell>
+    <slot />
+  </AppShell>
 </template>
 
 <script setup lang="ts">
-// TODO: implement Default layout logic if needed
+import AppShell from "@/components/layout/AppShell.vue";
 </script>

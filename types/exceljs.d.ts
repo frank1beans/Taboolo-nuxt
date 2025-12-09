@@ -1,1 +1,4 @@
-// TODO: port exceljs types from old project
+declare module "exceljs/dist/exceljs.min.js" {
+  import ExcelJS from "exceljs";
+  export default ExcelJS;
+}
