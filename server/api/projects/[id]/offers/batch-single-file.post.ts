@@ -1,5 +1,6 @@
 import { proxyMultipartToPython } from '~/server/utils/python-proxy';
 import { mapBatchSingleFileResult } from '~/server/utils/python-mappers';
+import { upsertEstimatesBatch } from '~/server/utils/import-adapter';
 
 const fieldMap = (name: string) => {
   if (name === 'companies_config') return 'imprese_config';
@@ -35,5 +36,12 @@ export default defineEventHandler(async (event) => {
     { method: 'POST', mapFieldName: fieldMap, mapFieldValue: valueMap }
   );
 
-  return mapBatchSingleFileResult(result);
+  const mapped = mapBatchSingleFileResult(result);
+
+  // Persist all returned estimates
+  if (mapped.estimates) {
+    mapped.estimates = await upsertEstimatesBatch(projectId, Object.values(mapped.estimates));
+  }
+
+  return mapped;
 });

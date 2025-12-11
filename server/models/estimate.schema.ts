@@ -14,6 +14,10 @@ export interface IEstimate {
   delta_percentage?: number;
   notes?: string;
   file_name?: string;
+  delivery_date?: Date;
+  price_list_id?: string;
+  source_preventivo_id?: string;
+  import_run_id?: string;
   matching_report?: Record<string, any>;
   created_at: Date;
   updated_at: Date;
@@ -33,10 +37,36 @@ const EstimateSchema = new Schema<IEstimate>({
   delta_percentage: { type: Number },
   notes: { type: String },
   file_name: { type: String },
+  delivery_date: { type: Date },
+  price_list_id: { type: String },
+  source_preventivo_id: { type: String },
+  import_run_id: { type: String, index: true },
   matching_report: { type: Schema.Types.Mixed }
 }, {
-  timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' }
+  timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' },
+  toJSON: {
+    virtuals: true,
+    transform: function(_doc, ret) {
+      ret.id = ret._id.toString();
+      ret.project_id = ret.project_id?.toString();
+      delete ret._id;
+      delete ret.__v;
+      return ret;
+    }
+  },
+  toObject: {
+    virtuals: true,
+    transform: function(_doc, ret) {
+      ret.id = ret._id.toString();
+      ret.project_id = ret.project_id?.toString();
+      delete ret._id;
+      delete ret.__v;
+      return ret;
+    }
+  }
 });
 
 export const Estimate = model<IEstimate>('Estimate', EstimateSchema);
+
+
 

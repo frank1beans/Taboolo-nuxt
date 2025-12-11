@@ -1,5 +1,6 @@
 import { proxyMultipartToPython } from '~/server/utils/python-proxy';
 import { mapComputoToEstimate } from '~/server/utils/python-mappers';
+import { upsertEstimate } from '~/server/utils/import-adapter';
 
 export default defineEventHandler(async (event) => {
   const projectId = getRouterParam(event, 'id');
@@ -9,6 +10,16 @@ export default defineEventHandler(async (event) => {
 
   // Delega all'importer Python (computo progetto Excel/SIX)
   const result = await proxyMultipartToPython(event, `/commesse/${projectId}/computo-progetto`, { method: 'POST' });
-  return mapComputoToEstimate(result);
+  const mapped = mapComputoToEstimate(result);
+
+  // Persist estimate in Mongo (baseline/project)
+  const saved = await upsertEstimate(projectId, {
+    ...mapped,
+    type: 'project',
+    is_baseline: mapped?.is_baseline ?? true,
+  });
+
+  return saved;
 });
+
 

@@ -22,6 +22,10 @@ export function mapComputoToEstimate(data: Json) {
     delta_percentage: data.percentuale_delta,
     notes: data.note,
     file_name: data.file_nome ?? data.file_name,
+    delivery_date: data.data ?? data.date,
+    price_list_id: data.price_list_id,
+    source_preventivo_id: data.preventivo_id ?? data.estimate_id,
+    import_run_id: data.import_run_id,
     matching_report: data.matching_report,
     created_at: data.created_at,
     updated_at: data.updated_at
@@ -43,16 +47,35 @@ export function mapWbsImportStats(data: Json) {
 
 export function mapSixImportReport(data: Json) {
   if (!data || typeof data !== 'object') return data;
+  const itemsArray = Array.isArray(data.items) ? data.items : [];
+  const itemsCount = itemsArray.length || (data.voci ?? data.items ?? 0);
+  const preventivoMeta = data.preventivo_meta ?? {};
   return {
     project_id: data.commessa_id ?? data.project_id,
+    file_name: data.file_name,
     spatial_wbs: data.wbs_spaziali ?? data.spatial_wbs,
     wbs6: data.wbs6,
     wbs7: data.wbs7,
-    items: data.voci ?? data.items,
+    items: itemsCount,
     total_amount: data.importo_totale ?? data.total_amount,
     price_items: data.price_items ?? null,
     estimate_id: data.preventivo_id ?? data.estimate_id ?? null,
-    catalog_only: data.listino_only ?? data.catalog_only ?? false
+    catalog_only: data.listino_only ?? data.catalog_only ?? false,
+    price_catalog: data.price_catalog ?? data.catalog ?? data.price_lists ?? [],
+    items_raw: itemsArray,
+    wbs_spaziali_nodes: data.wbs_spaziali_nodes ?? data.wbs_spaziali ?? [],
+    wbs6_nodes: data.wbs6_nodes ?? data.wbs6 ?? [],
+    wbs7_nodes: data.wbs7_nodes ?? data.wbs7 ?? [],
+    preventivo_meta: {
+      id: preventivoMeta.id ?? data.preventivo_id ?? data.estimate_id ?? null,
+      code: preventivoMeta.code ?? null,
+      description: preventivoMeta.description ?? null,
+      author: preventivoMeta.author ?? null,
+      version: preventivoMeta.version ?? null,
+      date: preventivoMeta.date ?? null,
+      price_list_id: preventivoMeta.price_list_id ?? null,
+      price_list_label: preventivoMeta.price_list_label ?? null,
+    },
   };
 }
 

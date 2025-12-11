@@ -6,13 +6,17 @@
         <h1 class="text-xl font-semibold">{{ project?.name ?? "Project" }}</h1>
         <p class="text-sm text-muted-foreground">{{ project?.code }}</p>
       </div>
-      <div class="flex gap-2">
-        <NuxtLink class="text-sm font-semibold text-primary" :to="`/projects/${id}/import`">Import</NuxtLink>
+    <div class="flex flex-wrap gap-2">
+        <NuxtLink class="text-sm font-semibold text-primary" :to="`/projects/${id}/import`">Import Excel</NuxtLink>
+        <NuxtLink class="text-sm font-semibold text-primary" :to="`/projects/${id}/import-six`">Import SIX</NuxtLink>
         <NuxtLink class="text-sm font-semibold text-primary" :to="`/projects/${id}/price-catalog`">
           Price catalog
         </NuxtLink>
         <NuxtLink class="text-sm font-semibold text-primary" :to="`/projects/${id}/estimate`">
           Estimate
+        </NuxtLink>
+        <NuxtLink class="text-sm font-semibold text-primary" :to="`/projects/${id}/wbs`">
+          WBS
         </NuxtLink>
       </div>
     </div>

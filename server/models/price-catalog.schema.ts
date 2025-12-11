@@ -9,6 +9,10 @@ export interface IPriceCatalogItem {
   
   // Metadata
   wbs6_code?: string;
+  wbs7_code?: string;
+  price_list_id?: string;
+  import_run_id?: string;
+  source_preventivo_id?: string;
   price_lists?: Map<string, number>; // e.g., { "2024": 100, "2025": 110 }
   
   // Semantic Search
@@ -26,6 +30,10 @@ const PriceCatalogItemSchema = new Schema<IPriceCatalogItem>({
   unit_id: { type: String },
   
   wbs6_code: { type: String },
+  wbs7_code: { type: String },
+  price_list_id: { type: String },
+  import_run_id: { type: String, index: true },
+  source_preventivo_id: { type: String },
   price_lists: { type: Map, of: Number },
   
   embedding: { type: [Number], select: false } // Hide embedding by default

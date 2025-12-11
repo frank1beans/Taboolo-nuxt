@@ -1,17 +1,15 @@
 {
   "permissions": {
     "allow": [
-      "Bash(find:*)",
-      "Bash(tree:*)",
-      "Bash(xargs -I {} sh -c \"echo \"\"=== {} ===\"\" && wc -l {}\")",
-      "Bash(cat:*)",
+      "Bash(pnpm run dev:*)",
+      "Bash(tasklist:*)",
+      "Bash(findstr:*)",
       "Bash(pnpm add:*)",
-      "Bash(git checkout:*)",
-      "Bash(grep:*)",
-      "Bash(git -C \"c:\\Users\\f.biggi\\Taboolo-nuxt\" status --short)",
-      "Bash(git -C \"c:\\Users\\f.biggi\\Taboolo-nuxt\" diff --name-only)",
-      "Bash(git -C \"c:\\Users\\f.biggi\\Taboolo-nuxt\" status --porcelain)",
-      "Bash(ls:*)"
+      "Bash(timeout 15 pnpm dev:*)",
+      "Bash(pnpm build:*)",
+      "Bash(pnpm dev)",
+      "Bash(git restore:*)",
+      "Bash(pnpm remove:*)"
     ]
   }
 }

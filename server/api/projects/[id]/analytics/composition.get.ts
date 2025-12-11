@@ -33,7 +33,7 @@ export default defineEventHandler(async (event) => {
     ]
   };
 
-  const wbs6Nodes = await WbsNode.find({ project_id: projectObjectId, type: 'wbs6' }).lean();
+  const wbs6Nodes = await WbsNode.find({ project_id: projectObjectId, level: 6 }).lean();
   const wbs6Map = new Map<string, { code: string; description?: string }>();
   for (const node of wbs6Nodes) {
     wbs6Map.set(String(node._id), { code: node.code, description: node.description });

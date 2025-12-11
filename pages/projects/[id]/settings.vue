@@ -15,7 +15,4 @@
 definePageMeta({
   alias: ["/commesse/:id/settings"],
 });
-
-const route = useRoute();
-const id = computed(() => route.params.id);
 </script>

@@ -1,5 +1,6 @@
 import { proxyMultipartToPython } from '~/server/utils/python-proxy';
 import { mapComputoToEstimate } from '~/server/utils/python-mappers';
+import { upsertEstimate } from '~/server/utils/import-adapter';
 
 const fieldMap = (name: string) => {
   switch (name) {
@@ -42,6 +43,13 @@ export default defineEventHandler(async (event) => {
 
   // Proxy all offer imports (LC/MC) to Python importer
   const result = await proxyMultipartToPython(event, `/commesse/${projectId}/ritorni`, { method: 'POST', mapFieldName: fieldMap, mapFieldValue: valueMap });
-  return mapComputoToEstimate(result);
-});
+  const mapped = mapComputoToEstimate(result);
 
+  // Persist estimate in Mongo (offer)
+  const saved = await upsertEstimate(projectId, {
+    ...mapped,
+    type: 'offer',
+  });
+
+  return saved;
+});

@@ -1,12 +1,13 @@
 import { Schema, model, Types } from 'mongoose';
 
-export type WbsNodeType = 'spatial' | 'wbs6' | 'wbs7';
+export type WbsNodeType = 'spatial' | 'commodity';
 
 export interface IWbsNode {
   project_id: Types.ObjectId;
   parent_id?: Types.ObjectId;
   type: WbsNodeType;
   level: number;
+  category?: string; // e.g., wbs01...wbs07
   code: string;
   description?: string;
   
@@ -26,8 +27,9 @@ export interface IWbsNode {
 const WbsNodeSchema = new Schema<IWbsNode>({
   project_id: { type: Schema.Types.ObjectId, ref: 'Project', required: true, index: true },
   parent_id: { type: Schema.Types.ObjectId, ref: 'WbsNode', index: true },
-  type: { type: String, enum: ['spatial', 'wbs6', 'wbs7'], required: true },
+  type: { type: String, enum: ['spatial', 'commodity'], required: true },
   level: { type: Number, required: true },
+  category: { type: String },
   code: { type: String, required: true },
   description: { type: String },
   

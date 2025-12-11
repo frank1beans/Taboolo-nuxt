@@ -12,9 +12,9 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
 
   modules: [
-    "@nuxtjs/tailwindcss",
     "@nuxt/eslint",
     "@nuxtjs/i18n",
+    "@nuxt/ui",
   ],
 
   // i18n configuration
@@ -27,13 +27,6 @@ export default defineNuxtConfig({
   },
 
   css: [mainCssPath],
-
-  postcss: {
-    plugins: {
-      tailwindcss: {},
-      autoprefixer: {},
-    },
-  },
 
   vite: {
     resolve: {
@@ -53,8 +46,19 @@ export default defineNuxtConfig({
     pages: "pages",
   },
 
+  components: [
+    {
+      path: "~/components",
+      pathPrefix: false,
+    },
+  ],
+
   runtimeConfig: {
-    // Base URL del backend Python (FastAPI). Es: http://localhost:8000/api/v1
-    pythonApiBaseUrl: process.env.PYTHON_API_BASE_URL || "http://localhost:8000/api/v1",
+    // Base URL del backend (Nitro/Mongo). Default sullo stesso host /api
+    pythonApiBaseUrl: process.env.PYTHON_API_BASE_URL || "/api",
+    mongodbUri: process.env.MONGODB_URI || "mongodb://localhost:27017/taboolo",
+    public: {
+      pythonApiBaseUrl: process.env.NUXT_PUBLIC_API_BASE_URL || "/api",
+    },
   },
 });

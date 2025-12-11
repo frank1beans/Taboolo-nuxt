@@ -15,7 +15,7 @@
             type="email"
             class="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none ring-1 ring-transparent transition focus:border-ring focus:ring-ring/30"
             required
-          />
+          >
         </div>
         <div class="space-y-2">
           <label class="text-sm font-medium" for="password">Password</label>
@@ -25,7 +25,7 @@
             type="password"
             class="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none ring-1 ring-transparent transition focus:border-ring focus:ring-ring/30"
             required
-          />
+          >
         </div>
         <p v-if="error" class="text-sm text-destructive">{{ error }}</p>
         <button

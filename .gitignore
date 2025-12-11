@@ -1,8 +1,12 @@
 # Nuxt dev/build outputs
-REACTPROJECT
+TABOOLO
 python-backend/
 python-import/.venv/
 python-import/__pycache__/
+python-importer/.venv/
+python-importer/__pycache__/
+python-importer/**/__pycache__/
+python-importer/**/*.pyc
 .output
 .data
 .nuxt
@@ -26,3 +30,6 @@ logs
 .env
 .env.*
 !.env.example
+
+#Coding assistant
+.claude

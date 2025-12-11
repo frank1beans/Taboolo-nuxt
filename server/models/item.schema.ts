@@ -34,6 +34,9 @@ export interface IItem {
   // Ordering/Grouping
   progressive?: number;
   order: number;
+
+  import_run_id?: string;
+  source_preventivo_id?: string;
   
   // Data
   project?: IProjectItemData;
@@ -55,6 +58,8 @@ const ItemSchema = new Schema<IItem>({
   
   progressive: { type: Number },
   order: { type: Number, default: 0 },
+  import_run_id: { type: String, index: true },
+  source_preventivo_id: { type: String },
   
   project: {
     estimate_id: { type: Schema.Types.ObjectId, ref: 'Estimate' },
@@ -80,5 +85,7 @@ const ItemSchema = new Schema<IItem>({
 // Index for efficient retrieval of all items for a WBS node
 ItemSchema.index({ project_id: 1, wbs6_id: 1 });
 
-export const Item = model<IItem>('Item', ItemSchema);
+export const Item = model<IItem>('Item', ItemSchema, 'estimateitems');
+
+
 

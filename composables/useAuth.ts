@@ -14,7 +14,7 @@ export const useAuth = () => {
   const initPromise = useState<Promise<void> | null>("auth-init", () => null);
 
   const bootstrap = async () => {
-    if (!process.client) {
+    if (!import.meta.client) {
       loading.value = false;
       return;
     }

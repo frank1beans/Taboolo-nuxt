@@ -13,7 +13,7 @@ export type DisciplineEnum =
   | "other";
 
 export interface ApiEstimate {
-  id: number;
+  id: string;
   name: string;
   type: EstimateType;
   discipline?: DisciplineEnum;
@@ -26,6 +26,10 @@ export interface ApiEstimate {
   delta_percentage?: number | null;
   notes?: string | null;
   file_name?: string | null;
+  delivery_date?: string | null;
+  price_list_id?: string | null;
+  source_preventivo_id?: string | null;
+  import_run_id?: string | null;
   created_at: string;
   updated_at: string;
   matching_report?: Record<string, any> | null;
@@ -34,7 +38,7 @@ export interface ApiEstimate {
 export type ProjectStatus = "setup" | "in_progress" | "closed";
 
 export interface ApiProject {
-  id: number;
+  id: string;
   name: string;
   code: string;
   description?: string | null;
@@ -148,7 +152,8 @@ export interface ApiWbsVisibilityEntry {
 }
 
 export interface ApiSixImportReport {
-  project_id: number;
+  project_id: string;
+  file_name?: string | null;
   spatial_wbs: number;
   wbs6: number;
   wbs7: number;
@@ -157,6 +162,33 @@ export interface ApiSixImportReport {
   price_items?: number | null;
   estimate_id?: string | null;
   catalog_only?: boolean;
+  estimate?: ApiEstimate;
+  price_catalog?: Array<{
+    product_id?: string;
+    code?: string;
+    description?: string;
+    unit_id?: string | null;
+    unit_label?: string | null;
+    wbs6_code?: string | null;
+    wbs6_description?: string | null;
+    wbs7_code?: string | null;
+    wbs7_description?: string | null;
+    price_lists?: Record<string, number>;
+  }>;
+  items_raw?: Array<Record<string, any>>;
+  wbs_spaziali_nodes?: Array<Record<string, any>>;
+  wbs6_nodes?: Array<Record<string, any>>;
+  wbs7_nodes?: Array<Record<string, any>>;
+  preventivo_meta?: {
+    id?: string | null;
+    code?: string | null;
+    description?: string | null;
+    author?: string | null;
+    version?: string | null;
+    date?: string | null;
+    price_list_id?: string | null;
+    price_list_label?: string | null;
+  };
 }
 
 export interface ApiSixEstimateOption {

@@ -2,8 +2,6 @@
  * Centralized constants and configurations for the application.
  */
 
-import type { LucideIcon } from "lucide-react";
-import { Clock, Play, CheckCircle, BarChart3, Euro, Layers3, Clock3 } from "lucide-react";
 import type { ProjectStatus } from "@/types/api";
 
 // ============= STATUS CONFIG =============
@@ -14,7 +12,7 @@ export interface StatusConfig {
   label: string;
   description: string;
   badgeVariant: BadgeVariant;
-  icon: LucideIcon;
+  icon: string;
   className: string;
 }
 
@@ -23,21 +21,21 @@ export const STATUS_CONFIG: Record<ProjectStatus, StatusConfig> = {
     label: "Setup",
     description: "Project in preparation",
     badgeVariant: "info",
-    icon: Clock,
+    icon: "i-lucide-clock",
     className: "bg-sky-100 text-sky-700 dark:bg-sky-950 dark:text-sky-200 border-sky-200 dark:border-sky-900",
   },
   in_progress: {
     label: "In progress",
     description: "Active and monitored",
     badgeVariant: "success",
-    icon: Play,
+    icon: "i-lucide-play",
     className: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-200 border-emerald-200 dark:border-emerald-900",
   },
   closed: {
     label: "Closed",
     description: "Archived or completed",
     badgeVariant: "muted",
-    icon: CheckCircle,
+    icon: "i-lucide-check-circle",
     className: "bg-slate-200 text-slate-700 dark:bg-slate-900 dark:text-slate-200 border-slate-300 dark:border-slate-800",
   },
 };
@@ -55,10 +53,10 @@ export const BADGE_VARIANT_STYLES: Record<BadgeVariant, string> = {
 // ============= METRIC ICONS =============
 
 export const METRIC_ICONS = {
-  currency: Euro,
-  layers: Layers3,
-  chart: BarChart3,
-  clock: Clock3,
+  currency: "i-lucide-euro",
+  layers: "i-lucide-layers-3",
+  chart: "i-lucide-bar-chart-3",
+  clock: "i-lucide-clock-3",
 } as const;
 
 // ============= CRITICALITY =============

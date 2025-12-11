@@ -1,17 +1,6 @@
-import { proxyMultipartToPython } from '~/server/utils/python-proxy';
-import { mapSixPreview } from '~/server/utils/python-mappers';
+import { previewSixImport } from '~/server/importers/python-six/client';
 
 export default defineEventHandler(async (event) => {
   const projectId = getRouterParam(event, 'id');
-  if (!projectId) {
-    throw createError({ statusCode: 400, statusMessage: 'Project ID required' });
-  }
-
-  const result = await proxyMultipartToPython(
-    event,
-    `/commesse/${projectId}/import-six/preview`,
-    { method: 'POST' }
-  );
-
-  return mapSixPreview(result);
+  return previewSixImport(event, projectId);
 });

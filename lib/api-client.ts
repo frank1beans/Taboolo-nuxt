@@ -35,13 +35,14 @@ import type {
   PropertyExtractionPayload,
   PropertyExtractionResult,
 } from "@/types/api";
+import { useRuntimeConfig } from "#app";
 import { getAccessToken } from "./auth-storage";
 import { toast } from "vue-sonner";
 
 const API_BASE_URL =
   process.env.NUXT_PUBLIC_API_BASE_URL ||
   import.meta.env.VITE_API_BASE_URL ||
-  "http://localhost:8000/api/v1";
+  "/api";
 
 const propertySchemasStaticOnly =
   (import.meta.env.VITE_PROPERTY_SCHEMAS_STATIC as string | undefined)?.toLowerCase() === "true" ||
@@ -95,9 +96,17 @@ const tryExtractAtUrl = async (url: string, payload: PropertyExtractionPayload) 
   return (await response.json()) as PropertyExtractionResult;
 };
 
+const getApiBaseUrl = () => {
+  const config = useRuntimeConfig();
+  const fromRuntime = config?.public?.pythonApiBaseUrl || config?.pythonApiBaseUrl;
+  const base = (fromRuntime as string | undefined) || API_BASE_URL;
+  return base.replace(/\/+$/, "");
+};
+
 async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   const token = getAccessToken();
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  const base = getApiBaseUrl();
+  const response = await fetch(`${base}${path}`, {
     cache: options?.cache ?? "no-store",
     headers: {
       ...(options?.body instanceof FormData ? {} : { "Content-Type": "application/json" }),
@@ -580,6 +589,13 @@ export const api = {
     projectId: number | string,
   ): Promise<ApiEstimate[]> {
     return apiFetch<ApiEstimate[]>(`/projects/${projectId}/project-estimates`);
+  },
+
+  async getEstimate(
+    projectId: number | string,
+    estimateId: number | string,
+  ): Promise<ApiEstimate> {
+    return apiFetch<ApiEstimate>(`/projects/${projectId}/estimate/${estimateId}`);
   },
 
   async setBaselineEstimate(
