@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { createError, getRequestHeader, readMultipartFormData, setResponseStatus } from 'h3';
 
 type FieldMapper = (name: string) => string;

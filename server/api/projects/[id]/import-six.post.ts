@@ -1,6 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { randomUUID } from 'crypto';
-import { runSixImport } from '~/server/importers/python-six/client';
-import { upsertEstimate, upsertPriceCatalog, upsertEstimateItems, buildAndUpsertWbsFromItems } from '~/server/utils/import-adapter';
+import { runSixImport } from '#importers/python-six/client';
+import { upsertEstimate, upsertPriceCatalog, upsertEstimateItems, buildAndUpsertWbsFromItems } from '#utils/import-adapter';
 
 export default defineEventHandler(async (event) => {
   const projectId = getRouterParam(event, 'id');

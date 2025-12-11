@@ -1,4 +1,4 @@
-import { Project, Estimate, WbsNode, Item, PriceCatalogItem } from '~/server/models';
+import { Project, Estimate, WbsNode, Item, PriceCatalogItem } from '#models';
 
 export default defineEventHandler(async (event) => {
   const id = getRouterParam(event, 'id');

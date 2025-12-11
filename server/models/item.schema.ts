@@ -1,4 +1,4 @@
-import { Schema, model, Types } from 'mongoose';
+import { Schema, model, type Types } from 'mongoose';
 
 export interface IProjectItemData {
   estimate_id: Types.ObjectId;
@@ -86,6 +86,5 @@ const ItemSchema = new Schema<IItem>({
 ItemSchema.index({ project_id: 1, wbs6_id: 1 });
 
 export const Item = model<IItem>('Item', ItemSchema, 'estimateitems');
-
 
 

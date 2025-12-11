@@ -1,4 +1,4 @@
-import { Project, WbsNode } from '~/server/models';
+import { WbsNode } from '#models';
 
 export default defineEventHandler(async (event) => {
   const projectId = getRouterParam(event, 'id');

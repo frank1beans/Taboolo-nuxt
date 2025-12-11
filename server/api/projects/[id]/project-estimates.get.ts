@@ -1,4 +1,4 @@
-import { Estimate } from '~/server/models';
+import { Estimate } from '#models';
 
 export default defineEventHandler(async (event) => {
   const projectId = getRouterParam(event, 'id');

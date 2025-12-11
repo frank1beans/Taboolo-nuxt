@@ -1,6 +1,6 @@
-import { proxyMultipartToPython } from '~/server/utils/python-proxy';
-import { mapComputoToEstimate } from '~/server/utils/python-mappers';
-import { upsertEstimate } from '~/server/utils/import-adapter';
+import { proxyMultipartToPython } from '#utils/python-proxy';
+import { mapComputoToEstimate } from '#utils/python-mappers';
+import { upsertEstimate } from '#utils/import-adapter';
 
 export default defineEventHandler(async (event) => {
   const projectId = getRouterParam(event, 'id');

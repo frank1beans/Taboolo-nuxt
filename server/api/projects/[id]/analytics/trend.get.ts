@@ -1,5 +1,5 @@
 import { Types } from 'mongoose';
-import { Item } from '~/server/models';
+import { Item } from '#models';
 
 export default defineEventHandler(async (event) => {
   const projectId = getRouterParam(event, 'id');

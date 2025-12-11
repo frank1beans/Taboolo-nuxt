@@ -1,7 +1,7 @@
 import type { H3Event } from 'h3';
 import { createError } from 'h3';
-import { proxyMultipartToPython } from '~/server/utils/python-proxy';
-import { mapSixImportReport, mapSixPreview } from '~/server/utils/python-mappers';
+import { proxyMultipartToPython } from '#utils/python-proxy';
+import { mapSixImportReport, mapSixPreview } from '#utils/python-mappers';
 
 const assertProjectId = (projectId?: string): string => {
   if (!projectId) {

@@ -1,23 +1,48 @@
 import { defineNuxtConfig } from "nuxt/config";
-import { fileURLToPath, URL } from "node:url";
+import { fileURLToPath } from 'node:url';
 
-const rootDir = fileURLToPath(new URL("./", import.meta.url));
-const assetsDir = fileURLToPath(new URL("./assets", import.meta.url));
-const mainCssPath = fileURLToPath(new URL("./assets/css/main.css", import.meta.url));
-
-// https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
-  compatibilityDate: "2025-07-15",
+  future: {
+    compatibilityVersion: 4,
+  },
 
+  compatibilityDate: "2025-07-15",
+  ssr: true,
   devtools: { enabled: true },
 
   modules: [
-    "@nuxt/eslint",
-    "@nuxtjs/i18n",
     "@nuxt/ui",
+    "@nuxt/icon",
+    "@nuxtjs/color-mode",
+    "@nuxtjs/i18n",
+    "@nuxt/eslint",
   ],
 
-  // i18n configuration
+  css: ["~/assets/css/main.css"],
+
+  nitro: {
+    alias: {
+      '#models': fileURLToPath(new URL('./server/models', import.meta.url)),
+      '#utils': fileURLToPath(new URL('./server/utils', import.meta.url)),
+      '#importers': fileURLToPath(new URL('./server/importers', import.meta.url)),
+    },
+  },
+
+  postcss: {
+    plugins: {
+      "tailwindcss": false,
+      "tailwindcss/nesting": false,
+      "@tailwindcss/postcss": {},
+      autoprefixer: {},
+    },
+  },
+
+  colorMode: {
+    preference: "system",
+    fallback: "light",
+    classSuffix: "",
+  },
+
   i18n: {
     defaultLocale: "en",
     locales: [
@@ -26,39 +51,35 @@ export default defineNuxtConfig({
     ],
   },
 
-  css: [mainCssPath],
-
-  vite: {
-    resolve: {
-      alias: {
-        "~": rootDir,
-        "@": rootDir,
-        assets: assetsDir,
-        "@assets": assetsDir,
-        "~/assets": assetsDir,
-      },
+  runtimeConfig: {
+    apiBaseUrl: process.env.API_BASE_URL || process.env.PYTHON_API_BASE_URL || "/api",
+    pythonApiBaseUrl: process.env.PYTHON_API_BASE_URL || "/api",
+    mongodbUri: process.env.MONGODB_URI || "",
+    public: {
+      apiBaseUrl: process.env.NUXT_PUBLIC_API_BASE_URL || "/api",
+      pythonApiBaseUrl: process.env.NUXT_PUBLIC_API_BASE_URL || "/api",
     },
   },
 
-  srcDir: ".",
-  pages: true,
-  dir: {
-    pages: "pages",
+  imports: {
+    dirs: [
+      'composables',
+      'composables/**',
+      'lib',
+      'lib/**',
+      'utils',
+      'utils/**',
+    ],
   },
 
   components: [
     {
-      path: "~/components",
+      path: '~/components',
       pathPrefix: false,
     },
-  ],
-
-  runtimeConfig: {
-    // Base URL del backend (Nitro/Mongo). Default sullo stesso host /api
-    pythonApiBaseUrl: process.env.PYTHON_API_BASE_URL || "/api",
-    mongodbUri: process.env.MONGODB_URI || "mongodb://localhost:27017/taboolo",
-    public: {
-      pythonApiBaseUrl: process.env.NUXT_PUBLIC_API_BASE_URL || "/api",
+    {
+      path: '~/components',
+      pattern: '**/*.vue',
     },
-  },
+  ],
 });

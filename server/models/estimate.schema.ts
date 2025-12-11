@@ -1,4 +1,4 @@
-import { Schema, model, Types } from 'mongoose';
+import { Schema, model, type Types } from 'mongoose';
 
 export interface IEstimate {
   project_id: Types.ObjectId;
@@ -18,7 +18,7 @@ export interface IEstimate {
   price_list_id?: string;
   source_preventivo_id?: string;
   import_run_id?: string;
-  matching_report?: Record<string, any>;
+  matching_report?: Record<string, unknown>;
   created_at: Date;
   updated_at: Date;
 }
@@ -67,6 +67,5 @@ const EstimateSchema = new Schema<IEstimate>({
 });
 
 export const Estimate = model<IEstimate>('Estimate', EstimateSchema);
-
 
 

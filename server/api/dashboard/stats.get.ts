@@ -1,9 +1,24 @@
-import { Project } from '@/server/models/project.schema'
-import { Estimate } from '@/server/models/estimate.schema'
+import { Project } from '../../models/project.schema'
+import { Estimate } from '../../models/estimate.schema'
+
+type LeanProject = {
+  _id?: { toString(): string }
+  code?: string
+  name?: string
+  status?: string
+}
+
+type LeanEstimate = {
+  _id?: { toString(): string }
+  name?: string
+  type?: string
+  project_id?: { toString?: () => string }
+  created_at?: Date | string
+}
 
 export default defineEventHandler(async () => {
   // Basic counts
-  const [projects, estimates] = await Promise.all([
+  const [projects, estimates]: [LeanProject[], LeanEstimate[]] = await Promise.all([
     Project.find().lean(),
     Estimate.find().lean(),
   ])
@@ -14,18 +29,18 @@ export default defineEventHandler(async () => {
   const generated_reports = 0
 
   // Recent activity: last 10 estimates (project or offer)
-  const recentRaw = await Estimate.find().sort({ created_at: -1 }).limit(10).lean()
+  const recentRaw: LeanEstimate[] = await Estimate.find().sort({ created_at: -1 }).limit(10).lean()
 
   // Build project lookup for codes/names
   const projectMap = new Map<string, { id: string; code?: string; name?: string }>()
-  projects.forEach((p: any) => {
+  projects.forEach((p) => {
     const id = p._id?.toString()
     if (id) {
       projectMap.set(id, { id, code: p.code, name: p.name })
     }
   })
 
-  const recent_activity = recentRaw.map((item: any) => {
+  const recent_activity = recentRaw.map((item) => {
     const projectId = item.project_id?.toString?.() || ''
     const project = projectMap.get(projectId)
     return {

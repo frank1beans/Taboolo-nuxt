@@ -32,7 +32,7 @@ export interface ApiEstimate {
   import_run_id?: string | null;
   created_at: string;
   updated_at: string;
-  matching_report?: Record<string, any> | null;
+  matching_report?: Record<string, unknown> | null;
 }
 
 export type ProjectStatus = "setup" | "in_progress" | "closed";
@@ -175,10 +175,10 @@ export interface ApiSixImportReport {
     wbs7_description?: string | null;
     price_lists?: Record<string, number>;
   }>;
-  items_raw?: Array<Record<string, any>>;
-  wbs_spaziali_nodes?: Array<Record<string, any>>;
-  wbs6_nodes?: Array<Record<string, any>>;
-  wbs7_nodes?: Array<Record<string, any>>;
+  items_raw?: Array<Record<string, unknown>>;
+  wbs_spaziali_nodes?: Array<Record<string, unknown>>;
+  wbs6_nodes?: Array<Record<string, unknown>>;
+  wbs7_nodes?: Array<Record<string, unknown>>;
   preventivo_meta?: {
     id?: string | null;
     code?: string | null;
@@ -305,7 +305,7 @@ export interface PropertyExtractionPayload {
 
 export interface PropertyExtractionResult {
   category_id: string;
-  properties: Record<string, any>;
+  properties: Record<string, unknown>;
   missing_required: string[];
 }
 
@@ -332,7 +332,7 @@ export interface ApiBatchSingleFileFailure {
   error: string;
   error_type?: string | null;
   details?: string | null;
-  config?: Record<string, any> | null;
+  config?: Record<string, unknown> | null;
 }
 
 export interface ApiBatchSingleFileResult {
@@ -614,7 +614,7 @@ export interface ApiPriceListItem {
   wbs7_code?: string | null;
   wbs7_description?: string | null;
   price_lists?: Record<string, number> | null;
-  extra_metadata?: Record<string, any> | null;
+  extra_metadata?: Record<string, unknown> | null;
   source_file?: string | null;
   estimate_id?: string | null;
   project_price?: number | null;
@@ -681,7 +681,7 @@ export interface ApiUserProfile {
   user_id: number;
   company?: string | null;
   language?: string | null;
-  settings?: Record<string, any> | null;
+  settings?: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
 }
@@ -692,3 +692,4 @@ export interface ApiAuthResponse {
   token_type: string;
   user: ApiUser;
 }
+

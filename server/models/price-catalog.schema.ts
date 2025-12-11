@@ -1,4 +1,4 @@
-import { Schema, model, Types } from 'mongoose';
+import { Schema, model, type Types } from 'mongoose';
 
 export interface IPriceCatalogItem {
   project_id?: Types.ObjectId;

@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 
-export default defineNitroPlugin(async (nitroApp) => {
+export default defineNitroPlugin(async (_nitroApp) => {
   const config = useRuntimeConfig();
   const uri = config.mongodbUri || process.env.MONGODB_URI || 'mongodb://localhost:27017/taboolo';
 
@@ -11,6 +11,5 @@ export default defineNitroPlugin(async (nitroApp) => {
     console.error('Error connecting to MongoDB:', e);
   }
 });
-
 
 

@@ -1,6 +1,6 @@
-import { Project } from '~/server/models';
+import { Project } from '#models';
 
-export default defineEventHandler(async (event) => {
+export default defineEventHandler(async (_event) => {
   try {
     const projects = await Project.find().sort({ created_at: -1 });
     return projects;

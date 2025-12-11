@@ -1,8 +1,9 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Types } from 'mongoose';
-import { Estimate } from '~/server/models/estimate.schema';
-import { PriceCatalogItem } from '~/server/models/price-catalog.schema';
-import { WbsNode } from '~/server/models/wbs.schema';
-import { Item } from '~/server/models/item.schema';
+import { Estimate } from '#models/estimate.schema';
+import { PriceCatalogItem } from '#models/price-catalog.schema';
+import { WbsNode } from '#models/wbs.schema';
+import { Item } from '#models/item.schema';
 
 type AnyRecord = Record<string, any>;
 

@@ -1,5 +1,5 @@
-import { proxyMultipartToPython } from '~/server/utils/python-proxy';
-import { mapWbsImportStats } from '~/server/utils/python-mappers';
+import { proxyMultipartToPython } from '#utils/python-proxy';
+import { mapWbsImportStats } from '#utils/python-mappers';
 
 export default defineEventHandler(async (event) => {
   const projectId = getRouterParam(event, 'id');

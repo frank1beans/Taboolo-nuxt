@@ -13,7 +13,9 @@
     "lint": "eslint . --ext .ts,.js,.vue"
   },
   "dependencies": {
+    "@nuxt/icon": "^2.1.0",
     "@nuxt/ui": "^4.2.1",
+    "@nuxtjs/color-mode": "^4.0.0",
     "@nuxtjs/i18n": "^10.2.1",
     "@pinia/nuxt": "^0.11.3",
     "@tanstack/vue-query": "^5.92.1",
@@ -34,8 +36,10 @@
     "yup": "^1.7.1"
   },
   "devDependencies": {
+    "@iconify-json/lucide": "^1.2.80",
     "@nuxt/eslint": "^1.11.0",
     "@nuxt/eslint-config": "^1.11.0",
+    "@tailwindcss/postcss": "^4.1.17",
     "@types/mongoose": "^5.11.97",
     "@typescript-eslint/eslint-plugin": "^8.49.0",
     "@typescript-eslint/parser": "^8.49.0",

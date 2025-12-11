@@ -1,5 +1,5 @@
 import { Types } from 'mongoose';
-import { Item, WbsNode } from '~/server/models';
+import { Item, WbsNode } from '#models';
 
 export default defineEventHandler(async (event) => {
   const projectId = getRouterParam(event, 'id');

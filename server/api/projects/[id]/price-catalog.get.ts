@@ -1,4 +1,4 @@
-import { PriceCatalogItem } from '~/server/models';
+import { PriceCatalogItem } from '#models';
 
 export default defineEventHandler(async (event) => {
   const projectId = getRouterParam(event, 'id');

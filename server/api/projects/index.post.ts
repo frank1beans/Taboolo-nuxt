@@ -1,4 +1,4 @@
-import { Project } from '~/server/models';
+import { Project } from '#models';
 
 export default defineEventHandler(async (event) => {
   const body = await readBody(event);
@@ -13,8 +13,11 @@ export default defineEventHandler(async (event) => {
   try {
     const newProject = await Project.create(body);
     return newProject;
-  } catch (error: any) {
-    if (error.code === 11000) {
+  } catch (error: unknown) {
+    const isDuplicateKey =
+      typeof error === 'object' && error !== null && 'code' in error && (error as { code?: number }).code === 11000;
+
+    if (isDuplicateKey) {
       throw createError({
         statusCode: 409,
         statusMessage: 'Project code already exists',

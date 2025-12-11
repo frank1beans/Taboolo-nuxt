@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 type Json = Record<string, any>;
 
 const COMPUTO_TYPE_MAP: Record<string, string> = {
