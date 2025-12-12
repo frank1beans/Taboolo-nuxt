@@ -1,104 +1,43 @@
-import { ref } from 'vue'
-import type { GridApi, GridReadyEvent } from 'ag-grid-community'
+import { ref, type Ref } from 'vue';
+import type { DataGridConfig } from '~/types/data-grid';
 
-export interface UseDataGridOptions {
-  persistKey?: string
-  enableExport?: boolean
-}
+export function useDataGrid(config: DataGridConfig) {
+  const gridApi = ref<any>(null);
+  const gridReady = ref(false);
 
-/**
- * Composable for AG Grid state management
- * Provides common grid operations: export, column state persistence, etc.
- */
-export const useDataGrid = (options: UseDataGridOptions = {}) => {
-  const gridApi = ref<GridApi | null>(null)
+  const onGridReady = (params: any) => {
+    gridApi.value = params.api;
+    gridReady.value = true;
+  };
 
-  // Get column state from localStorage if persistKey is provided
-  const getStoredColumnState = () => {
-    if (!options.persistKey) return null
-    if (!import.meta.client) return null
+  const refreshData = () => {
+    if (!gridApi.value) return;
+    gridApi.value.refreshCells();
+  };
 
-    const stored = localStorage.getItem(`grid-state-${options.persistKey}`)
-    return stored ? JSON.parse(stored) : null
-  }
-
-  // Save column state to localStorage
-  const saveColumnState = () => {
-    if (!options.persistKey || !gridApi.value) return
-
-    const columnState = gridApi.value.getColumnState()
-    localStorage.setItem(`grid-state-${options.persistKey}`, JSON.stringify(columnState))
-  }
-
-  // Grid ready callback
-  const onGridReady = (params: GridReadyEvent) => {
-    gridApi.value = params.api
-
-    // Restore column state if available
-    const storedState = getStoredColumnState()
-    if (storedState && gridApi.value) {
-      gridApi.value.applyColumnState({ state: storedState, applyOrder: true })
-    }
-
-    // Auto-size columns on first load
-    params.api.sizeColumnsToFit()
-  }
-
-  // Export to CSV (AG Grid Community)
-  const exportToCsv = (fileName?: string) => {
-    if (!gridApi.value) return
-
-    gridApi.value.exportDataAsCsv({
-      fileName: fileName || 'export.csv',
-    })
-  }
-
-  // Refresh grid data
-  const refreshGrid = () => {
-    if (!gridApi.value) return
-    gridApi.value.refreshCells()
-  }
-
-  // Get selected rows
   const getSelectedRows = () => {
-    if (!gridApi.value) return []
-    return gridApi.value.getSelectedRows()
-  }
+    if (!gridApi.value) return [];
+    return gridApi.value.getSelectedRows();
+  };
 
-  // Clear selection
-  const clearSelection = () => {
-    if (!gridApi.value) return
-    gridApi.value.deselectAll()
-  }
+  const sizeColumnsToFit = () => {
+    if (!gridApi.value) return;
+    gridApi.value.sizeColumnsToFit();
+  };
 
-  // Apply quick filter
-  const setQuickFilter = (filterText: string) => {
-    if (!gridApi.value) return
-    gridApi.value.setGridOption('quickFilterText', filterText)
-  }
-
-  // Auto-size all columns
-  const autoSizeColumns = (skipHeader = false) => {
-    if (!gridApi.value) return
-    gridApi.value.autoSizeAllColumns(skipHeader)
-  }
+  const autoSizeAllColumns = () => {
+    if (!gridApi.value) return;
+    const allColumnIds = gridApi.value.getAllGridColumns().map((col: any) => col.getId());
+    gridApi.value.autoSizeColumns(allColumnIds);
+  };
 
   return {
     gridApi,
+    gridReady,
     onGridReady,
-    exportToCsv,
-    saveColumnState,
-    refreshGrid,
+    refreshData,
     getSelectedRows,
-    clearSelection,
-    setQuickFilter,
-    autoSizeColumns,
-  }
+    sizeColumnsToFit,
+    autoSizeAllColumns,
+  };
 }
-
-/**
- * Note: Excel export requires AG Grid Enterprise license.
- * For community version, use exportToCsv() or the custom functions from @/lib/grid-utils:
- * - exportToExcel() - uses XLSX library
- * - exportToExcelJS() - uses ExcelJS library (more advanced formatting)
- */

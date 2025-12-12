@@ -1,161 +1,123 @@
+<template>
+  <aside
+    v-if="visible"
+    class="w-72 bg-white border-r border-slate-200 h-full flex flex-col shadow-sm"
+  >
+    <div class="px-3 py-2 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+      <div class="text-sm font-semibold text-slate-800">WBS</div>
+      <div class="flex items-center gap-1">
+        <UButton
+          icon="i-heroicons-arrows-pointing-out"
+          color="gray"
+          variant="ghost"
+          size="xs"
+          title="Collassa tutto"
+          @click="collapseAll"
+        />
+        <UButton
+          icon="i-heroicons-x-mark"
+          color="gray"
+          variant="ghost"
+          size="xs"
+          title="Chiudi sidebar"
+          @click="toggleVisible(false)"
+        />
+      </div>
+    </div>
+    <div class="flex-1 overflow-y-auto">
+      <ul class="p-2 space-y-1 text-sm">
+        <li
+          v-for="node in nodes"
+          :key="node.id"
+          class="rounded border border-transparent hover:border-slate-200"
+        >
+          <UButton
+            variant="ghost"
+            color="gray"
+            size="sm"
+            class="w-full justify-start px-2 py-1 flex items-center gap-2 hover:bg-slate-50"
+            @click="selectNode(node)"
+          >
+            <span class="text-xs font-mono text-slate-500">{{ node.code }}</span>
+            <span class="font-medium text-slate-800">{{ node.name }}</span>
+            <span v-if="showLevel" class="text-[11px] text-slate-500">L{{ node.level }}</span>
+          </UButton>
+          <ul v-if="node.children?.length" class="ml-4 border-l border-slate-200 pl-2 space-y-1">
+            <li
+              v-for="child in node.children"
+              :key="child.id"
+              class="rounded border border-transparent hover:border-slate-200"
+            >
+              <UButton
+                variant="ghost"
+                color="gray"
+                size="sm"
+                class="w-full justify-start px-2 py-1 flex items-center gap-2 hover:bg-slate-50"
+                @click="selectNode(child)"
+              >
+                <span class="text-xs font-mono text-slate-500">{{ child.code }}</span>
+                <span class="text-slate-800">{{ child.name }}</span>
+                <span v-if="showLevel" class="text-[11px] text-slate-500">L{{ child.level }}</span>
+              </UButton>
+            </li>
+          </ul>
+        </li>
+      </ul>
+    </div>
+  </aside>
+</template>
+
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import type { WbsTreeNodeData } from './WbsTree.vue'
-import WbsSidebarNode from './WbsSidebarNode.vue'
+import { ref, watch } from 'vue';
+import type { WbsNode } from '~/types/wbs';
 
-interface WbsSidebarProps {
-  nodes: WbsTreeNodeData[]
-  selectedNodeId?: string | null
-  showAmounts?: boolean
-  maxLevel?: number
-}
-
-const props = withDefaults(defineProps<WbsSidebarProps>(), {
-  selectedNodeId: null,
-  showAmounts: false,
-  maxLevel: 7,
-})
+const props = withDefaults(
+  defineProps<{
+    modelValue?: boolean;
+    visible?: boolean;
+    projectId?: string;
+    showLevel?: boolean;
+  }>(),
+  {
+    modelValue: true,
+    visible: true,
+    projectId: undefined,
+    showLevel: false,
+  }
+);
 
 const emit = defineEmits<{
-  'update:selectedNodeId': [id: string | null]
-  'node-select': [node: WbsTreeNodeData | null]
-}>()
+  'update:visible': [value: boolean];
+  'node-selected': [node: WbsNode | null];
+}>();
 
-const expandedNodes = ref<Set<string>>(new Set())
+const visible = ref(props.visible ?? props.modelValue ?? true);
 
-// Find node by ID recursively
-const findNodeById = (nodes: WbsTreeNodeData[], id: string): WbsTreeNodeData | null => {
-  for (const node of nodes) {
-    if (node.id === id) return node
-    if (node.children?.length) {
-      const found = findNodeById(node.children, id)
-      if (found) return found
-    }
+watch(
+  () => props.visible,
+  (val) => {
+    if (val !== undefined) visible.value = val;
   }
-  return null
-}
+);
 
-// Get breadcrumb path
-const selectedNodePath = computed(() => {
-  if (!props.selectedNodeId) return []
+type SimpleWbsNode = { id: string; code: string; name: string; level: number; children?: SimpleWbsNode[] };
 
-  const path: WbsTreeNodeData[] = []
-  const findPath = (nodes: WbsTreeNodeData[], targetId: string, currentPath: WbsTreeNodeData[]): boolean => {
-    for (const node of nodes) {
-      const newPath = [...currentPath, node]
-      if (node.id === targetId) {
-        path.push(...newPath)
-        return true
-      }
-      if (node.children?.length && findPath(node.children, targetId, newPath)) {
-        return true
-      }
-    }
-    return false
-  }
+const nodes = ref<SimpleWbsNode[]>([
+  { id: 'wbs-1', code: '01', name: 'Strutture', level: 1 },
+  {
+    id: 'wbs-2',
+    code: '02',
+    name: 'Architettoniche',
+    level: 1,
+    children: [
+      { id: 'wbs-2-1', code: '02.01', name: 'Tamponamenti', level: 2 },
+      { id: 'wbs-2-2', code: '02.02', name: 'Finiture', level: 2 },
+    ],
+  },
+  { id: 'wbs-3', code: '03', name: 'Impianti', level: 1 },
+]);
 
-  findPath(props.nodes, props.selectedNodeId, [])
-  return path
-})
-
-// Toggle node expansion
-const toggleNode = (nodeId: string) => {
-  if (expandedNodes.value.has(nodeId)) {
-    expandedNodes.value.delete(nodeId)
-  } else {
-    expandedNodes.value.add(nodeId)
-  }
-}
-
-// Select node
-const selectNode = (node: WbsTreeNodeData) => {
-  const newId = props.selectedNodeId === node.id ? null : node.id
-  emit('update:selectedNodeId', newId)
-  emit('node-select', newId ? node : null)
-
-  // Auto-expand selected node
-  if (newId) {
-    expandedNodes.value.add(node.id)
-  }
-}
-
-// Reset selection
-const resetSelection = () => {
-  emit('update:selectedNodeId', null)
-  emit('node-select', null)
-}
-
-// Auto-expand first 2 levels on mount
-const autoExpandInitialLevels = (nodes: WbsTreeNodeData[], currentLevel = 1) => {
-  nodes.forEach((node) => {
-    if (currentLevel <= 2) {
-      expandedNodes.value.add(node.id)
-      if (node.children?.length) {
-        autoExpandInitialLevels(node.children, currentLevel + 1)
-      }
-    }
-  })
-}
-
-// Initialize
-autoExpandInitialLevels(props.nodes)
-
-// Icon based on level (from original WbsFilterPanel)
-const getNodeIcon = (level: number) => {
-  return level <= 5 ? 'i-lucide-map-pin' : level === 6 ? 'i-lucide-folder' : 'i-lucide-file'
-}
+const selectNode = (node: SimpleWbsNode) => emit('node-selected', node as unknown as WbsNode);
+const toggleVisible = (val: boolean) => emit('update:visible', val);
+const collapseAll = () => emit('node-selected', null);
 </script>
-
-<template>
-  <div class="flex flex-col h-full">
-    <!-- Header with Reset -->
-    <div class="flex items-center justify-between p-4 border-b border-border">
-      <div>
-        <h3 class="font-semibold text-sm">Struttura WBS</h3>
-        <p class="text-xs text-muted-foreground mt-0.5">Seleziona un nodo per filtrare</p>
-      </div>
-      <UButton
-        v-if="selectedNodeId"
-        size="xs"
-        variant="ghost"
-        color="gray"
-        @click="resetSelection"
-      >
-        <UIcon name="i-lucide-x-circle" class="mr-1 h-3 w-3" />
-        Reset
-      </UButton>
-    </div>
-
-    <!-- Breadcrumb -->
-    <div v-if="selectedNodePath.length > 0" class="px-4 py-2 bg-primary/5 border-b border-border">
-      <div class="flex items-center gap-1 text-xs overflow-x-auto">
-        <UIcon name="i-lucide-filter" class="h-3 w-3 text-primary flex-shrink-0" />
-        <span class="text-muted-foreground flex-shrink-0">Filtro:</span>
-        <div class="flex items-center gap-1 flex-wrap">
-          <template v-for="(node, index) in selectedNodePath" :key="node.id">
-            <UIcon v-if="index > 0" name="i-lucide-chevron-right" class="h-3 w-3 text-muted-foreground flex-shrink-0" />
-            <span class="font-mono text-xs bg-primary/10 px-1.5 py-0.5 rounded">
-              {{ node.code }}
-            </span>
-          </template>
-        </div>
-      </div>
-    </div>
-
-    <!-- Tree -->
-    <div class="flex-1 overflow-y-auto p-4 custom-scrollbar">
-      <WbsSidebarNode
-        v-for="node in nodes"
-        :key="node.id"
-        :node="node"
-        :selected-node-id="selectedNodeId"
-        :expanded-nodes="expandedNodes"
-        :max-level="maxLevel"
-        :show-amounts="showAmounts"
-        :get-node-icon="getNodeIcon"
-        @toggle="toggleNode"
-        @select="selectNode"
-      />
-    </div>
-  </div>
-</template>
