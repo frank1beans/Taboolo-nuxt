@@ -1,6 +1,7 @@
 from pathlib import Path
 from typing import Sequence
 
+from importers.helpers.text_and_measure import head_to_tail_quantity, tokenize_description
 from importers.parser_utils import _CustomReturnParseResult, parse_custom_return_excel
 
 

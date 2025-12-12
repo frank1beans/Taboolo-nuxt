@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { toast } from 'vue-sonner'
-import { useExecuteImport } from '~/composables/queries/useImportQueries'
-import type { ColumnType } from '~/composables/useColumnMapping'
+import { useExecuteImport } from '@/composables/queries/useImportQueries'
+import type { ColumnType } from '@/composables/useColumnMapping'
 
 export interface RoundUploadDialogProps {
-  projectId: number
+  projectId: string | number
   open?: boolean
 }
 
@@ -221,7 +221,7 @@ const columnOptions = computed(() => {
 
 <template>
   <Dialog :open="open" @update:open="(val) => !val && handleClose()">
-    <DialogContent class="max-w-4xl max-h-[90vh] flex flex-col">
+    <div class="max-w-4xl max-h-[90vh] flex flex-col">
       <DialogHeader>
         <DialogTitle>Carica Round Offerta</DialogTitle>
         <DialogDescription>
@@ -489,6 +489,6 @@ const columnOptions = computed(() => {
           </Button>
         </div>
       </DialogFooter>
-    </DialogContent>
+    </div>
   </Dialog>
 </template>

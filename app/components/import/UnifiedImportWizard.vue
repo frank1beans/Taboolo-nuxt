@@ -5,7 +5,7 @@ import ImportConfigStep from './steps/ImportConfigStep.vue'
 import ImportUploadStep from './steps/ImportUploadStep.vue'
 import ImportMappingStep from './steps/ImportMappingStep.vue'
 import ImportExecuteStep from './steps/ImportExecuteStep.vue'
-import type { ColumnMapping, ColumnType } from '~/composables/useColumnMapping'
+import type { ColumnMapping, ColumnType } from '@/composables/useColumnMapping'
 
 export interface UnifiedImportWizardProps {
   projectId: number

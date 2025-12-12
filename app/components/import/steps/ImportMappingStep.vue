@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { inject, computed, watch, onMounted } from 'vue'
 import type { WizardState } from '../UnifiedImportWizard.vue'
-import { useColumnMapping, type ColumnType } from '~/composables/useColumnMapping'
+import { useColumnMapping, type ColumnType } from '@/composables/useColumnMapping'
 
 const wizardState = inject<WizardState>('wizardState')!
 

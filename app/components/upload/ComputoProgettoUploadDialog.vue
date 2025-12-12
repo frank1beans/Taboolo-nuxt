@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { toast } from 'vue-sonner'
+import { useUploadEstimate } from '@/composables/queries/useEstimateQueries'
 
 export interface ComputoProgettoUploadProps {
-  projectId: number
+  projectId: string | number
   open?: boolean
 }
 
@@ -77,7 +78,7 @@ const handleClose = () => {
 
 <template>
   <Dialog :open="open" @update:open="(val) => !val && handleClose()">
-    <DialogContent class="max-w-2xl">
+    <div class="max-w-2xl">
       <DialogHeader>
         <DialogTitle>Carica Computo Progetto</DialogTitle>
         <DialogDescription>
@@ -152,6 +153,6 @@ const handleClose = () => {
           Carica Computo
         </Button>
       </DialogFooter>
-    </DialogContent>
+    </div>
   </Dialog>
 </template>

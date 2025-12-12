@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, toRefs, h, defineComponent, type PropType } from 'vue'
-import { cn } from '~/lib/utils'
+import { cn } from '@/lib/utils'
 import type { FrontendWbsNode } from '@/types/api'
 import { UIcon } from '#components'
 

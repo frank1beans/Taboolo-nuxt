@@ -1,11 +1,13 @@
+import { defineEventHandler, createError, getRouterParam } from 'h3';
 import { Project, Estimate } from '#models';
+import { serializeDoc, serializeDocs } from '#utils/serialize';
 
 export default defineEventHandler(async (event) => {
   const id = getRouterParam(event, 'id');
 
   try {
-    const project = await Project.findById(id);
-    
+    const project = await Project.findById(id).lean();
+
     if (!project) {
       throw createError({
         statusCode: 404,
@@ -14,11 +16,11 @@ export default defineEventHandler(async (event) => {
     }
 
     // Fetch associated estimates
-    const estimates = await Estimate.find({ project_id: id }).sort({ created_at: -1 });
+    const estimates = await Estimate.find({ project_id: id }).sort({ created_at: -1 }).lean();
 
     return {
-      ...project.toObject(),
-      estimates: estimates,
+      ...serializeDoc(project),
+      estimates: serializeDocs(estimates),
     };
   } catch (error) {
     throw createError({

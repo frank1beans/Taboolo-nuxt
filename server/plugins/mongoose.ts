@@ -1,4 +1,6 @@
 import mongoose from 'mongoose';
+import { defineNitroPlugin } from '#nitro';
+import { useRuntimeConfig } from '#nitro';
 
 export default defineNitroPlugin(async (_nitroApp) => {
   const config = useRuntimeConfig();
@@ -11,5 +13,6 @@ export default defineNitroPlugin(async (_nitroApp) => {
     console.error('Error connecting to MongoDB:', e);
   }
 });
+
 
 

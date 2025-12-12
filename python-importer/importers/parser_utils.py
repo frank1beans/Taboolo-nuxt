@@ -17,6 +17,7 @@ from importers.common import (
     _looks_like_wbs7_code,
 )
 from importers.excel.types import ParsedEstimate, ParsedItem, ParsedWbsLevel
+from importers.helpers.text_and_measure import head_to_tail_quantity, tokenize_description
 
 
 def parse_custom_return_excel(
@@ -222,7 +223,7 @@ def _parse_custom_return_excel(
         # Quantity: either from the same row or from following measure rows
         quantity_value = _cell_to_float(row, quantity_index) if quantity_index is not None else None
         if quantity_value is None:
-            quantity_value = _collect_measures(cleaned_rows, prog_idx)
+            quantity_value = head_to_tail_quantity(cleaned_rows, prog_idx)
 
         if quantity_value is None:
             logger_warning = (
@@ -232,6 +233,7 @@ def _parse_custom_return_excel(
             quantity_value = 0.0
 
         quantity_value, amount = _calculate_line_amount(quantity_value, unit_price)
+        tokens = tokenize_description(description_value or "")
 
         item = ParsedItem(
             order=order,
@@ -247,6 +249,7 @@ def _parse_custom_return_excel(
             metadata={
                 "sheet_name": sheet.title if sheet else None,
                 "column_warnings": column_warnings or None,
+                "tokens": tokens,
             },
         )
         items.append(item)
@@ -437,22 +440,6 @@ def _extract_wbs_levels(row: tuple[Any, ...], description_indexes: list[int]) ->
                     levels.append(ParsedWbsLevel(level=7, code=normalized, description=None))
                     break
     return levels
-
-
-def _collect_measures(rows: list[tuple[Any, ...]], start_idx: int) -> float | None:
-    total: float | None = None
-    for row in rows[start_idx + 1 :]:
-        if not _row_has_values(row):
-            continue
-        maybe_price = _cell_to_float(row, 0)
-        maybe_qty = _cell_to_float(row, 1)
-        if maybe_qty is not None and maybe_price is None:
-            if total is None:
-                total = 0.0
-            total += maybe_qty
-        else:
-            break
-    return total
 
 
 def _sanitize_price_candidate(value: float | None) -> float | None:

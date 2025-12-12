@@ -6,6 +6,9 @@ from typing import Any
 from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile, status
 
 from core import settings
+from importers.helpers.text_and_measure import tokenize_description
+from importers.models.raw import RawLxItem, RawMxReturn
+from services.raw_import_service import SixRawImportService
 from importers.registry import (
     parse_estimate_from_bytes,
     parse_excel_estimate_from_bytes,
@@ -16,6 +19,7 @@ from utils.rate_limit import SlidingWindowRateLimiter, enforce_rate_limit
 
 router = APIRouter()
 returns_rate_limiter = SlidingWindowRateLimiter(settings.import_rate_limit_per_minute, 60)
+raw_service = SixRawImportService()
 
 
 def _parse_companies_config(raw: str | None) -> list[dict[str, Any]]:
@@ -68,6 +72,98 @@ def _pick_parser(mode: str):
     if mode_lower == "excel":
         return parse_excel_estimate_from_bytes
     return parse_lx_estimate_from_bytes
+
+
+@router.post(
+    "/{commessa_id}/returns/lx",
+    status_code=status.HTTP_200_OK,
+)
+async def import_returns_lx_raw(
+    commessa_id: str,
+    request: Request,
+    file: UploadFile = File(...),
+    sheet_name: str | None = Form(default=None),
+    code_columns: str | None = Form(default=None),
+    description_columns: str | None = Form(default=None),
+    price_column: str | None = Form(default=None),
+    quantity_column: str | None = Form(default=None),
+    return_id: str | None = Form(default=None),
+) -> dict[str, Any]:
+    client_ip = request.client.host if request.client else "anonymous"
+    enforce_rate_limit(returns_rate_limiter, client_ip)
+
+    payload = await file.read()
+    if len(payload) > settings.max_upload_size_mb * 1024 * 1024:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail="File troppo grande",
+        )
+
+    try:
+        items = raw_service.parse_lx_raw(
+            file_bytes=payload,
+            filename=file.filename,
+            sheet_name=sheet_name,
+            code_columns=(code_columns or "").split(",") if code_columns else None,
+            description_columns=(description_columns or "").split(",") if description_columns else None,
+            price_column=price_column or "",
+            quantity_column=quantity_column,
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+
+    return {
+        "return_id": return_id,
+        "items": [item.__dict__ for item in items],
+        "count": len(items),
+    }
+
+
+@router.post(
+    "/{commessa_id}/returns/mx",
+    status_code=status.HTTP_200_OK,
+)
+async def import_returns_mx_raw(
+    commessa_id: str,
+    request: Request,
+    file: UploadFile = File(...),
+    sheet_name: str | None = Form(default=None),
+    code_columns: str | None = Form(default=None),
+    description_columns: str | None = Form(default=None),
+    price_column: str | None = Form(default=None),
+    quantity_column: str | None = Form(default=None),
+    progressive_column: str | None = Form(default=None),
+    return_id: str | None = Form(default=None),
+) -> dict[str, Any]:
+    client_ip = request.client.host if request.client else "anonymous"
+    enforce_rate_limit(returns_rate_limiter, client_ip)
+
+    payload = await file.read()
+    if len(payload) > settings.max_upload_size_mb * 1024 * 1024:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail="File troppo grande",
+        )
+
+    try:
+        returns = raw_service.parse_mx_raw(
+            file_bytes=payload,
+            filename=file.filename,
+            sheet_name=sheet_name,
+            code_columns=(code_columns or "").split(",") if code_columns else None,
+            description_columns=(description_columns or "").split(",") if description_columns else None,
+            price_column=price_column or "",
+            quantity_column=quantity_column,
+            progressive_column=progressive_column,
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+
+    return {
+        "return_id": return_id,
+        "items": [item.__dict__ for item in returns],
+        "count": len(returns),
+    }
 
 
 @router.post(

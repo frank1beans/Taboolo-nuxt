@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { formatShortDate } from '~/lib/formatters'
-import { STATUS_CONFIG } from '~/lib/constants'
-import { useProjects, useImportProjectBundle, useExportProjectBundle } from '~/composables/queries/useProjectQueries'
+import { formatShortDate } from '@/lib/formatters'
+import { STATUS_CONFIG } from '@/lib/constants'
+import { useProjects, useImportProjectBundle, useExportProjectBundle } from '@/composables/queries/useProjectQueries'
+import PageShell from '@/components/layout/PageShell.vue'
 import NewProjectDialog from '@/components/project/NewProjectDialog.vue'
 
 definePageMeta({
@@ -152,7 +153,7 @@ const shortDate = (value?: string | Date | null) => formatShortDate(value)
           color="gray"
           variant="ghost"
           icon="i-lucide-refresh-ccw"
-          :loading="isFetching"
+          :loading="!!isFetching"
           @click="refetch"
         >
           Aggiorna
@@ -179,15 +180,15 @@ const shortDate = (value?: string | Date | null) => formatShortDate(value)
               size="md"
             />
           </div>
-          <UButton
-            color="gray"
-            variant="soft"
-            icon="i-lucide-upload-cloud"
-            :loading="importBundle.isPending"
-            @click="handleBundlePick"
-          >
-            Importa bundle (.mmcomm)
-          </UButton>
+        <UButton
+          color="gray"
+          variant="soft"
+          icon="i-lucide-upload-cloud"
+          :loading="!!importBundle.isPending"
+          @click="handleBundlePick"
+        >
+          Importa bundle (.mmcomm)
+        </UButton>
           <input
             ref="bundleInput"
             type="file"
@@ -384,7 +385,7 @@ const shortDate = (value?: string | Date | null) => formatShortDate(value)
                 color="gray"
                 variant="ghost"
                 size="xs"
-                :loading="exportingId === project.id && exportBundle.isPending"
+                :loading="exportingId === project.id && !!exportBundle.isPending"
                 @click="handleExport(project.id)"
               >
                 Export bundle
@@ -404,7 +405,7 @@ const shortDate = (value?: string | Date | null) => formatShortDate(value)
               color="gray"
               variant="soft"
               icon="i-lucide-upload-cloud"
-              :loading="importBundle.isPending"
+              :loading="!!importBundle.isPending"
               @click="handleBundlePick"
             >
               Importa bundle

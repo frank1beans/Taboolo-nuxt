@@ -6,7 +6,7 @@
       <span class="text-[11px] text-muted-foreground uppercase">{{ node.category }}</span>
     </div>
     <ul v-if="node.children?.length" class="ml-4 border-l border-border pl-3">
-      <WbsTreeNode v-for="child in node.children" :key="child._id" :node="child" />
+      <WbsTreeNode v-for="child in node.children" :key="child.id" :node="child" />
     </ul>
   </li>
 </template>

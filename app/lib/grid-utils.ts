@@ -504,8 +504,8 @@ export const exportToExcel = (
 // ============= THEME STYLES =============
 
 export const GRID_THEME_CLASS = {
-  light: "ag-theme-alpine",
-  dark: "ag-theme-alpine-dark",
+  light: "ag-theme-quartz",
+  dark: "ag-theme-quartz-dark",
 };
 
 export const getGridThemeClass = (isDarkMode: boolean): string => {

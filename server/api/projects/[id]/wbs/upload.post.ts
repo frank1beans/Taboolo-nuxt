@@ -1,3 +1,4 @@
+import { defineEventHandler, createError, getRouterParam, getQuery } from 'h3';
 import { proxyMultipartToPython } from '#utils/python-proxy';
 import { mapWbsImportStats } from '#utils/python-mappers';
 

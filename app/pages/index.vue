@@ -1,13 +1,15 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useDashboardStats } from '~/composables/queries/useDashboardStats'
-import { formatShortDate } from '~/lib/formatters'
+import PageShell from '@/components/layout/PageShell.vue'
+import { useDashboardStats } from '@/composables/queries/useDashboardStats'
+import { formatShortDate } from '@/lib/formatters'
 
 definePageMeta({
   alias: ['/home'],
 })
 
 const { data, isLoading, isFetching, refetch } = useDashboardStats()
+const refreshLoading = computed(() => !!isFetching.value)
 
 const stats = computed(() => data.value)
 
@@ -52,7 +54,7 @@ const shortDate = (value?: string | Date | null) => formatShortDate(value)
             color="gray"
             variant="ghost"
             icon="i-lucide-refresh-ccw"
-            :loading="isFetching"
+            :loading="!!refreshLoading"
             @click="refetch"
           >
             Aggiorna

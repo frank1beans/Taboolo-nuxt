@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
 import { computed, unref, type MaybeRef } from 'vue'
-import { api } from '~/lib/api-client'
+import { api } from '@/lib/api-client'
 import { toast } from 'vue-sonner'
 
 /**

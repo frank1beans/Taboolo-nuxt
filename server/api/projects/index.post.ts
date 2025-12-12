@@ -1,8 +1,10 @@
+import { defineEventHandler, createError, readBody } from 'h3';
 import { Project } from '#models';
+import { serializeDoc } from '#utils/serialize';
 
 export default defineEventHandler(async (event) => {
   const body = await readBody(event);
-  
+
   if (!body.name || !body.code) {
     throw createError({
       statusCode: 400,
@@ -12,7 +14,7 @@ export default defineEventHandler(async (event) => {
 
   try {
     const newProject = await Project.create(body);
-    return newProject;
+    return serializeDoc(newProject.toObject());
   } catch (error: unknown) {
     const isDuplicateKey =
       typeof error === 'object' && error !== null && 'code' in error && (error as { code?: number }).code === 11000;

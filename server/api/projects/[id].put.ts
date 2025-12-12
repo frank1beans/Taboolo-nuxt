@@ -1,4 +1,6 @@
+import { defineEventHandler, createError, getRouterParam, readBody } from 'h3';
 import { Project } from '#models';
+import { serializeDoc } from '#utils/serialize';
 
 export default defineEventHandler(async (event) => {
   const id = getRouterParam(event, 'id');
@@ -9,7 +11,7 @@ export default defineEventHandler(async (event) => {
       id,
       { $set: body },
       { new: true, runValidators: true }
-    );
+    ).lean();
 
     if (!updatedProject) {
       throw createError({
@@ -18,7 +20,7 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    return updatedProject;
+    return serializeDoc(updatedProject);
   } catch (error: unknown) {
     const isDuplicateKey =
       typeof error === 'object' && error !== null && 'code' in error && (error as { code?: number }).code === 11000;

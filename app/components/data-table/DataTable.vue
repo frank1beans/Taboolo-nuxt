@@ -4,8 +4,8 @@ import { AgGridVue } from 'ag-grid-vue3'
 import type { ColDef, ColGroupDef, GridApi, GridReadyEvent, RowClickedEvent } from 'ag-grid-community'
 import 'ag-grid-community/styles/ag-grid.css'
 import 'ag-grid-community/styles/ag-theme-quartz.css'
-import { cn } from '~/lib/utils'
-import { useDataGrid } from '~/composables/useDataGrid'
+import { cn } from '@/lib/utils'
+import { useDataGrid } from '@/composables/useDataGrid'
 
 export interface DataTableProps<T = Record<string, unknown>> {
   data: T[]
@@ -43,7 +43,7 @@ const emit = defineEmits<{
   ready: [api: GridApi<T>]
 }>()
 
-const { gridApi, onGridReady: handleGridReady, setQuickFilter, exportToExcel } = useDataGrid({
+const { gridApi, onGridReady: handleGridReady, setQuickFilter, exportToCsv } = useDataGrid({
   persistKey: props.persistKey,
   enableExport: props.enableExport,
 })
@@ -129,25 +129,39 @@ const loadingOverlayComponent = computed(() =>
       </div>
 
       <div v-if="enableExport" class="flex gap-2">
-        <Button size="sm" variant="outline" @click="exportToExcel('export')">
-          Esporta Excel
-        </Button>
+        <UButton size="sm" variant="outline" @click="exportToCsv('export')">
+          <UIcon name="i-lucide-download" class="mr-2 h-4 w-4" />
+          Esporta CSV
+        </UButton>
       </div>
     </div>
 
     <!-- AG Grid -->
-    <div :class="cn('ag-theme-quartz', className)" :style="{ height }">
-      <AgGridVue
-        :row-data="data"
-        :column-defs="columnDefs"
-        :default-col-def="defaultColDef"
-        :grid-options="gridOptions"
-        :loading-overlay-component="loadingOverlayComponent"
-        @grid-ready="onGridReady"
-        @row-clicked="onRowClicked"
-        @selection-changed="onSelectionChanged"
-      />
-    </div>
+    <ClientOnly>
+      <div :class="cn('ag-theme-quartz', className)" :style="{ height }">
+        <AgGridVue
+          :row-data="data"
+          :column-defs="columnDefs"
+          :default-col-def="defaultColDef"
+          :grid-options="gridOptions"
+          :loading-overlay-component="loadingOverlayComponent"
+          @grid-ready="onGridReady"
+          @row-clicked="onRowClicked"
+          @selection-changed="onSelectionChanged"
+        />
+      </div>
+      <template #fallback>
+        <div 
+          class="flex items-center justify-center rounded-lg border border-border bg-muted/10" 
+          :style="{ height }"
+        >
+          <div class="flex flex-col items-center gap-2 text-muted-foreground">
+            <UIcon name="i-lucide-loader-2" class="h-8 w-8 animate-spin" />
+            <span class="text-sm">Caricamento tabella...</span>
+          </div>
+        </div>
+      </template>
+    </ClientOnly>
   </div>
 </template>
 

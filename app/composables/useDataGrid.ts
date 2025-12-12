@@ -1,5 +1,5 @@
 import { ref } from 'vue'
-import type { GridApi, ColumnApi, GridReadyEvent } from 'ag-grid-community'
+import type { GridApi, GridReadyEvent } from 'ag-grid-community'
 
 export interface UseDataGridOptions {
   persistKey?: string
@@ -12,7 +12,6 @@ export interface UseDataGridOptions {
  */
 export const useDataGrid = (options: UseDataGridOptions = {}) => {
   const gridApi = ref<GridApi | null>(null)
-  const columnApi = ref<ColumnApi | null>(null)
 
   // Get column state from localStorage if persistKey is provided
   const getStoredColumnState = () => {
@@ -34,29 +33,18 @@ export const useDataGrid = (options: UseDataGridOptions = {}) => {
   // Grid ready callback
   const onGridReady = (params: GridReadyEvent) => {
     gridApi.value = params.api
-    columnApi.value = params.columnApi
 
     // Restore column state if available
     const storedState = getStoredColumnState()
-    if (storedState && columnApi.value) {
-      columnApi.value.applyColumnState({ state: storedState, applyOrder: true })
+    if (storedState && gridApi.value) {
+      gridApi.value.applyColumnState({ state: storedState, applyOrder: true })
     }
 
     // Auto-size columns on first load
     params.api.sizeColumnsToFit()
   }
 
-  // Export to Excel
-  const exportToExcel = (fileName?: string) => {
-    if (!gridApi.value) return
-
-    gridApi.value.exportDataAsExcel({
-      fileName: fileName || 'export.xlsx',
-      sheetName: 'Data',
-    })
-  }
-
-  // Export to CSV
+  // Export to CSV (AG Grid Community)
   const exportToCsv = (fileName?: string) => {
     if (!gridApi.value) return
 
@@ -97,9 +85,7 @@ export const useDataGrid = (options: UseDataGridOptions = {}) => {
 
   return {
     gridApi,
-    columnApi,
     onGridReady,
-    exportToExcel,
     exportToCsv,
     saveColumnState,
     refreshGrid,
@@ -109,3 +95,10 @@ export const useDataGrid = (options: UseDataGridOptions = {}) => {
     autoSizeColumns,
   }
 }
+
+/**
+ * Note: Excel export requires AG Grid Enterprise license.
+ * For community version, use exportToCsv() or the custom functions from @/lib/grid-utils:
+ * - exportToExcel() - uses XLSX library
+ * - exportToExcelJS() - uses ExcelJS library (more advanced formatting)
+ */

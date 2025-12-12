@@ -3,8 +3,8 @@ import { inject, computed, unref, type MaybeRef } from 'vue'
 import { toast } from 'vue-sonner'
 import type { WizardState } from '../SixImportWizard.vue'
 import { useQueryClient } from '@tanstack/vue-query'
-import { estimateKeys } from '~/composables/queries/useEstimateQueries'
-import { wbsKeys } from '~/composables/queries/useWbsQueries'
+import { estimateKeys } from '@/composables/queries/useEstimateQueries'
+import { wbsKeys } from '@/composables/queries/useWbsQueries'
 
 const wizardState = inject<WizardState>('wizardState')!
 const projectId = inject<MaybeRef<string | number>>('projectId')!

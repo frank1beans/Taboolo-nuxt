@@ -7,28 +7,39 @@
         <p class="text-muted-foreground">Gestisci i computi di progetto e le offerte.</p>
       </div>
       <div class="flex items-center gap-2">
-        <Button variant="outline" @click="showRoundUpload = true">
+        <UButton variant="outline" @click="showRoundUpload = true">
           <UIcon name="i-lucide-upload" class="mr-2 h-4 w-4" />
           Carica Offerta
-        </Button>
-        <Button @click="showProjectUpload = true">
+        </UButton>
+        <UButton @click="showProjectUpload = true">
           <UIcon name="i-lucide-plus" class="mr-2 h-4 w-4" />
           Nuovo Computo
-        </Button>
+        </UButton>
       </div>
+    </div>
+
+    <!-- Debug Info -->
+    <div class="rounded-xl border bg-yellow-100 dark:bg-yellow-900 p-4 text-sm">
+      <p><strong>DEBUG:</strong></p>
+      <p>Project ID: {{ projectId }}</p>
+      <p>Is Loading: {{ isLoading }}</p>
+      <p>Estimates Count: {{ estimates?.length ?? 0 }}</p>
+      <p>Estimates Data: {{ JSON.stringify(estimates) }}</p>
     </div>
 
     <!-- Estimates Table -->
     <div class="rounded-xl border bg-card text-card-foreground shadow">
       <div class="p-6">
-        <DataTable
-          :data="estimates || []"
-          :column-defs="columnDefs"
-          :is-loading="isLoading"
-          :enable-search="true"
-          :enable-export="true"
-          @row-clicked="handleRowClick"
-        />
+        <ClientOnly>
+          <DataTable
+            :data="estimates || []"
+            :column-defs="columnDefs"
+            :is-loading="isLoading"
+            :enable-search="true"
+            :enable-export="true"
+            @row-clicked="handleRowClick"
+          />
+        </ClientOnly>
       </div>
     </div>
 
@@ -53,16 +64,14 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useEstimates } from '~/composables/queries/useEstimateQueries'
+import { useEstimates } from '@/composables/queries/useEstimateQueries'
 import DataTable from '@/components/data-table/DataTable.vue'
-import Button from '@/components/ui/Button.vue'
 import ComputoProgettoUploadDialog from '@/components/upload/ComputoProgettoUploadDialog.vue'
 import RoundUploadDialog from '@/components/upload/RoundUploadDialog.vue'
-import type { ColDef, ICellRendererParams } from 'ag-grid-community'
-import { UIcon } from '#components'
+import type { ColDef, ICellRendererParams, ValueFormatterParams } from 'ag-grid-community'
 
 type EstimateRow = {
-  _id: string
+  id: string
   name?: string
   type?: string
   revision?: string | null
@@ -75,9 +84,14 @@ type EstimateRow = {
 
 const route = useRoute()
 const router = useRouter()
-const projectId = computed(() => Number(route.params.id))
+const projectId = computed(() => String(route.params.id))
 
 const { data: estimates, isLoading, refetch } = useEstimates(projectId)
+
+// Debug log
+console.log('🔍 Debug - estimates:', estimates.value)
+console.log('🔍 Debug - isLoading:', isLoading.value)
+console.log('🔍 Debug - projectId:', projectId.value)
 
 const showProjectUpload = ref(false)
 const showRoundUpload = ref(false)
@@ -118,7 +132,7 @@ const columnDefs: ColDef<EstimateRow>[] = [
 ]
 
 const handleRowClick = (row: EstimateRow) => {
-  router.push(`/projects/${projectId.value}/estimate/${row._id}`)
+  router.push(`/projects/${projectId.value}/estimate/${row.id}`)
 }
 
 const handleUploadSuccess = () => {

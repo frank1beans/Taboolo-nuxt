@@ -1,8 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/vue-query'
 import { computed, unref, type MaybeRef } from 'vue'
-import { api } from '~/lib/api-client'
+import { api } from '@/lib/api-client'
 import { toast } from 'vue-sonner'
-import type { ProjectStatus } from '@/types/api'
 
 const getErrorMessage = (error: unknown, fallback: string) =>
   error instanceof Error ? error.message : fallback

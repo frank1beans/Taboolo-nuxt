@@ -1,24 +1,47 @@
-import { defineNuxtConfig } from "nuxt/config";
+import { defineNuxtConfig } from 'nuxt/config';
 import { fileURLToPath } from 'node:url';
 
 export default defineNuxtConfig({
-  future: {
-    compatibilityVersion: 4,
-  },
-
-  compatibilityDate: "2025-07-15",
-  ssr: true,
+  compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
+  builder: '@nuxt/vite-builder',
+
+  srcDir: 'app/',
 
   modules: [
-    "@nuxt/ui",
-    "@nuxt/icon",
-    "@nuxtjs/color-mode",
-    "@nuxtjs/i18n",
-    "@nuxt/eslint",
+    '@nuxt/ui',
+    '@nuxt/icon',
+    '@nuxtjs/color-mode',
+    '@pinia/nuxt',
   ],
 
-  css: ["~/assets/css/main.css"],
+  components: {
+    dirs: [
+      {
+        path: '~/components',
+        pathPrefix: false,
+      },
+    ],
+  },
+
+  css: ['~/assets/css/tailwind.css'],
+
+  postcss: {
+    plugins: {
+      '@tailwindcss/postcss': {},
+      autoprefixer: {},
+    },
+  },
+
+  colorMode: {
+    preference: 'system',
+    fallback: 'light',
+    classSuffix: '',
+  },
+
+  alias: {
+    '@': fileURLToPath(new URL('./app', import.meta.url)),
+  },
 
   nitro: {
     alias: {
@@ -26,60 +49,15 @@ export default defineNuxtConfig({
       '#utils': fileURLToPath(new URL('./server/utils', import.meta.url)),
       '#importers': fileURLToPath(new URL('./server/importers', import.meta.url)),
     },
-  },
-
-  postcss: {
-    plugins: {
-      "tailwindcss": false,
-      "tailwindcss/nesting": false,
-      "@tailwindcss/postcss": {},
-      autoprefixer: {},
-    },
-  },
-
-  colorMode: {
-    preference: "system",
-    fallback: "light",
-    classSuffix: "",
-  },
-
-  i18n: {
-    defaultLocale: "en",
-    locales: [
-      { code: "en", name: "English" },
-      { code: "it", name: "Italiano" },
-    ],
+    imports: {
+      dirs: ['./server/models', './server/utils', './server/importers']
+    }
   },
 
   runtimeConfig: {
-    apiBaseUrl: process.env.API_BASE_URL || process.env.PYTHON_API_BASE_URL || "/api",
-    pythonApiBaseUrl: process.env.PYTHON_API_BASE_URL || "/api",
-    mongodbUri: process.env.MONGODB_URI || "",
     public: {
-      apiBaseUrl: process.env.NUXT_PUBLIC_API_BASE_URL || "/api",
-      pythonApiBaseUrl: process.env.NUXT_PUBLIC_API_BASE_URL || "/api",
+      apiBaseUrl: '',
     },
+    mongodbUri: process.env.MONGODB_URI || '',
   },
-
-  imports: {
-    dirs: [
-      'composables',
-      'composables/**',
-      'lib',
-      'lib/**',
-      'utils',
-      'utils/**',
-    ],
-  },
-
-  components: [
-    {
-      path: '~/components',
-      pathPrefix: false,
-    },
-    {
-      path: '~/components',
-      pattern: '**/*.vue',
-    },
-  ],
 });

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { toast } from 'vue-sonner'
-import { useCreateProject } from '~/composables/queries/useProjectQueries'
+import { useCreateProject } from '@/composables/queries/useProjectQueries'
 
 type ProjectStatus = 'setup' | 'in_progress' | 'closed'
 
@@ -58,6 +58,7 @@ const formData = ref<ProjectFormData>({
 const errors = ref<Partial<Record<keyof ProjectFormData, string>>>({})
 
 const { mutateAsync: createProject, isPending: isSubmitting } = useCreateProject()
+const isSubmittingBool = computed(() => !!isSubmitting.value)
 
 const businessUnitOptions = computed(() =>
   BUSINESS_UNITS.map((unit) => ({
@@ -173,26 +174,26 @@ watch(() => props.open, (value) => {
       </template>
 
       <div class="space-y-5">
-        <UFormGroup label="Nome progetto" required :error="errors.name">
+        <UFormField label="Nome progetto" required :error="errors.name">
           <UInput
             v-model="formData.name"
             placeholder="es. Ristrutturazione Palazzo Comunale"
-            :disabled="isSubmitting"
+            :disabled="isSubmittingBool"
           />
-        </UFormGroup>
+        </UFormField>
 
         <div class="grid gap-4 sm:grid-cols-2">
-          <UFormGroup label="Codice progetto" required :error="errors.code">
+          <UFormField label="Codice progetto" required :error="errors.code">
             <UInput
               v-model="formData.code"
               placeholder="es. PROG-001"
-              :disabled="isSubmitting"
+              :disabled="isSubmittingBool"
               @blur="formData.code = formData.code.toUpperCase()"
             />
             <p class="text-[11px] text-muted-foreground">Codice univoco alfanumerico</p>
-          </UFormGroup>
+          </UFormField>
 
-          <UFormGroup label="Business unit">
+          <UFormField label="Business unit">
             <USelectMenu
               v-model="formData.business_unit"
               :options="businessUnitOptions"
@@ -201,48 +202,48 @@ watch(() => props.open, (value) => {
               placeholder="Seleziona business unit"
               searchable
               clearable
-              :disabled="isSubmitting"
+              :disabled="isSubmittingBool"
             />
             <p class="text-[11px] text-muted-foreground">Opzionale</p>
-          </UFormGroup>
+          </UFormField>
         </div>
 
-        <UFormGroup label="Descrizione" required :error="errors.description">
+        <UFormField label="Descrizione" required :error="errors.description">
           <UTextarea
             v-model="formData.description"
             :rows="3"
             placeholder="Breve descrizione del progetto..."
-            :disabled="isSubmitting"
+            :disabled="isSubmittingBool"
           />
-        </UFormGroup>
+        </UFormField>
 
         <div class="grid gap-4 sm:grid-cols-2">
-          <UFormGroup label="Revisione">
+          <UFormField label="Revisione">
             <UInput
               v-model="formData.revision"
               placeholder="es. Rev. A"
-              :disabled="isSubmitting"
+              :disabled="isSubmittingBool"
             />
-          </UFormGroup>
+          </UFormField>
 
-          <UFormGroup label="Stato">
+          <UFormField label="Stato">
             <USelectMenu
               v-model="formData.status"
               :options="statusOptions"
               value-attribute="value"
               option-attribute="label"
-              :disabled="isSubmitting"
+              :disabled="isSubmittingBool"
             />
-          </UFormGroup>
+          </UFormField>
         </div>
       </div>
 
       <template #footer>
         <div class="flex items-center justify-end gap-2">
-          <UButton color="neutral" variant="ghost" :disabled="isSubmitting" @click="modalOpen = false">
+          <UButton color="neutral" variant="ghost" :disabled="isSubmittingBool" @click="modalOpen = false">
             Annulla
           </UButton>
-          <UButton color="primary" :loading="isSubmitting" @click="handleSubmit">
+          <UButton color="primary" :loading="isSubmittingBool" @click="handleSubmit">
             Crea progetto
           </UButton>
         </div>

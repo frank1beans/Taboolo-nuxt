@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/vue-query'
-import { api } from '~/lib/api-client'
-import { queryKeys } from '~/lib/constants'
+import { api } from '@/lib/api-client'
+import { queryKeys } from '@/lib/constants'
 
 export const useDashboardStats = () => {
   return useQuery({

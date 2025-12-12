@@ -8,5 +8,6 @@ Stateless parsers for SIX, LX, and MX formats with **no DB or external service d
 - `importers/six/parser.py` hosts the stateless SIX/XML parser classes (consumed by the service wrapper).
 - `importers/registry.py` exposes `parse_estimate_from_bytes(format_hint, ...)` to dispatch to the right parser (six, lx, mx, excel) and normalize the result.
 - `importers/normalize.py` converts parser-specific types into `NormalizedEstimate`/`NormalizedItem` defined in `importers/types.py`.
+- `importers/helpers/text_and_measure.py` centralizza la logica testa-coda per le quantità (`head_to_tail_quantity`) e la tokenizzazione delle descrizioni (`tokenize_description`). Aggiungi/rimuovi stopword modificando il set `stopwords` nella funzione.
 
 Use these parsers as a library: read the file, call the appropriate parser, then store the result in your datastore (Mongo via Nitro). SQL logic and side effects have been removed from this layer.

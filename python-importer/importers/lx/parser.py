@@ -8,6 +8,7 @@ from openpyxl.utils import get_column_letter
 
 from importers.common import _calculate_line_amount, _ceil_amount
 from importers.excel.types import ParsedEstimate, ParsedItem, ParsedWbsLevel
+from importers.helpers.text_and_measure import head_to_tail_quantity, tokenize_description
 from importers.parser_utils import (
     _CustomReturnParseResult,
     _apply_column_filter,
@@ -91,6 +92,7 @@ def parse_lx_return_excel(
         quantita = _cell_to_float(data_row, quantity_index) if quantity_index is not None else None
         prezzo_unitario = _sanitize_price_candidate(_cell_to_float(data_row, price_index))
         has_formula = _has_external_formula(formula_row, quantity_index)
+        tokens = tokenize_description(descrizione or "")
 
         # Skip item if quantity is an external formula or missing
         if has_formula or quantita is None:
@@ -111,6 +113,7 @@ def parse_lx_return_excel(
             notes=None,
             metadata={
                 "column_warnings": column_warnings or None,
+                "tokens": tokens,
             },
         )
         voci.append(voce)

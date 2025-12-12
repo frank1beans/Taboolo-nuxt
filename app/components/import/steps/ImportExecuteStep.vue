@@ -2,7 +2,7 @@
 import { inject, computed } from 'vue'
 import { toast } from 'vue-sonner'
 import type { WizardState } from '../UnifiedImportWizard.vue'
-import { useExecuteImport, useExecuteBatchImport } from '~/composables/queries/useImportQueries'
+import { useExecuteImport, useExecuteBatchImport } from '@/composables/queries/useImportQueries'
 
 const wizardState = inject<WizardState>('wizardState')!
 const projectId = inject<number>('projectId')!

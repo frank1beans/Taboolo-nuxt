@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
 import { UButton } from '#components'
+import logoImg from '~/assets/logo.png'
 
 const { user, logout } = useAuth()
 const router = useRouter()
@@ -41,7 +42,7 @@ const profileItems: [(NavItemWithLink | NavItemWithClick)[], NavItemWithClick[]]
   <header class="flex items-center justify-between border-b border-border/60 bg-card/80 px-5 py-3 backdrop-blur">
     <div class="flex items-center gap-3">
       <div class="h-10 w-10 rounded-xl bg-primary/10 p-2 shadow-sm">
-        <img src="~/assets/logo.png" alt="Taboolo" class="h-full w-full object-contain">
+        <img :src="logoImg" alt="Taboolo" class="h-full w-full object-contain">
       </div>
       <div class="leading-tight">
         <p class="text-sm font-semibold text-foreground">Taboolo</p>

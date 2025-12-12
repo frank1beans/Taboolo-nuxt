@@ -44,7 +44,7 @@
 import { computed } from "vue";
 import { useRoute } from "vue-router";
 import { useQuery } from "@tanstack/vue-query";
-import { api } from '~/lib/api-client';
+import { api } from '@/lib/api-client';
 
 definePageMeta({
   alias: ["/commesse/:id/overview"],

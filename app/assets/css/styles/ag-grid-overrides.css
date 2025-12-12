@@ -1,10 +1,10 @@
-.ag-theme-alpine .ag-cell,
-.ag-theme-alpine-dark .ag-cell {
+.ag-theme-quartz .ag-cell,
+.ag-theme-quartz-dark .ag-cell {
   white-space: pre-wrap;
 }
 
 /* Fix dark mode colors (library defaults are too dark for our background) */
-.ag-theme-alpine-dark {
+.ag-theme-quartz-dark {
   --ag-foreground-color: #e5e7eb;
   --ag-data-color: #e5e7eb;
   --ag-secondary-foreground-color: #cbd5e1;

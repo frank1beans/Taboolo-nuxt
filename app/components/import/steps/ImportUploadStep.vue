@@ -2,7 +2,7 @@
 import { inject, computed, watch } from 'vue'
 import { toast } from 'vue-sonner'
 import type { WizardState } from '../UnifiedImportWizard.vue'
-import { useExcelParser } from '~/composables/useExcelParser'
+import { useExcelParser } from '@/composables/useExcelParser'
 
 const wizardState = inject<WizardState>('wizardState')!
 

@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/vue-query'
 import { computed, unref, type MaybeRef } from 'vue'
-import { api } from '~/lib/api-client'
+import { api } from '@/lib/api-client'
 
 /**
  * Query key factory for analysis queries

@@ -1,12 +1,65 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { defineEventHandler, createError, getQuery, getRouterParam } from 'h3';
 import { randomUUID } from 'crypto';
-import { runSixImport } from '#importers/python-six/client';
-import { upsertEstimate, upsertPriceCatalog, upsertEstimateItems, buildAndUpsertWbsFromItems } from '#utils/import-adapter';
+import mongoose, { Types } from 'mongoose';
+import { runSixImport, runSixImportRaw } from '#importers/python-six/client';
+import {
+  upsertEstimate,
+  upsertPriceCatalog,
+  upsertEstimateItems,
+  buildAndUpsertWbsFromItems,
+  upsertRawUnits,
+  upsertRawPriceLists,
+  upsertRawGroupValues,
+  upsertRawProducts,
+  upsertRawPreventivi,
+  upsertRawRilevazioni,
+} from '#utils/import-adapter';
+import type { RawImportPayload } from '#utils/raw-types';
 
 export default defineEventHandler(async (event) => {
   const projectId = getRouterParam(event, 'id');
   if (!projectId) {
     throw createError({ statusCode: 400, statusMessage: 'Project ID required' });
+  }
+  const query = getQuery(event);
+  const isRaw = query?.mode === 'raw' || query?.raw === 'true' || query?.raw === '1';
+
+  if (isRaw) {
+    const importId = new Types.ObjectId();
+    const payload: RawImportPayload = await runSixImportRaw(event, projectId);
+    const session = await mongoose.startSession();
+    let summary: Record<string, any> = {};
+    try {
+      await session.withTransaction(async () => {
+        await upsertRawUnits(importId, payload.units, session);
+        await upsertRawPriceLists(importId, payload.priceLists, session);
+        await upsertRawGroupValues(importId, payload.groups, session);
+        await upsertRawProducts(importId, payload.products, session);
+        await upsertRawPreventivi(importId, payload.preventivi, session);
+        for (const [preventivoId, rilevazioni] of Object.entries(payload.rilevazioni)) {
+          await upsertRawRilevazioni(importId, preventivoId, rilevazioni, session);
+        }
+      });
+
+      const rilevazioniCount = Object.values(payload.rilevazioni).reduce((acc, arr) => acc + (arr?.length ?? 0), 0);
+      summary = {
+        import_id: importId.toString(),
+        units: payload.units.length,
+        price_lists: payload.priceLists.length,
+        groups: payload.groups.length,
+        products: payload.products.length,
+        preventivi: payload.preventivi.length,
+        rilevazioni: rilevazioniCount,
+      };
+    } finally {
+      await session.endSession();
+    }
+
+    return {
+      ...summary,
+      preventivi: payload.preventivi,
+    };
   }
 
   const importRunId = randomUUID();

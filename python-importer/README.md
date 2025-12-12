@@ -26,3 +26,7 @@ In questa fase l'app FastAPI è stata ridotta a modalità **stateless**: la pers
 - Questa copia sostituisce l'uso di `TABOOLO/backend` all'interno del repo Nuxt: avvia il servizio da qui.
 - Il codice è quello originale del backend, puoi alleggerirlo rimuovendo le parti non necessarie (auth, UI React) se vuoi ridurre le dipendenze.
 - Mantieni il file `.env` in questa cartella (non committato) con le stesse variabili che usavi prima.
+
+## Import servizi SIX
+- `SixImportService` (services/six_import_service.py) produce le viste aggregate pronte per l'anteprima Nitro (catalogo prezzi, computo).
+- `SixRawImportService` (services/raw_import_service.py) espone le entità grezze (`RawUnit`, `RawPriceList`, `RawGroupValue`, `RawProduct`, `RawPreventivoMetadata`, `RawRilevazione`) senza render o aggregazioni. Usa i normalizzatori per calcolare `quantity_direct` e `quantity_total_resolved`, così il backend Node può salvare direttamente su MongoDB.

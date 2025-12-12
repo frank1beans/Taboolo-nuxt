@@ -1,7 +1,8 @@
 import { computed, onMounted } from "vue";
+import { useState } from '#app';
 import type { ApiAuthResponse, ApiUser, ApiUserProfile } from "@/types/api";
-import { api } from '~/lib/api-client';
-import { clearAccessToken, getAccessToken, setAccessToken } from '~/lib/auth-storage';
+import { api } from '@/lib/api-client';
+import { clearAccessToken, getAccessToken, setAccessToken } from '@/lib/auth-storage';
 import { toast } from "vue-sonner";
 
 type LoginPayload = { email: string; password: string };

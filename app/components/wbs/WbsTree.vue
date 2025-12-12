@@ -1,6 +1,6 @@
 <template>
   <ul class="space-y-1">
-    <WbsTreeNode v-for="node in nodes" :key="node._id" :node="node" />
+    <WbsTreeNode v-for="node in nodes" :key="node.id" :node="node" />
   </ul>
 </template>
 
@@ -9,7 +9,7 @@ import WbsTreeNode from './WbsTreeNode.vue'
 import type { PropType } from 'vue'
 
 export interface WbsTreeNodeData {
-  _id: string
+  id: string
   code: string
   description?: string | null
   level: number

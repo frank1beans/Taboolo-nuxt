@@ -6,7 +6,11 @@
       "Bash(pnpm add:*)",
       "Bash([ -d \"app/server\" ])",
       "Bash([ -d \"server\" ])",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(npm run dev:*)",
+      "Bash(curl:*)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)"
     ]
   }
 }
