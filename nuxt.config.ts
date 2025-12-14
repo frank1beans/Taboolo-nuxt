@@ -24,7 +24,7 @@ export default defineNuxtConfig({
     ],
   },
 
-  css: ['~/assets/css/tailwind.css'],
+  css: ['~/assets/css/main.css'],
 
   postcss: {
     plugins: {
@@ -48,6 +48,7 @@ export default defineNuxtConfig({
       '#models': fileURLToPath(new URL('./server/models', import.meta.url)),
       '#utils': fileURLToPath(new URL('./server/utils', import.meta.url)),
       '#importers': fileURLToPath(new URL('./server/importers', import.meta.url)),
+      '#services': fileURLToPath(new URL('./server/services', import.meta.url)),
     },
     imports: {
       dirs: ['./server/models', './server/utils', './server/importers']

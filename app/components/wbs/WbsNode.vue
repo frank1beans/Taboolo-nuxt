@@ -4,9 +4,9 @@
       variant="ghost"
       color="gray"
       size="sm"
-      class="w-full text-left px-3 py-2 rounded-md hover:bg-slate-800 transition flex items-center gap-2 group"
+      class="w-full text-left px-3 py-2 rounded-md transition flex items-center gap-2 group hover:bg-[hsl(var(--muted)/0.6)]"
       :class="[
-        selected ? 'bg-slate-700 text-white' : 'text-slate-200',
+        selected ? 'bg-[hsl(var(--accent)/0.35)] text-[hsl(var(--foreground))]' : 'text-[hsl(var(--muted-foreground))]',
         `pl-${indentLevel * 4 + 3}`,
       ]"
       :style="{ paddingLeft: `${indentLevel * 16 + 12}px` }"

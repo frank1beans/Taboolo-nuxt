@@ -4,3 +4,4 @@ export * from './wbs.schema';
 export * from './item.schema';
 export * from './price-catalog.schema';
 export * from './raw';
+export * from './user-context.schema';

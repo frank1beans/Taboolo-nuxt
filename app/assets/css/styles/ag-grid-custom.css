@@ -1,11 +1,16 @@
 /* AG Grid Custom Theme - Minimal Design */
 
-/* ============= Light Theme ============= */
-.ag-theme-quartz {
-  --ag-background-color: hsl(var(--background));
+/* Shared theme tokens (light + dark inherit from CSS variables) */
+.ag-theme-quartz,
+.ag-theme-quartz-dark {
+  --ag-background-color: hsl(var(--card));
   --ag-foreground-color: hsl(var(--foreground));
   --ag-border-color: hsl(var(--border));
   --ag-secondary-border-color: hsl(var(--border) / 0.4);
+  --ag-border-radius: var(--radius-lg);
+  --ag-card-radius: var(--radius-lg);
+  --ag-header-height: 52px;
+  --ag-row-height: 44px;
 
   /* Header */
   --ag-header-background-color: hsl(var(--secondary));
@@ -13,15 +18,16 @@
   --ag-header-column-separator-color: hsl(var(--border) / 0.6);
 
   /* Rows */
-  --ag-row-hover-color: hsl(var(--muted) / 0.6);
-  --ag-selected-row-background-color: hsl(var(--muted) / 0.9);
+  --ag-row-hover-color: hsl(var(--table-row-hover));
+  --ag-selected-row-background-color: hsl(var(--table-row-selected));
   --ag-odd-row-background-color: transparent;
 
   /* Cell */
   --ag-cell-horizontal-border: none;
-  --ag-row-border-color: hsl(var(--border) / 0.35);
+  --ag-row-border-color: hsl(var(--table-border));
 
   /* Inputs */
+  --ag-input-border-color: hsl(var(--border));
   --ag-input-focus-border-color: hsl(var(--ring));
 
   /* Font */
@@ -32,54 +38,94 @@
   --ag-grid-size: 4px;
   --ag-cell-horizontal-padding: 14px;
   --ag-row-height: 42px;
-  
+
   /* Grid dimensions */
   min-height: 520px;
   height: 100%;
-  
+
   /* Scrollbar improvements */
   --ag-scrollbar-size: 8px;
+  --ag-control-panel-background-color: hsl(var(--card));
+  --ag-widget-container-horizontal-padding: 10px;
+  --ag-card-shadow: var(--shadow-sm);
+  --ag-popup-shadow: var(--shadow-md);
 }
 
-/* ============= Dark Theme ============= */
-.ag-theme-quartz-dark {
-  --ag-background-color: hsl(var(--background));
-  --ag-foreground-color: hsl(var(--foreground));
-  --ag-border-color: hsl(var(--border));
-  --ag-secondary-border-color: hsl(var(--border) / 0.4);
+/* ============= Hide Native Filters (using custom filter modal) ============= */
 
-  /* Header */
-  --ag-header-background-color: hsl(var(--secondary));
-  --ag-header-foreground-color: hsl(var(--foreground));
-  --ag-header-column-separator-color: hsl(var(--border) / 0.5);
+/* Hide floating filter row completely */
+.ag-theme-quartz .ag-floating-filter,
+.ag-theme-quartz-dark .ag-floating-filter,
+.ag-theme-quartz .ag-header-row-floating-filter,
+.ag-theme-quartz-dark .ag-header-row-floating-filter,
+.ag-theme-quartz .ag-floating-filter-full-body,
+.ag-theme-quartz-dark .ag-floating-filter-full-body,
+.ag-theme-quartz .ag-floating-filter-body,
+.ag-theme-quartz-dark .ag-floating-filter-body,
+.ag-theme-quartz .ag-floating-filter-input,
+.ag-theme-quartz-dark .ag-floating-filter-input {
+  display: none !important;
+  height: 0 !important;
+  min-height: 0 !important;
+  max-height: 0 !important;
+  overflow: hidden !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
 
-  /* Rows */
-  --ag-row-hover-color: hsl(var(--accent) / 0.3);
-  --ag-selected-row-background-color: hsl(var(--accent) / 0.5);
-  --ag-odd-row-background-color: transparent;
+/* Hide filter menu button in header */
+.ag-theme-quartz .ag-header-cell-menu-button,
+.ag-theme-quartz-dark .ag-header-cell-menu-button,
+.ag-theme-quartz .ag-header-cell-filter-button,
+.ag-theme-quartz-dark .ag-header-cell-filter-button,
+.ag-theme-quartz .ag-icon-menu,
+.ag-theme-quartz-dark .ag-icon-menu,
+.ag-theme-quartz .ag-icon-filter,
+.ag-theme-quartz-dark .ag-icon-filter {
+  display: none !important;
+  visibility: hidden !important;
+}
 
-  /* Cell */
-  --ag-cell-horizontal-border: none;
-  --ag-row-border-color: hsl(var(--border) / 0.3);
+/* Hide native filter popup and all filter-related elements */
+.ag-theme-quartz .ag-filter,
+.ag-theme-quartz-dark .ag-filter,
+.ag-theme-quartz .ag-popup,
+.ag-theme-quartz-dark .ag-popup,
+.ag-theme-quartz .ag-filter-wrapper,
+.ag-theme-quartz-dark .ag-filter-wrapper,
+.ag-theme-quartz .ag-filter-body-wrapper,
+.ag-theme-quartz-dark .ag-filter-body-wrapper,
+.ag-theme-quartz .ag-set-filter,
+.ag-theme-quartz-dark .ag-set-filter,
+.ag-theme-quartz .ag-text-field-input,
+.ag-theme-quartz-dark .ag-text-field-input {
+  display: none !important;
+  visibility: hidden !important;
+}
 
-  /* Inputs */
-  --ag-input-focus-border-color: hsl(var(--ring));
+/* Hide column menu */
+.ag-theme-quartz .ag-menu,
+.ag-theme-quartz-dark .ag-menu,
+.ag-theme-quartz .ag-menu-list,
+.ag-theme-quartz-dark .ag-menu-list,
+.ag-theme-quartz .ag-tabs,
+.ag-theme-quartz-dark .ag-tabs {
+  display: none !important;
+  visibility: hidden !important;
+}
 
-  /* Font */
-  --ag-font-family: var(--font-sans);
-  --ag-font-size: 12px;
+/* Force header row height to not include floating filter space */
+.ag-theme-quartz .ag-header,
+.ag-theme-quartz-dark .ag-header {
+  height: auto !important;
+  min-height: 48px !important;
+}
 
-  /* Spacing */
-  --ag-grid-size: 4px;
-  --ag-cell-horizontal-padding: 14px;
-  --ag-row-height: 42px;
-  
-  /* Grid dimensions */
-  min-height: 600px;
-  height: 100%;
-  
-  /* Scrollbar improvements */
-  --ag-scrollbar-size: 8px;
+/* Ensure only column header row is visible */
+.ag-theme-quartz .ag-header-row:not(.ag-header-row-column),
+.ag-theme-quartz-dark .ag-header-row:not(.ag-header-row-column) {
+  display: none !important;
 }
 
 /* ============= Global Overrides ============= */
@@ -91,6 +137,41 @@
   font-weight: 700;
   background: hsl(var(--secondary));
 }
+
+.ag-theme-quartz {
+  background-color: #ffffff;
+  color: hsl(var(--foreground));
+}
+
+.ag-theme-quartz-dark {
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+}
+
+.ag-theme-quartz .ag-root-wrapper,
+.ag-theme-quartz-dark .ag-root-wrapper,
+.ag-theme-quartz .ag-body-viewport,
+.ag-theme-quartz-dark .ag-body-viewport,
+.ag-theme-quartz .ag-center-cols-viewport,
+.ag-theme-quartz-dark .ag-center-cols-viewport,
+.ag-theme-quartz .ag-pinned-left-cols-container,
+.ag-theme-quartz-dark .ag-pinned-left-cols-container,
+.ag-theme-quartz .ag-pinned-right-cols-container,
+.ag-theme-quartz-dark .ag-pinned-right-cols-container,
+.ag-theme-quartz .ag-center-cols-container,
+.ag-theme-quartz-dark .ag-center-cols-container,
+.ag-theme-quartz .ag-body-horizontal-scroll-viewport,
+.ag-theme-quartz-dark .ag-body-horizontal-scroll-viewport {
+  background-color: hsl(var(--card));
+}
+
+.ag-theme-quartz .ag-center-cols-viewport,
+.ag-theme-quartz .ag-pinned-right-cols-viewport,
+.ag-theme-quartz-dark .ag-center-cols-viewport,
+.ag-theme-quartz-dark .ag-center-cols-viewport {
+  background: hsl(var(--card)) !important;
+}
+
 
 .ag-theme-quartz .ag-header-cell,
 .ag-theme-quartz-dark .ag-header-cell {
@@ -142,19 +223,39 @@
 /* Row styling */
 .ag-theme-quartz .ag-row,
 .ag-theme-quartz-dark .ag-row {
-  border-bottom: 1px solid hsl(var(--border) / 0.25);
+  border-bottom: 1px solid hsl(var(--table-border));
+  background-color: hsl(var(--card));
   transition: background-color 0.1s ease;
 }
 
 .ag-theme-quartz .ag-row:hover,
 .ag-theme-quartz-dark .ag-row:hover {
-  background-color: hsl(var(--muted) / 0.7) !important;
+  background-color: var(--ag-row-hover-color);
 }
 
 .ag-theme-quartz .ag-row-selected,
 .ag-theme-quartz-dark .ag-row-selected {
-  background-color: hsl(var(--accent) / 0.4) !important;
+  background-color: hsl(var(--primary) / 0.1) !important;
   border-left: 2px solid hsl(var(--primary));
+}
+
+.ag-theme-quartz .ag-row-selected .ag-cell,
+.ag-theme-quartz-dark .ag-row-selected .ag-cell {
+  background-color: transparent !important;
+}
+
+/* Fix text rendering artifacts */
+.ag-theme-quartz .ag-cell,
+.ag-theme-quartz-dark .ag-cell {
+  line-height: normal;
+  padding: 0 14px;
+  border-right: none;
+  min-height: 48px;
+  font-size: 13px;
+  font-weight: 400;
+  color: hsl(var(--foreground));
+  display: flex;
+  align-items: center;
 }
 
 /* Pinned columns */
@@ -216,7 +317,7 @@
   z-index: 20 !important;
   background: hsl(var(--background)) !important;
   border-top: 2px solid hsl(var(--border)) !important;
-  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1) !important;
+  box-shadow: 0 -2px 8px hsl(var(--foreground) / 0.12) !important;
   height: 18px !important;
 }
 

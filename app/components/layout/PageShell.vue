@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-slate-100 text-slate-900">
+  <div class="min-h-screen bg-[hsl(var(--background))] text-[hsl(var(--foreground))]">
     <slot />
   </div>
 </template>

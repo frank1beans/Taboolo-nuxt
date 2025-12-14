@@ -5,16 +5,18 @@ import mongoose, { Types } from 'mongoose';
 import { runSixImport, runSixImportRaw } from '#importers/python-six/client';
 import {
   upsertEstimate,
-  upsertPriceCatalog,
   upsertEstimateItems,
-  buildAndUpsertWbsFromItems,
+} from '#services/EstimateService';
+import { upsertPriceCatalog } from '#services/CatalogService';
+import { buildAndUpsertWbsFromItems } from '#services/WbsService';
+import {
   upsertRawUnits,
   upsertRawPriceLists,
   upsertRawGroupValues,
   upsertRawProducts,
   upsertRawPreventivi,
   upsertRawRilevazioni,
-} from '#utils/import-adapter';
+} from '#services/RawDataService';
 import type { RawImportPayload } from '#utils/raw-types';
 
 export default defineEventHandler(async (event) => {

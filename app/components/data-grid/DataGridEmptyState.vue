@@ -1,12 +1,26 @@
 <template>
-  <div class="flex flex-col items-center justify-center h-full min-h-[400px] text-slate-500">
-    <div class="text-6xl mb-4">📋</div>
-    <h3 class="text-lg font-semibold text-slate-700 mb-2">{{ title }}</h3>
-    <p class="text-sm text-slate-500">{{ message }}</p>
+  <div class="flex flex-col items-center justify-center h-full min-h-[400px] text-[hsl(var(--muted-foreground))]">
+    <!-- Illustration -->
+    <div class="w-20 h-20 rounded-2xl flex items-center justify-center mb-5 bg-[hsl(var(--muted))] border border-[hsl(var(--border))]">
+      <Icon 
+        name="heroicons:document-magnifying-glass" 
+        class="w-10 h-10 text-[hsl(var(--muted-foreground))]"
+      />
+    </div>
+    
+    <h3 class="text-lg font-semibold mb-2 text-[hsl(var(--foreground))]">
+      {{ title }}
+    </h3>
+    
+    <p class="text-sm max-w-sm text-center text-[hsl(var(--muted-foreground))]">
+      {{ message }}
+    </p>
+    
     <UButton
       v-if="showAction"
       color="primary"
       size="md"
+      icon="i-heroicons-arrow-path"
       class="mt-6"
       @click="$emit('action')"
     >

@@ -10,8 +10,10 @@ useHead({
 </script>
 
 <template>
-  <NuxtLayout>
-    <NuxtPage />
-  </NuxtLayout>
+  <ColorScheme tag="div">
+    <NuxtLayout>
+      <NuxtPage />
+    </NuxtLayout>
+  </ColorScheme>
   <Toaster position="top-right" />
 </template>

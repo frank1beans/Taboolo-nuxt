@@ -1,8 +1,8 @@
 <template>
   <div class="flex flex-col h-full">
     <!-- Tree Controls -->
-    <div class="px-3 py-2 border-b border-slate-800 flex items-center justify-between">
-      <span class="text-xs font-semibold text-slate-400 uppercase tracking-wide">WBS Tree</span>
+    <div class="px-3 py-2 border-b border-[hsl(var(--border))] bg-[hsl(var(--secondary))] flex items-center justify-between">
+      <span class="text-xs font-semibold text-[hsl(var(--muted-foreground))] uppercase tracking-wide">WBS Tree</span>
       <div class="flex items-center gap-1">
         <UButton
           icon="i-heroicons-chevron-down"
@@ -25,7 +25,7 @@
 
     <!-- Loading State -->
     <div v-if="loading" class="flex-1 flex items-center justify-center">
-      <div class="text-slate-400 text-sm">Caricamento...</div>
+      <div class="text-[hsl(var(--muted-foreground))] text-sm">Caricamento...</div>
     </div>
 
     <!-- Tree Nodes -->
@@ -43,13 +43,13 @@
     </div>
 
     <!-- Empty State -->
-    <div v-else class="flex-1 flex flex-col items-center justify-center text-slate-500 px-4">
+    <div v-else class="flex-1 flex flex-col items-center justify-center text-[hsl(var(--muted-foreground))] px-4">
       <div class="text-4xl mb-2">🌳</div>
       <div class="text-sm text-center">Nessuna struttura WBS disponibile</div>
     </div>
 
     <!-- Footer Actions -->
-    <div v-if="selectedNodeId" class="px-3 py-2 border-t border-slate-800">
+    <div v-if="selectedNodeId" class="px-3 py-2 border-t border-[hsl(var(--border))] bg-[hsl(var(--secondary))]">
       <UButton
         color="gray"
         variant="ghost"

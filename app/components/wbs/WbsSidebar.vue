@@ -1,10 +1,10 @@
 <template>
   <aside
     v-if="visible"
-    class="w-72 bg-white border-r border-slate-200 h-full flex flex-col shadow-sm"
+    class="w-72 bg-[hsl(var(--card))] border-r border-[hsl(var(--border))] h-full flex flex-col shadow-sm text-[hsl(var(--foreground))]"
   >
-    <div class="px-3 py-2 border-b border-slate-200 flex items-center justify-between bg-slate-50">
-      <div class="text-sm font-semibold text-slate-800">WBS</div>
+    <div class="px-3 py-2 border-b border-[hsl(var(--border))] flex items-center justify-between bg-[hsl(var(--secondary))]">
+      <div class="text-sm font-semibold text-[hsl(var(--foreground))]">WBS</div>
       <div class="flex items-center gap-1">
         <UButton
           icon="i-heroicons-arrows-pointing-out"
@@ -29,35 +29,35 @@
         <li
           v-for="node in nodes"
           :key="node.id"
-          class="rounded border border-transparent hover:border-slate-200"
+          class="rounded border border-transparent hover:border-[hsl(var(--border))]"
         >
           <UButton
             variant="ghost"
             color="gray"
             size="sm"
-            class="w-full justify-start px-2 py-1 flex items-center gap-2 hover:bg-slate-50"
+            class="w-full justify-start px-2 py-1 flex items-center gap-2 hover:bg-[hsl(var(--muted))]"
             @click="selectNode(node)"
           >
-            <span class="text-xs font-mono text-slate-500">{{ node.code }}</span>
-            <span class="font-medium text-slate-800">{{ node.name }}</span>
-            <span v-if="showLevel" class="text-[11px] text-slate-500">L{{ node.level }}</span>
+            <span class="text-xs font-mono text-[hsl(var(--muted-foreground))]">{{ node.code }}</span>
+            <span class="font-medium text-[hsl(var(--foreground))]">{{ node.name }}</span>
+            <span v-if="showLevel" class="text-[11px] text-[hsl(var(--muted-foreground))]">L{{ node.level }}</span>
           </UButton>
-          <ul v-if="node.children?.length" class="ml-4 border-l border-slate-200 pl-2 space-y-1">
+          <ul v-if="node.children?.length" class="ml-4 border-l border-[hsl(var(--border))] pl-2 space-y-1">
             <li
               v-for="child in node.children"
               :key="child.id"
-              class="rounded border border-transparent hover:border-slate-200"
+              class="rounded border border-transparent hover:border-[hsl(var(--border))]"
             >
               <UButton
                 variant="ghost"
                 color="gray"
                 size="sm"
-                class="w-full justify-start px-2 py-1 flex items-center gap-2 hover:bg-slate-50"
+                class="w-full justify-start px-2 py-1 flex items-center gap-2 hover:bg-[hsl(var(--muted))]"
                 @click="selectNode(child)"
               >
-                <span class="text-xs font-mono text-slate-500">{{ child.code }}</span>
-                <span class="text-slate-800">{{ child.name }}</span>
-                <span v-if="showLevel" class="text-[11px] text-slate-500">L{{ child.level }}</span>
+                <span class="text-xs font-mono text-[hsl(var(--muted-foreground))]">{{ child.code }}</span>
+                <span class="text-[hsl(var(--foreground))]">{{ child.name }}</span>
+                <span v-if="showLevel" class="text-[11px] text-[hsl(var(--muted-foreground))]">L{{ child.level }}</span>
               </UButton>
             </li>
           </ul>

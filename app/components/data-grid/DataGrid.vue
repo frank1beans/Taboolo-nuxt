@@ -2,7 +2,7 @@
   <ClientOnly>
     <div
       ref="gridWrapper"
-      class="ag-theme-quartz w-full border border-slate-200 rounded-md relative flex flex-col"
+      class="w-full relative flex flex-col rounded-xl border overflow-hidden border-[hsl(var(--border))] bg-[hsl(var(--card))] text-[hsl(var(--foreground))]"
       :style="{ height }"
     >
       <!-- Loading State -->
@@ -24,19 +24,26 @@
 
         <!-- AG Grid -->
         <AgGridVue
-          class="flex-1 w-full"
+          :key="gridKey"
+          :class="['flex-1 w-full', themeClass]"
           :columnDefs="columnDefs"
           :rowData="rowData"
           :defaultColDef="defaultColDef"
           :components="components"
           :context="context"
           :rowSelection="rowSelection"
-          :headerHeight="config.headerHeight || 64"
-          :rowHeight="config.rowHeight"
+          :headerHeight="config.headerHeight || 48"
+          :rowHeight="config.rowHeight || 44"
+          :floatingFiltersHeight="0"
+          :suppressMenuHide="true"
+          :animateRows="config.animateRows ?? true"
+          :suppressCellFocus="config.suppressCellFocus ?? true"
+          :domLayout="domLayout"
           @grid-ready="onGridReady"
           @row-clicked="handleRowClick"
           @row-double-clicked="handleRowDoubleClick"
           @selection-changed="handleSelectionChange"
+          @column-resized="onColumnResized"
         />
 
         <!-- Filter Chips -->
@@ -46,8 +53,8 @@
           @clear-all="clearAllFilters"
         />
 
-        <!-- Filter Panel -->
-        <DataGridFilterPanel
+        <!-- Column Filter Popover -->
+        <ColumnFilterPopover
           :panel="filterPanel"
           @apply-filter="applyColumnFilter"
           @close="filterPanel = null"
@@ -67,7 +74,7 @@
 
     <template #fallback>
       <div
-        class="w-full border border-slate-200 rounded-md flex items-center justify-center text-sm text-slate-500"
+        class="w-full border border-[hsl(var(--border))] rounded-md flex items-center justify-center text-sm text-[hsl(var(--muted-foreground))]"
         :style="{ height }"
       >
         Caricamento tabella...
@@ -77,13 +84,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, defineComponent, h } from 'vue';
+import { ref, computed, defineComponent, h } from 'vue';
 import { AgGridVue } from 'ag-grid-vue3';
 import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-quartz.css';
+import '~/assets/css/styles/ag-grid-custom.css';
 
 import type { DataGridConfig } from '~/types/data-grid';
 import DataGridHeader from './DataGridHeader.vue';
+import ColumnFilterPopover from './ColumnFilterPopover.vue';
 
 const props = withDefaults(
   defineProps<{
@@ -100,6 +109,7 @@ const props = withDefaults(
     loading?: boolean;
     customComponents?: Record<string, any>;
     contextExtras?: Record<string, any>;
+    domLayout?: 'normal' | 'autoHeight' | 'print';
   }>(),
   {
     rowData: () => [],
@@ -123,10 +133,16 @@ const emit = defineEmits<{
   'selection-changed': [rows: any[]];
   'filter-changed': [filterModel: any];
   'sort-changed': [sortModel: any[]];
+  'grid-ready': [params: any];
   'empty-action': [];
 }>();
 
 const gridWrapper = ref<HTMLElement | null>(null);
+const colorMode = useColorMode();
+const isDark = computed(() => colorMode.value === 'dark');
+const themeClass = computed(() => (isDark.value ? 'ag-theme-quartz-dark' : 'ag-theme-quartz'));
+// Key to force re-render when theme changes
+const gridKey = computed(() => `grid-${isDark.value ? 'dark' : 'light'}`);
 
 // Use composables
 const { gridApi, gridReady, onGridReady: onGridReadyBase } = useDataGrid(props.config);
@@ -141,6 +157,7 @@ const {
   removeFilter,
   clearAllFilters,
   openFilterPanel,
+  getCurrentFilter,
 } = useDataGridFilters(gridApi, props.config.columns);
 
 const { exportToXlsx } = useDataGridExport(gridApi);
@@ -151,13 +168,19 @@ const { createColumnDefs, getDefaultColDef } = useDataGridColumns();
 const columnDefs = computed(() => {
   return createColumnDefs(props.config.columns, props.rowData).map((col) => ({
     ...col,
-    headerComponent: 'dataGridHeader',
+    headerComponent: col.headerComponent !== undefined ? col.headerComponent : 'dataGridHeader',
   }));
 });
 
 const defaultColDef = computed(() => ({
+  sortable: true,
+  resizable: true,
+  // Keep filter for API (setFilterModel), hide UI via CSS
+  filter: 'agTextColumnFilter',
+  floatingFilter: false,
+  suppressMenu: true,
+  suppressHeaderMenuButton: true,
   ...getDefaultColDef(),
-  ...props.config.defaultColDef,
 }));
 
 // Custom header component
@@ -177,15 +200,18 @@ const components = computed(() => ({
 // Context for header components
 const context = computed(() => ({
   openFilterPanel: (config: any) => {
-    const containerRect = gridWrapper.value?.getBoundingClientRect();
-    openFilterPanel(config, containerRect);
+    openFilterPanel(config);
   },
+  getCurrentFilter: (field: string) => getCurrentFilter(field),
   ...(props.contextExtras || {}),
 }));
 
 // Grid ready handler
 const onGridReady = (params: any) => {
   onGridReadyBase(params);
+
+  // Emit grid-ready to parent
+  emit('grid-ready', params);
 
   // Setup event listeners for filter and sort changes
   params.api.addEventListener('filterChanged', () => {
@@ -212,12 +238,12 @@ const handleSelectionChange = () => {
   emit('selection-changed', selectedRows);
 };
 
-// Close filter panel on scroll
-onMounted(() => {
-  window.addEventListener('scroll', () => {
-    filterPanel.value = null;
-  });
-});
+const onColumnResized = (e: any) => {
+  if (!e?.finished || e?.source === 'sizeColumnsToFit') return;
+  e.api?.sizeColumnsToFit();
+};
+
+// Filter modal is now managed by UModal, no scroll listener needed
 
 // Expose methods for parent components
 defineExpose({
@@ -229,37 +255,24 @@ defineExpose({
 </script>
 
 <style scoped>
-.ag-theme-quartz .ag-row {
-  position: relative;
-  border-bottom: none;
+:deep(.ag-theme-quartz),
+:deep(.ag-theme-quartz-dark) {
+  font-family: var(--font-sans);
 }
 
-.ag-theme-quartz .ag-center-cols-container {
-  min-width: 100% !important;
+:deep(.ag-theme-quartz .ag-root-wrapper),
+:deep(.ag-theme-quartz-dark .ag-root-wrapper) {
+  border: none;
 }
 
-.ag-theme-quartz .ag-body-viewport {
-  overflow-x: hidden !important;
+:deep(.ag-theme-quartz .ag-header),
+:deep(.ag-theme-quartz-dark .ag-header) {
+  border-bottom: 1px solid hsl(var(--border) / 0.4);
 }
 
-.ag-theme-quartz .ag-row::after {
-  content: '';
-  position: absolute;
-  inset: 0 0 -1px 0;
-  border-bottom: 1px solid #e2e8f0;
-  pointer-events: none;
-}
-
-.ag-theme-quartz .ag-row-odd {
-  background: #f8fafc;
-}
-
-.ag-theme-quartz .ag-cell {
-  padding-top: 6px;
-  padding-bottom: 6px;
-}
-
-.ag-theme-quartz .ag-header {
-  border-bottom: 1px solid #cbd5e1;
+:deep(.ag-theme-quartz .ag-cell),
+:deep(.ag-theme-quartz-dark .ag-cell) {
+  padding-top: 8px;
+  padding-bottom: 8px;
 }
 </style>

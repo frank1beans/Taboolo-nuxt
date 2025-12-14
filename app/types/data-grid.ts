@@ -1,4 +1,5 @@
 export interface DataGridColumn {
+  colId?: string;
   field: string;
   headerName: string;
   flex?: number;
@@ -6,15 +7,42 @@ export interface DataGridColumn {
   minWidth?: number;
   maxWidth?: number;
   filter?: boolean | string;
+  floatingFilter?: boolean;
   sortable?: boolean;
   valueFormatter?: (params: any) => string;
   cellRenderer?: string | any;
+  cellClass?: string;
+  headerClass?: string;
+  headerComponent?: string | any;
   hide?: boolean;
   valuesGetter?: () => string[];
   pinned?: 'left' | 'right' | boolean | null;
   lockPosition?: boolean | 'left' | 'right';
+  suppressHeaderMenuButton?: boolean;
   suppressMenu?: boolean;
   resizable?: boolean;
+  suppressSizeToFit?: boolean;
+  suppressMovableColumns?: boolean;
+}
+
+export type ColumnFilterOperator =
+  | 'contains'
+  | 'starts_with'
+  | 'equals'
+  | 'not_contains'
+  | 'is_empty'
+  | 'is_not_empty'
+  | 'greater_than'
+  | 'less_than'
+  | 'greater_than_or_equal'
+  | 'less_than_or_equal'
+  | 'not_equals'
+  | 'in_range';
+
+export interface ColumnFilter {
+  columnKey: string;
+  operator: ColumnFilterOperator;
+  value?: string | null;
 }
 
 export interface DataGridConfig {
@@ -22,6 +50,8 @@ export interface DataGridConfig {
   defaultColDef?: any;
   rowHeight?: number;
   headerHeight?: number;
+  animateRows?: boolean;
+  suppressCellFocus?: boolean;
   pagination?: PaginationConfig;
   enableQuickFilter?: boolean;
   enableExport?: boolean;
@@ -53,24 +83,23 @@ export interface ActiveFilter {
   field: string;
   label: string;
   value: string;
-  type: 'equals' | 'contains' | 'blank' | 'notBlank';
+  operator: ColumnFilterOperator;
 }
 
 export interface FilterPanelState {
   field: string;
   label: string;
   options: string[];
-  top: number;
-  left: number;
-  width: number;
-  height: number;
-  anchor: 'left' | 'right';
-  active?: string;
+  triggerRect?: DOMRect;
+  triggerEl?: HTMLElement | null;
+  currentFilter?: ColumnFilter | null;
+  filterType?: 'text' | 'number' | 'date';
 }
 
 export interface FilterPanelConfig {
   field: string;
   label: string;
   options: string[];
-  rect: DOMRect;
+  triggerEl?: HTMLElement | null;
+  filterType?: 'text' | 'number' | 'date';
 }

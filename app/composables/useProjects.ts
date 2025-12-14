@@ -1,18 +1,6 @@
 import { ref } from 'vue';
 import type { DataGridFetchParams, DataGridFetchResponse } from '~/types/data-grid';
-
-export interface Project {
-  id: string;
-  name: string;
-  code: string;
-  description?: string;
-  notes?: string;
-  business_unit?: string;
-  revision?: string;
-  status: 'setup' | 'in_progress' | 'closed';
-  created_at: Date;
-  updated_at: Date;
-}
+import type { Project } from '~/types/project';
 
 export function useProjects() {
   const projects = ref<Project[]>([]);

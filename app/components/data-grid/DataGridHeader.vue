@@ -1,38 +1,97 @@
 <template>
   <div class="flex flex-col gap-1 relative">
-    <div class="flex items-center gap-1 text-[11px] font-semibold text-slate-800 whitespace-nowrap">
-      <span>{{ params.displayName }}</span>
+    <div class="flex items-center gap-1.5 text-[11px] font-semibold whitespace-nowrap">
+      <span class="text-[11px] font-semibold uppercase tracking-wide text-[hsl(var(--muted-foreground))]">
+        {{ params.displayName }}
+      </span>
+      
+      <!-- Sort Button -->
       <button
-        class="text-[11px] px-1 py-0.5 rounded border border-slate-300 bg-white hover:bg-slate-100 transition leading-none"
-        type="button"
-        title="Ordina"
-        @click="cycleSort"
-      >
-        {{ sortIcon }}
-      </button>
-      <button
+        v-if="isSortable"
         :class="[
-          'text-[11px] px-1 py-0.5 rounded border border-slate-300 bg-white hover:bg-slate-100 transition leading-none',
-          filterActive ? 'border-indigo-500 text-indigo-600 bg-indigo-50' : '',
+          'inline-flex items-center justify-center w-6 h-6 rounded-md transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring)/0.6)] border',
+          sortState
+            ? 'bg-[hsl(var(--primary)/0.12)] text-[hsl(var(--primary))] border-[hsl(var(--primary)/0.4)]'
+            : 'bg-[hsl(var(--card))] text-[hsl(var(--muted-foreground))] border-[hsl(var(--border))] hover:bg-[hsl(var(--muted)/0.6)] hover:text-[hsl(var(--foreground))]'
         ]"
         type="button"
-        title="Filtro"
+        :aria-label="`Ordina per ${params.displayName}`"
+        :title="`Ordina per ${params.displayName}`"
+        @click="cycleSort"
+      >
+        <Icon 
+          :name="sortIconName" 
+          :class="iconSize"
+        />
+      </button>
+      
+      <!-- Filter Button -->
+      <button
+        v-if="isFilterable"
+        :class="[
+          'relative inline-flex items-center justify-center w-6 h-6 rounded-md transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring)/0.6)] border',
+          isFilterActive
+            ? 'bg-[hsl(var(--success)/0.14)] text-[hsl(var(--success))] border-[hsl(var(--success)/0.4)]'
+            : 'bg-[hsl(var(--card))] text-[hsl(var(--muted-foreground))] border-[hsl(var(--border))] hover:bg-[hsl(var(--muted)/0.6)] hover:text-[hsl(var(--foreground))]'
+        ]"
+        type="button"
+        :aria-label="filterTooltip"
+        :title="filterTooltip"
         @click="openFilter"
       >
-        ⏷
+        <Icon 
+          :name="isFilterActive ? 'heroicons:funnel-solid' : 'heroicons:funnel'" 
+          :class="iconSize"
+        />
+        <span
+          v-if="isFilterActive"
+          class="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-[hsl(var(--success))] ring-2 ring-[hsl(var(--card))]"
+        />
       </button>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 
 const props = defineProps<{
   params: any;
 }>();
 
+const iconSize = 'w-4 h-4';
+
 const sortState = ref<'asc' | 'desc' | null>((props.params.column?.getSort() as any) || null);
+const isSortable = computed(() => props.params.column?.getColDef?.()?.sortable !== false);
+const isFilterable = computed(() => props.params.column?.getColDef?.()?.filter !== false);
+
+const isFilterActive = ref(false);
+
+const updateFilterState = () => {
+  isFilterActive.value = props.params.column?.isFilterActive?.() ?? false;
+};
+
+const onFilterChanged = (event: any) => {
+  if (event.columns.includes(props.params.column)) {
+    updateFilterState();
+  }
+};
+
+// Also listen to sort changes to update sort state
+const onSortChanged = () => {
+  sortState.value = (props.params.column?.getSort() as any) || null;
+};
+
+onMounted(() => {
+  updateFilterState();
+  props.params.api.addEventListener('filterChanged', updateFilterState);
+  props.params.api.addEventListener('sortChanged', onSortChanged);
+});
+
+onBeforeUnmount(() => {
+  props.params.api.removeEventListener('filterChanged', updateFilterState);
+  props.params.api.removeEventListener('sortChanged', onSortChanged);
+});
 
 const cycleSort = () => {
   const next = sortState.value === 'asc' ? 'desc' : sortState.value === 'desc' ? null : 'asc';
@@ -41,25 +100,47 @@ const cycleSort = () => {
     state: [{ colId: props.params.column?.getColId(), sort: next || undefined }],
     defaultState: { sort: null },
   });
-  props.params.api.onSortChanged();
-  props.params.api.refreshHeader();
+  // No need to manually call onSortChanged or refreshHeader, the event listener will handle it
 };
 
-const sortIcon = computed(() => {
-  if (sortState.value === 'asc') return '▲';
-  if (sortState.value === 'desc') return '▼';
-  return '⇅';
+const sortIconName = computed(() => {
+  if (sortState.value === 'asc') return 'heroicons:bars-arrow-up';
+  if (sortState.value === 'desc') return 'heroicons:bars-arrow-down';
+  return 'heroicons:arrows-up-down';
 });
 
-const filterActive = computed(() => props.params.column?.isFilterActive?.());
+const activeFilter = computed(() => {
+  const colId = props.params.column?.getColId?.();
+  return props.params.context?.getCurrentFilter?.(colId || '');
+});
+
+const filterTooltip = computed(() => {
+  if (!isFilterActive.value || !activeFilter.value) return 'Filtro';
+  const { operator, value } = activeFilter.value;
+  const labels: Record<string, string> = {
+    contains: 'Contiene',
+    starts_with: 'Inizia con',
+    equals: 'Uguale a',
+    not_contains: 'Non contiene',
+    is_empty: 'Vuoto',
+    is_not_empty: 'Non vuoto',
+  };
+  const suffix = operator === 'is_empty' || operator === 'is_not_empty' ? '' : `${value ? `: ${value}` : ''}`;
+  return `Filtro attivo: ${labels[operator] || 'Filtro'}${suffix}`;
+});
 
 const openFilter = (event: MouseEvent) => {
   const options = props.params?.valuesGetter?.() ?? [];
+  const target = (event.currentTarget as HTMLElement) || null;
+  const colDef = props.params.column?.getColDef?.();
+  const filterType = colDef?.filter === 'agNumberColumnFilter' ? 'number' : 'text';
+
   props.params.context?.openFilterPanel?.({
     field: props.params.column?.getColId?.(),
     label: props.params.displayName,
     options,
-    rect: (event.currentTarget as HTMLElement).getBoundingClientRect(),
+    triggerEl: target,
+    filterType,
   });
 };
 </script>
