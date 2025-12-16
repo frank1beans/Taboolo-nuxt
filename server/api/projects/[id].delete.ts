@@ -1,12 +1,12 @@
 import { defineEventHandler, createError, getRouterParam } from 'h3';
-import { Project, Estimate, WbsNode, Item, PriceCatalogItem } from '#models';
+import { Project, Estimate, WbsNode, EstimateItem, PriceListItem } from '#models';
 
 export default defineEventHandler(async (event) => {
   const id = getRouterParam(event, 'id');
 
   try {
     const project = await Project.findById(id);
-    
+
     if (!project) {
       throw createError({
         statusCode: 404,
@@ -15,10 +15,10 @@ export default defineEventHandler(async (event) => {
     }
 
     // Cascade delete related entities
-    await Item.deleteMany({ project_id: id });
+    await EstimateItem.deleteMany({ project_id: id });
     await WbsNode.deleteMany({ project_id: id }); // Updated key name in model
     await Estimate.deleteMany({ project_id: id });
-    await PriceCatalogItem.deleteMany({ project_id: id }); // Updated key name in model
+    await PriceListItem.deleteMany({ project_id: id }); // Updated key name in model
 
     await Project.findByIdAndDelete(id);
 

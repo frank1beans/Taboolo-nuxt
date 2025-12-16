@@ -60,5 +60,6 @@ export default defineNuxtConfig({
       apiBaseUrl: '',
     },
     mongodbUri: process.env.MONGODB_URI || '',
+    pythonApiBaseUrl: process.env.PYTHON_API_URL || 'http://localhost:8000/api/v1',
   },
 });

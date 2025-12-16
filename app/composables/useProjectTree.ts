@@ -65,7 +65,7 @@ export const useProjectTree = (
         id: `estimate-${est.id}`,
         label: est.name || 'Preventivo',
         icon: isActive ? 'heroicons:document-check' : 'heroicons:document',
-        to: `/estimates/${est.id}`,
+        to: `/projects/${project.id}/estimate/${est.id}`,
         count: roundCount || companyCount ? Math.max(roundCount, companyCount) : undefined,
         children,
       }

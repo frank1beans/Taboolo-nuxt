@@ -1,5 +1,5 @@
 import { defineEventHandler, createError, getRouterParam } from 'h3';
-import { PriceCatalogItem } from '#models';
+import { PriceListItem } from '#models'; // Updated
 import { serializeDocs } from '#utils/serialize';
 
 export default defineEventHandler(async (event) => {
@@ -9,7 +9,7 @@ export default defineEventHandler(async (event) => {
   }
 
   try {
-    const items = await PriceCatalogItem.find({ project_id: projectId }).sort({ created_at: -1 }).lean();
+    const items = await PriceListItem.find({ project_id: projectId }).sort({ created_at: -1 }).lean();
     return { items: serializeDocs(items) };
   } catch (error) {
     throw createError({

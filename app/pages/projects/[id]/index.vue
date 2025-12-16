@@ -6,7 +6,7 @@ import type { DataGridConfig } from '~/types/data-grid';
 const route = useRoute();
 const projectId = route.params.id as string;
 
-const { data: context, status } = await useFetch(`/api/projects/${projectId}/context`);
+const { data: context, status, refresh } = await useFetch(`/api/projects/${projectId}/context`);
 
 const loading = computed(() => status.value === 'pending');
 const project = computed(() => context.value);
@@ -48,6 +48,7 @@ const gridConfig: DataGridConfig = {
     },
     {
       colId: 'actions',
+      field: '',
       headerName: '',
       width: 100,
       cellRenderer: 'actionsRenderer',
@@ -69,17 +70,43 @@ const navigateToEstimate = (estimate: any) => {
   navigateTo(`/projects/${projectId}/estimate/${estimate.id}`);
 };
 
+const deleteEstimate = async (estimate: any) => {
+  if (!confirm(`Sei sicuro di voler eliminare il preventivo "${estimate.name}"? Questa azione è irreversibile.`)) {
+    return;
+  }
+  
+  try {
+    await $fetch(`/api/projects/${projectId}/estimates/${estimate.id}`, {
+      method: 'DELETE',
+    });
+    // Refresh data
+    await refresh(); // assuming refresh function is available from useFetch result
+  } catch (error) {
+    console.error('Error deleting estimate:', error);
+    alert('Errore durante l\'eliminazione del preventivo.');
+  }
+};
+
 // Custom Actions Renderer for this page
 const ActionsRenderer = defineComponent({
   props: ['params'],
   setup(props) {
-    return () => h(resolveComponent('UButton'), {
-      icon: 'heroicons:eye',
-      color: 'gray',
-      variant: 'ghost',
-      size: 'xs',
-      onClick: () => navigateToEstimate(props.params.data),
-    });
+    return () => h('div', { class: 'flex items-center gap-1' }, [
+        h(resolveComponent('UButton'), {
+            icon: 'heroicons:eye',
+            color: 'gray',
+            variant: 'ghost',
+            size: 'xs',
+            onClick: () => navigateToEstimate(props.params.data),
+        }),
+        h(resolveComponent('UButton'), {
+            icon: 'heroicons:trash',
+            color: 'red',
+            variant: 'ghost',
+            size: 'xs',
+            onClick: () => deleteEstimate(props.params.data),
+        })
+    ]);
   },
 });
 
@@ -108,6 +135,15 @@ const links = computed(() => [
               <Icon name="heroicons:document-text" class="w-3.5 h-3.5 mr-1" />
               {{ estimates.length }} {{ estimates.length === 1 ? 'preventivo' : 'preventivi' }}
             </UBadge>
+            <UButton 
+              color="primary" 
+              size="sm" 
+              icon="i-heroicons-arrow-up-tray" 
+              variant="solid"
+              @click="navigateTo(`/projects/${projectId}/import`)"
+            >
+              Importa Dati
+            </UButton>
           </div>
         </div>
       </template>

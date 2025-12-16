@@ -97,7 +97,7 @@ const tryExtractAtUrl = async (url: string, payload: PropertyExtractionPayload) 
 
 const getApiBaseUrl = () => {
   const config = useRuntimeConfig();
-  const fromRuntime = config?.public?.pythonApiBaseUrl || config?.pythonApiBaseUrl;
+  const fromRuntime = config?.public?.apiBaseUrl;
   const base = (fromRuntime as string | undefined) || API_BASE_URL;
   return base.replace(/\/+$/, "");
 };
@@ -427,11 +427,20 @@ export const api = {
   async previewSixEstimates(
     projectId: number | string,
     file: File,
+    options?: { raw?: boolean }
   ): Promise<ApiSixEstimatesPreview> {
     const formData = new FormData();
     formData.append("file", file);
+
+    // Add raw mode query param
+    const query = new URLSearchParams();
+    if (options?.raw) {
+      query.set("mode", "raw");
+    }
+    const suffix = query.toString() ? `?${query.toString()}` : "";
+
     return apiFetch<ApiSixEstimatesPreview>(
-      `/projects/${projectId}/import-six/preview`,
+      `/projects/${projectId}/import-six/preview${suffix}`,
       {
         method: "POST",
         body: formData,
@@ -446,6 +455,7 @@ export const api = {
     options?: {
       enableEmbeddings?: boolean;
       enablePropertyExtraction?: boolean;
+      raw?: boolean;
     },
   ): Promise<ApiSixImportReport> {
     const formData = new FormData();
@@ -459,7 +469,15 @@ export const api = {
     if (options?.enablePropertyExtraction) {
       formData.append("extract_properties", "true");
     }
-    return apiFetch<ApiSixImportReport>(`/projects/${projectId}/import-six`, {
+
+    // Add raw mode query param
+    const query = new URLSearchParams();
+    if (options?.raw) {
+      query.set("mode", "raw");
+    }
+    const suffix = query.toString() ? `?${query.toString()}` : "";
+
+    return apiFetch<ApiSixImportReport>(`/projects/${projectId}/import-six${suffix}`, {
       method: "POST",
       body: formData,
     });

@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Types } from 'mongoose';
-import { PriceCatalogItem } from '#models';
+import { PriceListItem } from '#models';
 
 type AnyRecord = Record<string, any>;
 
@@ -21,11 +21,13 @@ export async function upsertPriceCatalog(projectId: string, catalog: AnyRecord[]
                     $set: {
                         project_id: projectObjectId,
                         product_id: productId,
-                        item_code: entry.code ?? '',
-                        item_description: entry.description,
-                        unit_id: entry.unit_id ?? entry.unit_label,
-                        wbs6_code: entry.wbs6_code,
-                        wbs7_code: entry.wbs7_code,
+                        code: entry.code ?? '',
+                        description: entry.description,
+                        long_description: entry.extraDescription,
+                        unit: entry.unit_id ?? entry.unit_label,
+                        price: entry.price,
+                        // wbs6_code: entry.wbs6_code, // Removed from schema
+                        wbs_ids: [entry.wbs_id].filter(Boolean), // Approximation if wbs_id present
                         price_list_id: entry.price_list_id,
                         source_preventivo_id: entry.source_preventivo_id,
                         import_run_id: entry.import_run_id,
@@ -37,5 +39,5 @@ export async function upsertPriceCatalog(projectId: string, catalog: AnyRecord[]
         };
     });
 
-    await PriceCatalogItem.bulkWrite(operations, { ordered: false });
+    await PriceListItem.bulkWrite(operations, { ordered: false });
 }

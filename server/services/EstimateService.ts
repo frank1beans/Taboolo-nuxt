@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Types } from 'mongoose';
-import { Estimate, Item } from '#models';
+import { Estimate, EstimateItem } from '#models';
 
 type AnyRecord = Record<string, any>;
 
@@ -83,7 +83,7 @@ export async function upsertEstimateItems(
   const estimateObjectId = new Types.ObjectId(estimateId);
 
   // Remove previous items for this estimate to avoid duplicates
-  await Item.deleteMany({ 'project.estimate_id': estimateObjectId, project_id: projectObjectId });
+  await EstimateItem.deleteMany({ 'project.estimate_id': estimateObjectId, project_id: projectObjectId });
 
   const buildWbsCodes = (entry: AnyRecord) => {
     let w6: string | undefined;
@@ -102,16 +102,18 @@ export async function upsertEstimateItems(
     .map((entry) => {
       const { w6, w7 } = buildWbsCodes(entry);
       const wbs6Id = w6 ? wbs6Map[w6] : undefined;
-      if (!wbs6Id) return null; // skip items without a mapped WBS6
-      const wbs7Id = w7 ? wbs7Map[w7] : undefined;
+      // if (!wbs6Id) return null; // skip items without a mapped WBS6
+      // Adapting to wbs_ids array
+      const ids: Types.ObjectId[] = [];
+      if (wbs6Id) ids.push(new Types.ObjectId(wbs6Id));
+      if (w7) { const id7 = wbs7Map[w7]; if (id7) ids.push(new Types.ObjectId(id7)); }
 
       return {
         project_id: projectObjectId,
-        wbs6_id: new Types.ObjectId(wbs6Id),
-        wbs7_id: wbs7Id ? new Types.ObjectId(wbs7Id) : undefined,
+        wbs_ids: ids,
         code: entry.code ?? '',
         description: entry.description ?? '',
-        unit_measure: entry.unit ?? entry.unit_label,
+        unit: entry.unit ?? entry.unit_label,
         progressive: entry.progressive ?? entry.order,
         order: entry.order ?? 0,
         import_run_id: importRunId,
@@ -129,6 +131,6 @@ export async function upsertEstimateItems(
     .filter(Boolean) as AnyRecord[];
 
   if (docs.length) {
-    await Item.insertMany(docs, { ordered: false });
+    await EstimateItem.insertMany(docs, { ordered: false });
   }
 }

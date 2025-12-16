@@ -64,7 +64,10 @@ const operatorRequiresValue = (op: ColumnFilterOperator) =>
   op === 'not_equals';
 
 const inputDisabled = computed(() => !operatorRequiresValue(operator.value));
-const normalizedQuery = computed(() => query.value.trim());
+const normalizedQuery = computed(() => {
+  const val = query.value as unknown;
+  return (val === null || val === undefined ? '' : String(val)).trim();
+});
 
 const placeholder = computed(() => {
   const label = props.panel?.label ?? 'colonna';
@@ -76,6 +79,19 @@ const placeholder = computed(() => {
 const totalOptions = computed(() => props.panel?.options?.length ?? 0);
 const visibleOptions = computed(() => {
   const options = props.panel?.options ?? [];
+  
+  // If no query, show all options regardless of operator
+  if (!normalizedQuery.value) {
+    return options;
+  }
+  
+  // For is_empty and is_not_empty operators, don't filter options by query
+  if (operator.value === 'is_empty' || operator.value === 'is_not_empty') {
+    return options;
+  }
+  
+  // For text-based operators, filter options that match the current query
+  // For numeric operators with a query, show options that would match the comparison
   return options.filter((opt) => matchesOperator(String(opt ?? ''), normalizedQuery.value, operator.value));
 });
 const visibleCount = computed(() => visibleOptions.value.length);
@@ -107,7 +123,23 @@ const highlightMatch = (value: string) => {
 
 const setInitialState = (panel: FilterPanelState) => {
   const current = panel.currentFilter;
-  operator.value = current?.operator ?? 'contains';
+  
+  // Determine default operator based on filter type
+  // For numeric filters, 'contains' is not valid, so default to 'equals'
+  const isNumericFilter = panel.filterType === 'number';
+  const defaultOperator: ColumnFilterOperator = isNumericFilter ? 'equals' : 'contains';
+  
+  // If there's a current filter, use its operator; otherwise use the appropriate default
+  let initialOp = current?.operator ?? defaultOperator;
+  
+  // Validate that the operator is compatible with the filter type
+  // If a text-only operator is set on a numeric column, reset to default
+  const textOnlyOperators: ColumnFilterOperator[] = ['contains', 'starts_with', 'not_contains'];
+  if (isNumericFilter && textOnlyOperators.includes(initialOp)) {
+    initialOp = defaultOperator;
+  }
+  
+  operator.value = initialOp;
   query.value = (current?.value ?? '').toString();
 
   initialOperator.value = operator.value;

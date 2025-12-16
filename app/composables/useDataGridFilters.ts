@@ -17,9 +17,31 @@ export function useDataGridFilters(
   const filterPanel = ref<FilterPanelState | null>(null);
 
   const operatorRequiresValue = (operator: ColumnFilterOperator) =>
-    ['contains', 'starts_with', 'equals', 'not_contains'].includes(operator);
+    [
+      'contains',
+      'starts_with',
+      'equals',
+      'not_contains',
+      'not_equals',
+      'greater_than',
+      'less_than',
+      'greater_than_or_equal',
+      'less_than_or_equal',
+    ].includes(operator);
 
-  const toAgFilterModel = (filter: ColumnFilter | null) => {
+  const parseNumber = (raw: string) => {
+    const str = raw.trim();
+    if (!str) return null;
+
+    const direct = Number(str);
+    if (!Number.isNaN(direct)) return direct;
+
+    const normalized = str.replace(/\./g, '').replace(',', '.');
+    const alt = Number(normalized);
+    return Number.isNaN(alt) ? null : alt;
+  };
+
+  const toAgFilterModel = (filter: ColumnFilter | null, isNumericColumn = false) => {
     if (!filter) return null;
     const trimmed = (filter.value ?? '').toString().trim();
     const hasValue = trimmed.length > 0;
@@ -28,11 +50,22 @@ export function useDataGridFilters(
       return null;
     }
 
-    // Numeric filters
-    if (['greater_than', 'less_than', 'greater_than_or_equal', 'less_than_or_equal', 'in_range'].includes(filter.operator)) {
+    // Numeric operators (always numeric filter type)
+    const numericOnlyOperators = ['greater_than', 'less_than', 'greater_than_or_equal', 'less_than_or_equal', 'in_range'];
+    // Operators that can be either numeric or text depending on context
+    const ambiguousOperators = ['equals', 'not_equals'];
+
+    const isNumericOperator = numericOnlyOperators.includes(filter.operator);
+    const isAmbiguousOperator = ambiguousOperators.includes(filter.operator);
+
+    // Treat as numeric if: (1) it's a numeric-only operator, or (2) it's an ambiguous operator and the value looks numeric
+    const valueIsNumeric = hasValue && parseNumber(trimmed) !== null;
+    const treatAsNumeric = isNumericOperator || (isAmbiguousOperator && (isNumericColumn || valueIsNumeric));
+
+    if (treatAsNumeric) {
       const filterType = 'number';
-      const value = Number(trimmed);
-      if (isNaN(value)) return null;
+      const value = parseNumber(trimmed);
+      if (value === null && operatorRequiresValue(filter.operator)) return null;
 
       switch (filter.operator) {
         case 'greater_than':
@@ -60,6 +93,8 @@ export function useDataGridFilters(
         return { filterType: 'text', type: 'startsWith', filter: trimmed };
       case 'equals':
         return { filterType: 'text', type: 'equals', filter: trimmed };
+      case 'not_equals':
+        return { filterType: 'text', type: 'notEqual', filter: trimmed };
       case 'not_contains':
         return { filterType: 'text', type: 'notContains', filter: trimmed };
       case 'is_empty':
@@ -132,10 +167,14 @@ export function useDataGridFilters(
 
     const model = gridApi.value.getFilterModel() || {};
 
+    // Determine if the column is numeric
+    const col = columns.find((c) => c.field === field);
+    const isNumericColumn = col?.filterType === 'number' || col?.filter === 'agNumberColumnFilter';
+
     if (!filter) {
       delete model[field];
     } else {
-      const mapped = toAgFilterModel(filter);
+      const mapped = toAgFilterModel(filter, isNumericColumn);
       if (mapped) {
         model[field] = mapped;
       } else {
@@ -206,7 +245,9 @@ export function useDataGridFilters(
     if (!gridApi.value) return null;
     const model = gridApi.value.getFilterModel?.() || {};
     const parsed = fromAgFilterModel(model[field]);
-    return parsed ? { columnKey: field, ...parsed } : null;
+    if (!parsed) return null;
+    // Override columnKey from parsed (which is empty) with actual field
+    return { ...parsed, columnKey: field };
   };
 
   const openFilterPanel = ({ field, label, options, triggerEl, filterType }: FilterPanelConfig) => {

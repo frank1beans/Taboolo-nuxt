@@ -46,6 +46,7 @@ export async function previewSixImportRaw(event: H3Event, projectId?: string) {
     `/commesse/${id}/import-six/raw/preview`,
     { method: 'POST' }
   );
+  console.log('[Nitro DEBUG] Raw Preview Result from Python:', JSON.stringify(result, null, 2));
   return mapRawPreview(result);
 }
 

@@ -14,11 +14,5 @@ export {
   buildAndUpsertWbsFromItems,
 } from '#services/WbsService';
 
-export {
-  upsertRawUnits,
-  upsertRawPriceLists,
-  upsertRawGroupValues,
-  upsertRawProducts,
-  upsertRawPreventivi,
-  upsertRawRilevazioni,
-} from '#services/RawDataService';
+// raw data service removed from exports to prevent side-effects
+// export { ... } from '#services/RawDataService';

@@ -1,6 +1,6 @@
 import { defineEventHandler, createError, getRouterParam } from 'h3';
 import { Types } from 'mongoose';
-import { Item } from '#models';
+import { EstimateItem } from '#models'; // Updated import
 
 export default defineEventHandler(async (event) => {
   const projectId = getRouterParam(event, 'id');
@@ -34,12 +34,33 @@ export default defineEventHandler(async (event) => {
     ]
   };
 
-  const [baselineAgg] = await Item.aggregate([
+  const [baselineAgg] = await EstimateItem.aggregate([
     { $match: { project_id: projectObjectId } },
-    { $group: { _id: null, total: { $sum: projectAmountExpr } } }
+    { $addFields: { pli_oid: { $toObjectId: "$price_list_item_id" } } },
+    {
+      $lookup: {
+        from: 'pricelistitems',
+        localField: 'pli_oid',
+        foreignField: '_id',
+        as: 'price_item'
+      }
+    },
+    { $unwind: { path: '$price_item', preserveNullAndEmptyArrays: true } },
+    {
+      $addFields: {
+        'project.amount': {
+          $cond: {
+            if: { $gt: ['$project.amount', null] },
+            then: '$project.amount',
+            else: { $multiply: ['$project.quantity', { $ifNull: ['$price_item.price', 0] }] }
+          }
+        }
+      }
+    },
+    { $group: { _id: null, total: { $sum: '$project.amount' } } }
   ]);
 
-  const offerAgg = await Item.aggregate([
+  const offerAgg = await EstimateItem.aggregate([
     { $match: { project_id: projectObjectId } },
     { $unwind: '$offers' },
     {

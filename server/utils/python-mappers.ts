@@ -137,9 +137,14 @@ export function mapRawPreview(result: any) {
 }
 
 export function mapRawImportPayload(result: any) {
-  const priceLists = (result?.price_lists ?? []).map((pl: any) => ({
-    listIdRaw: pl.list_id_raw,
-    canonicalId: pl.canonical_id ?? pl.list_id_raw,
+  // NEW: Pass-through for LoaderService structure
+  if (result && 'estimate' in result && 'project' in result) {
+    return result;
+  }
+
+  const priceLists = (result?.priceLists ?? []).map((pl: any) => ({
+    listIdRaw: pl.listIdRaw,
+    canonicalId: pl.canonicalId,
     label: pl.label ?? null,
     priority: pl.priority ?? 0,
     preferred: Boolean(pl.preferred),
@@ -151,7 +156,7 @@ export function mapRawImportPayload(result: any) {
   }
 
   const groups = (result?.groups ?? []).map((g: any) => ({
-    grpId: g.grp_id,
+    grpId: g.grpId,
     code: g.code ?? null,
     description: g.description ?? null,
     kind: g.kind,
@@ -159,36 +164,35 @@ export function mapRawImportPayload(result: any) {
   }));
 
   const products = (result?.products ?? []).map((p: any) => ({
-    prodottoId: p.prodotto_id,
+    prodottoId: p.prodottoId,
     code: p.code ?? null,
-    descriptionShort: p.desc_short ?? p.code ?? '',
-    descriptionLong: p.desc_long ?? null,
-    unitId: p.unit_id ?? null,
-    wbs6: p.wbs6_code || p.wbs6_description ? { code: p.wbs6_code, description: p.wbs6_description } : undefined,
-    wbs7: p.wbs7_code || p.wbs7_description ? { code: p.wbs7_code, description: p.wbs7_description } : undefined,
-    isParentVoice: Boolean(p.is_parent_voice),
+    descriptionShort: p.descriptionShort ?? p.code ?? '',
+    descriptionLong: p.descriptionLong ?? null,
+    unitId: p.unitId ?? null,
+    wbs6: p.wbs6,
+    wbs7: p.wbs7,
+    isParentVoice: Boolean(p.isParentVoice),
     prices: Array.isArray(p.prices)
       ? p.prices.map((entry: any) => ({
-        canonicalId: entry[0],
-        value: entry[1],
-        priority: entry[2] ?? 0,
+        canonicalId: entry.canonicalId || entry[0],
+        value: entry.value || entry[1],
+        priority: (entry.priority || entry[2]) ?? 0,
       }))
       : [],
   }));
 
   const preventivi = (result?.preventivi ?? []).map((prv: any) => {
-    const canonicalPriceList = prv.price_list_id_raw ? priceListMap.get(prv.price_list_id_raw) : null;
     return {
-      preventivoId: prv.preventivo_id,
+      preventivoId: prv.preventivoId,
       code: prv.code ?? null,
       description: prv.description ?? null,
       date: prv.date ?? null,
-      priceListIdRaw: prv.price_list_id_raw ?? null,
-      priceListId: canonicalPriceList ?? null,
+      priceListIdRaw: prv.priceListIdRaw ?? null,
+      priceListId: prv.priceListId ?? null,
       stats: {
-        rilevazioni: prv.rilevazioni ?? 0,
-        items: prv.items ?? 0,
-        totalImportoPreview: prv.total_importo_preview ?? null,
+        rilevazioni: prv.stats?.rilevazioni ?? 0,
+        items: prv.stats?.items ?? 0,
+        totalImportoPreview: prv.stats?.totalImportoPreview ?? null,
       },
     };
   });
@@ -204,44 +208,42 @@ export function mapRawImportPayload(result: any) {
   const rilevazioniRaw = result?.rilevazioni ?? {};
   for (const key of Object.keys(rilevazioniRaw)) {
     rilevazioni[key] = (rilevazioniRaw[key] ?? []).map((r: any) => ({
-      preventivoId: key,
+      preventivoId: r.preventivoId,
       idx: r.idx,
       progressivo: r.progressivo ?? null,
-      prodottoId: r.prodotto_id,
-      listaQuotazioneIdRaw: r.lista_quotazione_id_raw ?? null,
-      wbsSpatial: Array.isArray(r.wbs_spatial)
-        ? r.wbs_spatial
-          .filter((w: any) => w && w.level && w.level <= 5)
+      prodottoId: r.prodottoId,
+      listaQuotazioneIdRaw: r.listaQuotazioneIdRaw ?? null,
+      wbsSpatial: Array.isArray(r.wbsSpatial)
+        ? r.wbsSpatial
+          .filter((w: any) => w && (w.level === undefined || w.level <= 5)) // Legacy quirk or pass-through
           .map((w: any) => ({ level: w.level, code: w.code ?? null, description: w.description ?? null }))
         : [],
       misure: Array.isArray(r.misure)
         ? r.misure.map((m: any) => ({
           operation: m.operation ?? '+',
           cells: Array.isArray(m.cells)
-            ? m.cells.map((c: any) => ({
-              pos: c[0] ?? 0,
-              raw: c[1] ?? '',
-              value: normalizeDecimal(c[2]),
-            }))
+            ? m.cells
             : [],
+
+          formula: m.formula ?? null,
+          length: normalizeDecimal(m.length),
+          width: normalizeDecimal(m.width),
+          height: normalizeDecimal(m.height),
+          parts: normalizeDecimal(m.parts),
+
           product: normalizeDecimal(m.product),
           references: m.references ?? [],
         }))
         : [],
       comments: r.comments ?? [],
-      quantityDirect: normalizeDecimal(r.quantity_direct),
-      referenceEntries: Array.isArray(r.reference_entries)
-        ? r.reference_entries.map((entry: any) => ({
-          refProgressivo: entry[0],
-          factor: normalizeDecimal(entry[1]) ?? '0',
-        }))
-        : [],
-      quantityTotalResolved: normalizeDecimal(r.quantity_total_resolved),
+      quantityDirect: normalizeDecimal(r.quantityDirect),
+      referenceEntries: r.referenceEntries ?? [],
+      quantityTotalResolved: normalizeDecimal(r.quantityTotalResolved),
     }));
   }
 
   return {
-    units: (result?.units ?? []).map((u: any) => ({ unitId: u.unit_id, label: u.label })),
+    units: (result?.units ?? []).map((u: any) => ({ unitId: u.unitId, label: u.label })),
     priceLists,
     groups,
     products,

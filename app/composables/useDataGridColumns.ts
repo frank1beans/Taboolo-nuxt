@@ -19,9 +19,35 @@ export function useDataGridColumns() {
     }
   };
 
+  const getNestedValue = (obj: any, path: string) => {
+    return path.split('.').reduce((acc, part) => (acc && acc[part] !== undefined ? acc[part] : undefined), obj);
+  };
+
   const createColumnDefs = (columns: DataGridColumn[], rowData: any[] = []) => {
     return columns.map((col) => {
-      const filterSetting = col.filter ?? 'agTextColumnFilter';
+      let filterSetting: any = col.filter ?? 'agTextColumnFilter';
+
+      if (filterSetting === true) filterSetting = 'agTextColumnFilter';
+      if (filterSetting === 'number') filterSetting = 'agNumberColumnFilter';
+
+      const shouldTreatAsNumeric = (() => {
+        if (col.filterType === 'number' || filterSetting === 'agNumberColumnFilter') return true;
+        for (const row of rowData) {
+          const val = getNestedValue(row, col.field);
+          if (val !== null && val !== undefined) {
+            return typeof val === 'number';
+          }
+        }
+        return false;
+      })();
+
+      if (
+        shouldTreatAsNumeric &&
+        (col.filter === undefined || col.filter === true || col.filter === 'agTextColumnFilter')
+      ) {
+        filterSetting = 'agNumberColumnFilter';
+      }
+
       const colDef: any = {
         colId: col.colId || col.field,
         field: col.field,
@@ -72,10 +98,6 @@ export function useDataGridColumns() {
           // Auto-generate valuesGetter from rowData
           colDef.headerComponentParams = {
             valuesGetter: () => {
-              const getNestedValue = (obj: any, path: string) => {
-                return path.split('.').reduce((acc, part) => acc && acc[part], obj);
-              };
-
               const unique = Array.from(
                 new Set(rowData.map((r) => getNestedValue(r, col.field)))
               ).filter(v => v !== undefined && v !== null);

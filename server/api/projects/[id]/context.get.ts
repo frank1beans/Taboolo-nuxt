@@ -1,6 +1,6 @@
 import { defineEventHandler, createError, getRouterParam } from 'h3';
 import { Types } from 'mongoose';
-import { Estimate, Item, Project } from '#models';
+import { Estimate, EstimateItem, Project } from '#models';
 import { serializeDoc } from '#utils/serialize';
 
 export default defineEventHandler(async (event) => {
@@ -27,7 +27,7 @@ export default defineEventHandler(async (event) => {
   const estimateObjectIds = estimates.map((est) => new Types.ObjectId(est._id));
 
   const offerAgg = estimateObjectIds.length
-    ? await Item.aggregate([
+    ? await EstimateItem.aggregate([
       {
         $match: {
           project_id: projectObjectId,
@@ -70,17 +70,38 @@ export default defineEventHandler(async (event) => {
 
   // Calculate total amount for each estimate
   const totalsAgg = estimateObjectIds.length
-    ? await Item.aggregate([
+    ? await EstimateItem.aggregate([
       {
         $match: {
           project_id: projectObjectId,
           'project.estimate_id': { $in: estimateObjectIds },
         },
       },
+      { $addFields: { pli_oid: { $toObjectId: "$price_list_item_id" } } },
+      {
+        $lookup: {
+          from: 'pricelistitems',
+          localField: 'pli_oid',
+          foreignField: '_id',
+          as: 'price_item'
+        }
+      },
+      { $unwind: { path: '$price_item', preserveNullAndEmptyArrays: true } },
+      {
+        $addFields: {
+          calculatedAmount: {
+            $cond: {
+              if: { $gt: ['$project.amount', null] },
+              then: '$project.amount',
+              else: { $multiply: ['$project.quantity', { $ifNull: ['$price_item.price', 0] }] }
+            }
+          }
+        }
+      },
       {
         $group: {
           _id: '$project.estimate_id',
-          totalAmount: { $sum: '$project.amount' },
+          totalAmount: { $sum: '$calculatedAmount' },
         },
       },
     ])

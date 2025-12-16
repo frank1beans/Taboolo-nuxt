@@ -26,6 +26,7 @@
         <AgGridVue
           :key="gridKey"
           :class="['flex-1 w-full', themeClass]"
+          theme="legacy"
           :columnDefs="columnDefs"
           :rowData="rowData"
           :defaultColDef="defaultColDef"
@@ -239,8 +240,8 @@ const handleSelectionChange = () => {
 };
 
 const onColumnResized = (e: any) => {
-  if (!e?.finished || e?.source === 'sizeColumnsToFit') return;
-  e.api?.sizeColumnsToFit();
+  // if (!e?.finished || e?.source === 'sizeColumnsToFit') return;
+  // e.api?.sizeColumnsToFit();
 };
 
 // Filter modal is now managed by UModal, no scroll listener needed

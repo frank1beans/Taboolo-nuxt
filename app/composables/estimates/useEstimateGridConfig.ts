@@ -4,8 +4,20 @@ import type { DataGridConfig } from '~/types/data-grid';
 export interface EstimateItem {
     _id: string;
     code: string;
+    progressive?: number;
     description: string;
     unit_measure: string;
+    group_ids?: string[];
+    wbs_hierarchy?: {
+        wbs01?: string;
+        wbs02?: string;
+        wbs03?: string;
+        wbs04?: string;
+        wbs05?: string;
+        wbs06?: string;
+        wbs07?: string;
+        [key: string]: string | undefined;
+    };
     project: {
         quantity: number;
         unit_price: number;
@@ -22,16 +34,60 @@ export const useEstimateGridConfig = (rowData: Ref<EstimateItem[]>) => {
     };
 
     const formatNumber = (value: number) => {
-        return new Intl.NumberFormat('it-IT').format(value);
+        return new Intl.NumberFormat('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
     };
 
     const gridConfig: DataGridConfig = {
         columns: [
             {
+                field: 'progressive',
+                headerName: 'Prog.',
+                width: 90,
+                pinned: 'left',
+                cellClass: 'ag-right-aligned-cell font-mono',
+                filter: 'agNumberColumnFilter',
+            },
+            {
                 field: 'code',
                 headerName: 'Codice',
                 width: 120,
                 pinned: 'left',
+            },
+            // WBS Hierarchy Columns (wbs01-wbs07)
+            {
+                field: 'wbs_hierarchy.wbs01',
+                headerName: 'WBS 01',
+                width: 150,
+            },
+            {
+                field: 'wbs_hierarchy.wbs02',
+                headerName: 'WBS 02',
+                width: 150,
+            },
+            {
+                field: 'wbs_hierarchy.wbs03',
+                headerName: 'WBS 03',
+                width: 150,
+            },
+            {
+                field: 'wbs_hierarchy.wbs04',
+                headerName: 'WBS 04',
+                width: 150,
+            },
+            {
+                field: 'wbs_hierarchy.wbs05',
+                headerName: 'WBS 05',
+                width: 150,
+            },
+            {
+                field: 'wbs_hierarchy.wbs06',
+                headerName: 'WBS 06',
+                width: 150,
+            },
+            {
+                field: 'wbs_hierarchy.wbs07',
+                headerName: 'WBS 07',
+                width: 150,
             },
             {
                 field: 'description',

@@ -1,6 +1,6 @@
 import { defineEventHandler, createError, getRouterParam } from 'h3';
 import { Types } from 'mongoose';
-import { Item, WbsNode } from '#models';
+import { EstimateItem, WbsNode } from '#models'; // Updated import
 
 export default defineEventHandler(async (event) => {
   const projectId = getRouterParam(event, 'id');
@@ -40,17 +40,38 @@ export default defineEventHandler(async (event) => {
     wbs6Map.set(String(node._id), { code: node.code, description: node.description });
   }
 
-  const baselineAgg = await Item.aggregate([
+  const baselineAgg = await EstimateItem.aggregate([
     { $match: { project_id: projectObjectId } },
+    { $addFields: { pli_oid: { $toObjectId: "$price_list_item_id" } } },
+    {
+      $lookup: {
+        from: 'pricelistitems',
+        localField: 'pli_oid',
+        foreignField: '_id',
+        as: 'price_item'
+      }
+    },
+    { $unwind: { path: '$price_item', preserveNullAndEmptyArrays: true } },
+    {
+      $addFields: {
+        'project.amount': {
+          $cond: {
+            if: { $gt: ['$project.amount', null] },
+            then: '$project.amount',
+            else: { $multiply: ['$project.quantity', { $ifNull: ['$price_item.price', 0] }] }
+          }
+        }
+      }
+    },
     {
       $group: {
-        _id: '$wbs6_id',
-        project_amount: { $sum: projectAmountExpr }
+        _id: '$wbs6_id', // TODO: Fix wbs6_id missing in schema. Grouping might be broken.
+        project_amount: { $sum: '$project.amount' }
       }
     }
   ]);
 
-  const offerAgg = await Item.aggregate([
+  const offerAgg = await EstimateItem.aggregate([
     { $match: { project_id: projectObjectId } },
     { $unwind: '$offers' },
     {

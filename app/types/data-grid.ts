@@ -23,6 +23,11 @@ export interface DataGridColumn {
   resizable?: boolean;
   suppressSizeToFit?: boolean;
   suppressMovableColumns?: boolean;
+  /**
+   * Hint for the grid/filter UI to treat the column as numeric.
+   * If set to "number" the column will use AG Grid number filter and show numeric operators.
+   */
+  filterType?: 'text' | 'number' | 'date';
 }
 
 export type ColumnFilterOperator =

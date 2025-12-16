@@ -15,7 +15,7 @@ export function serializeDoc<T extends Record<string, any>>(doc: T | null | unde
 
   return {
     ...rest,
-    id: _id?.toString() || undefined,
+    id: rest.id || _id?.toString() || undefined,
   };
 }
 
