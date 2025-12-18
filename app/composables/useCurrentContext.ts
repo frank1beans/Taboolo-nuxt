@@ -1,5 +1,5 @@
 import { computed, ref, watch } from 'vue'
-import type { Estimate, Project } from '~/composables/useProjectTree'
+import type { Estimate, Project } from '~/types/project'
 
 import { persistClient as persistClientStorage, restoreFromClient as restoreFromClientStorage } from '~/composables/context/useContextPersistence'
 
@@ -39,9 +39,19 @@ const loadProjectContext = async (projectId: string | null) => {
       currentEstimateId.value = null
     }
   } catch (error) {
-    console.error('Failed to load project context', error)
-    project.value = null
-    estimate.value = null
+    const status = (error as any)?.statusCode ?? (error as any)?.response?.status
+    if (status === 404) {
+      // Project no longer exists: clear context gracefully
+      currentProjectId.value = null
+      currentEstimateId.value = null
+      project.value = null
+      estimate.value = null
+      persistClient()
+    } else {
+      console.error('Failed to load project context', error)
+      project.value = null
+      estimate.value = null
+    }
   } finally {
     loading.value = false
   }
@@ -56,6 +66,23 @@ const syncContext = async () => {
     },
   })
   persistClient()
+}
+
+const setProjectState = (projectData: Project | null, estimateId: string | null = null) => {
+  project.value = projectData;
+  currentProjectId.value = projectData?.id ?? null;
+
+  if (estimateId && projectData?.estimates) {
+    const found = projectData.estimates.find(e => e.id === estimateId);
+    estimate.value = found || null;
+    currentEstimateId.value = found ? estimateId : null;
+  } else {
+    estimate.value = null;
+    currentEstimateId.value = null;
+  }
+
+  // Sync casually (don't await) to persist persistence
+  syncContext();
 }
 
 const setCurrentProject = async (projectId: string | null) => {
@@ -79,8 +106,17 @@ const hydrateFromApi = async () => {
     const response = await $fetch<{ currentProjectId: string | null; currentEstimateId: string | null }>(
       '/api/context/current',
     )
-    currentProjectId.value = response.currentProjectId ?? null
-    currentEstimateId.value = response.currentEstimateId ?? null
+    const normalizedProjectId =
+      response.currentProjectId === 'null' || response.currentProjectId === 'undefined'
+        ? null
+        : response.currentProjectId ?? null
+    const normalizedEstimateId =
+      response.currentEstimateId === 'null' || response.currentEstimateId === 'undefined'
+        ? null
+        : response.currentEstimateId ?? null
+
+    currentProjectId.value = normalizedProjectId
+    currentEstimateId.value = normalizedEstimateId
 
     if (!currentProjectId.value) {
       restoreFromClient()
@@ -115,6 +151,7 @@ export const useCurrentContext = () => ({
   currentEstimate: computed(() => estimate.value),
   setCurrentProject,
   setCurrentEstimate,
+  setProjectState,
   hydrateFromApi,
   persistClient,
 })

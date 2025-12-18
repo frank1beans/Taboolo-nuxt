@@ -5,13 +5,15 @@ import { api } from '~/lib/api-client';
 import type { ApiSixEstimatesPreview, ApiSixEstimateOption, ApiEstimate } from '~/types/api';
 import FileDropZone from '~/components/ui/FileDropZone.vue';
 import ImportStatusCard from '~/components/ui/ImportStatusCard.vue';
-import ExcelOfferUpload from '~/components/projects/ExcelOfferUpload.vue';
+import ImportWizard from '~/components/projects/ImportWizard.vue';
 
 const route = useRoute();
 const router = useRouter();
 const projectId = route.params.id as string;
 
-const { data: project } = await useFetch(`/api/projects/${projectId}/context`);
+definePageMeta({
+  breadcrumb: 'Importazione'
+});
 
 const activeTab = ref(0);
 const items = [{
@@ -182,18 +184,23 @@ const navigateToProject = () => {
             Torna al progetto
           </UButton>
         </div>
-        <p class="text-xs uppercase tracking-wide font-medium text-slate-500 dark:text-slate-400">
+        <p class="text-xs uppercase tracking-wide font-medium text-[hsl(var(--muted-foreground))]">
           Importazione Dati
         </p>
-        <h1 class="text-lg font-semibold text-slate-900 dark:text-slate-100">
+        <h1 class="text-lg font-semibold text-[hsl(var(--foreground))]">
           {{ project?.name || 'Progetto' }}
         </h1>
       </div>
     </div>
 
     <!-- Main Content -->
-     <UCard class="border-white/10 bg-white/5">
-       <UTabs :items="items" v-model="activeTab" class="w-full">
+     <UCard class="border-[hsl(var(--border))] bg-[hsl(var(--card))]">
+       <UTabs 
+        :items="items" 
+        v-model="activeTab" 
+        class="w-full" 
+        :ui="{ list: { background: 'bg-[hsl(var(--secondary))]' } }"
+      >
          
          <!-- TAB 1: SIX/XML -->
          <template #six="{ item }">
@@ -220,10 +227,10 @@ const navigateToProject = () => {
                  </div>
 
                  <!-- Step 2: Preview & Confirm -->
-                 <div v-if="sixFile && sixStatus === 'idle'" class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
+                 <div v-if="sixFile && sixStatus === 'idle'" class="bg-[hsl(var(--secondary))/50] rounded-lg p-6 border border-[hsl(var(--border))]">
                     <div class="flex items-center justify-between mb-4">
                       <h3 class="text-sm font-semibold flex items-center gap-2">
-                        <UIcon name="i-heroicons-document-check" class="w-5 h-5 text-green-500" />
+                        <UIcon name="i-heroicons-document-check" class="w-5 h-5 text-emerald-500" />
                         {{ sixFile.name }}
                       </h3>
                        <UButton color="neutral" variant="ghost" icon="i-heroicons-x-mark" size="xs" @click="resetSix" label="Annulla" />
@@ -239,6 +246,13 @@ const navigateToProject = () => {
                            placeholder="Seleziona un preventivo..."
                            searchable
                            searchable-placeholder="Cerca preventivo..."
+                           color="neutral"
+                           :ui="{
+                             trigger: {
+                               trailingIcon: null,
+                               class: 'w-full justify-between'
+                             }
+                           }"
                          >
                            <template #item="{ item }">
                               <div class="flex items-center justify-between w-full truncate">
@@ -247,27 +261,21 @@ const navigateToProject = () => {
                                   <UBadge color="neutral" variant="subtle" size="xs">
                                     {{ item.count }} Voci
                                   </UBadge>
-                                  <span v-if="item.version" class="text-xs text-gray-400">v{{ item.version }}</span>
+                                  <span v-if="item.version" class="text-xs text-[hsl(var(--muted-foreground))]]">v{{ item.version }}</span>
                                 </div>
                               </div>
                            </template>
                            <template #default="{ open }">
                              <UButton
-                               color="neutral"
+                             color="neutral"
                                class="w-full justify-between"
-                               :icon="selectedEstimateId ? undefined : 'i-heroicons-chevron-up-down'"
-                               variant="outline"
+                               :icon="undefined"
+                               variant="solid"
                              >
                                <span v-if="selectedEstimateId" class="truncate">
                                  {{ previewEstimates.find(e => e.id === selectedEstimateId)?.label || 'Selezionato' }}
                                </span>
                                <span v-else class="text-gray-500 truncate">Seleziona...</span>
-
-                               <UIcon
-                                 name="i-heroicons-chevron-down"
-                                 class="w-5 h-5 transition-transform text-gray-400"
-                                 :class="[open && 'transform rotate-180']"
-                               />
                              </UButton>
                            </template>
                          </USelectMenu>
@@ -324,10 +332,11 @@ const navigateToProject = () => {
          <!-- TAB 2: EXCEL -->
          <template #excel="{ item }">
             <div class="pt-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-               <div class="max-w-2xl mx-auto">
-                 <ExcelOfferUpload 
+               <div class="h-[600px]">
+                 <ImportWizard 
                     :project-id="projectId" 
                     @success="handleExcelSuccess"
+                    @close="() => {}"
                  />
                </div>
             </div>

@@ -1,84 +1,90 @@
 <template>
-  <div class="select-none">
-    <!-- Node Row - Fixed height 44px, full row clickable -->
+  <div class="select-none relative">
+    <!-- Connecting line (vertical) for this node towards its siblings -->
+    <!-- Managed by parent for the list, but we need lines inside children -->
+    
+    <!-- Node Row -->
     <div
       role="treeitem"
       :aria-expanded="hasChildren ? isExpanded : undefined"
       :aria-selected="isSelected"
       :tabindex="depth === 0 ? 0 : -1"
-      class="tree-row group relative flex items-center gap-2 h-11 px-2 rounded-md cursor-pointer transition-all duration-150 outline-none"
+      class="group relative flex items-center gap-2.5 py-1.5 px-2 mb-0.5 rounded-lg cursor-pointer transition-all duration-150 outline-none border border-transparent"
       :class="[
         isSelected 
-          ? 'bg-primary-50 dark:bg-primary-950/40 font-medium' 
-          : 'hover:bg-slate-100 dark:hover:bg-slate-800',
-        'focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-1'
+          ? 'bg-[hsl(var(--primary)/0.1)] border-[hsl(var(--primary)/0.2)]' 
+          : 'hover:bg-[hsl(var(--muted)/0.8)]',
+        'focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1'
       ]"
       :style="{ paddingLeft: `${depth * 16 + 8}px` }"
       @click="handleClick"
       @keydown="handleKeydown"
     >
-      <!-- Selected indicator bar -->
+      <!-- Active Indicator (Left Bar) -->
       <div
         v-if="isSelected"
-        class="absolute left-0 top-2 bottom-2 w-[3px] bg-primary-500 rounded-full"
+        class="absolute left-0 top-1 bottom-1 w-[3px] bg-[hsl(var(--primary))] rounded-r-full"
       />
 
-      <!-- Chevron (always left, animated rotation) -->
+      <!-- Chevron / Leaf Indicator -->
       <button
         v-if="hasChildren"
         type="button"
-        class="w-6 h-6 flex items-center justify-center rounded-md transition-colors hover:bg-slate-200 dark:hover:bg-slate-700"
+        class="w-5 h-5 flex items-center justify-center rounded transition-colors hover:bg-[hsl(var(--muted)/0.8)] text-[hsl(var(--muted-foreground))]"
         :aria-label="isExpanded ? 'Collassa' : 'Espandi'"
         @click.stop="$emit('toggle', node.id)"
       >
         <UIcon
           name="i-heroicons-chevron-right-20-solid"
-          class="w-4 h-4 text-slate-500 dark:text-slate-400 transition-transform duration-150"
-          :class="{ 'rotate-90': isExpanded }"
+          class="w-3.5 h-3.5 transition-transform duration-200"
+          :class="{ 'rotate-90': isExpanded, 'text-[hsl(var(--foreground))]': isSelected }"
         />
       </button>
-      <div v-else class="w-6 h-6 flex items-center justify-center">
-        <div class="w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-slate-600" />
+      <!-- Leaf Node Icon (Dot) -->
+      <div v-else class="w-5 h-5 flex items-center justify-center">
+        <div class="w-1.5 h-1.5 rounded-full bg-[hsl(var(--border))]" :class="{ 'bg-[hsl(var(--primary))]': isSelected }" />
       </div>
 
-      <!-- Level Badge -->
-      <span
-        class="text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded flex-shrink-0"
-        :class="isSelected 
-          ? 'bg-primary-200 dark:bg-primary-800 text-primary-700 dark:text-primary-200' 
-          : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400'"
+      <!-- Level Badge (Minimalist) -->
+      <div 
+         class="h-5 px-1.5 rounded text-[10px] font-bold flex items-center justify-center shadow-sm border"
+         :class="isSelected 
+            ? 'bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] border-[hsl(var(--primary))]' 
+            : 'bg-[hsl(var(--card))] text-[hsl(var(--muted-foreground))] border-[hsl(var(--border))]'"
+         title="Livello WBS"
       >
-        {{ node.level }}
-      </span>
+        L{{ node.level }}
+      </div>
 
-      <!-- Name -->
-      <span
-        class="flex-1 truncate text-sm leading-relaxed"
-        :class="isSelected ? 'text-primary-700 dark:text-primary-300' : 'text-slate-700 dark:text-slate-300'"
-        :title="node.name"
-      >
-        {{ node.name }}
-      </span>
+      <!-- Name & Info -->
+      <div class="flex-1 min-w-0 flex flex-col justify-center">
+         <span
+          class="truncate text-sm font-medium leading-tight transition-colors"
+          :class="isSelected ? 'text-[hsl(var(--primary))]' : 'text-[hsl(var(--foreground))]'"
+          :title="node.name"
+        >
+          {{ node.name }}
+        </span>
+      </div>
 
-      <!-- Children Count -->
+      <!-- Children Count Badge -->
       <span
         v-if="hasChildren"
-        class="text-xs font-medium px-1.5 py-0.5 rounded-full flex-shrink-0"
+        class="text-[10px] font-medium px-1.5 py-0.5 rounded-full flex-shrink-0 transition-colors"
         :class="isSelected 
-          ? 'bg-primary-200 dark:bg-primary-800 text-primary-700 dark:text-primary-200' 
-          : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400'"
-        :aria-label="`${node.children?.length} elementi`"
+          ? 'bg-[hsl(var(--primary)/0.2)] text-[hsl(var(--primary-dark))]' 
+          : 'bg-[hsl(var(--secondary))] text-[hsl(var(--muted-foreground))]'"
       >
         {{ node.children?.length }}
       </span>
     </div>
 
     <!-- Children (recursive) -->
-    <ul v-if="hasChildren && isExpanded" role="group" class="relative">
-      <!-- Connecting line -->
+    <div v-if="hasChildren && isExpanded" role="group" class="relative">
+      <!-- Continuous Guide Line -->
       <div
-        class="absolute top-0 bottom-0 w-px bg-slate-200 dark:bg-slate-700"
-        :style="{ left: `${(depth + 1) * 16 + 16}px` }"
+        class="absolute top-0 bottom-1 w-px bg-[hsl(var(--border))]"
+        :style="{ left: `${(depth + 1) * 16 + 10}px` }"
       />
       
       <WbsTreeNode
@@ -91,9 +97,10 @@
         @toggle="$emit('toggle', $event)"
         @select="$emit('select', $event)"
       />
-    </ul>
+    </div>
   </div>
 </template>
+
 
 <script setup lang="ts">
 import { computed } from 'vue';

@@ -18,6 +18,8 @@ definePageMeta({
 const { loading, fetchProjects } = useProjects();
 const router = useRouter();
 const colorMode = useColorMode();
+const { currentProject } = useCurrentContext();
+const lastActiveProjectId = ref<string | null>(null);
 
 // Reactive row data
 const rowData = ref<Project[]>([]);
@@ -42,19 +44,31 @@ import { useProjectGridConfig } from '~/composables/projects/useProjectGridConfi
 // Grid Config composable
 const { gridConfig } = useProjectGridConfig(rowData);
 
-// Load initial data
-onMounted(async () => {
-  try {
-    await loadProjects();
-  } catch (error) {
-    console.error('Failed to load projects:', error);
-  }
-});
+// Add row highlighting for last active project
+gridConfig.rowClassRules = {
+  'font-bold bg-[hsl(var(--primary)/0.05)]': (params: any) => params.data && params.data.id === lastActiveProjectId.value,
+};
 
 const loadProjects = async () => {
   const data = await reloadProjectsApi(defaultFetchParams);
   rowData.value = data;
 };
+
+// Load initial data
+onMounted(async () => {
+  try {
+    // Capture last active project before clearing
+    if (currentProject.value?.id) {
+      lastActiveProjectId.value = currentProject.value.id;
+    }
+    
+    // Clear project context when entering project list
+    await setCurrentProject(null);
+    await loadProjects();
+  } catch (error) {
+    console.error('Failed to load projects:', error);
+  }
+});
 
 // Debounced navigation to avoid firing alongside double-click edit
 const rowClickTimeout = ref<number | null>(null);
@@ -79,11 +93,11 @@ const handleRowClick = (row: Project) => {
   }, 200);
 };
 
-// Row double click handler - open in edit mode
+// Row double click handler - open project detail
 const handleRowDoubleClick = (row: Project) => {
   clearRowClickTimeout();
-  setCurrentProject(row.id).catch((error) => console.error('Failed to update current project context', error));
-  openEditModal(row);
+  // Same behavior as single click (navigate)
+  handleRowClick(row);
 };
 
 onBeforeUnmount(() => {
@@ -133,25 +147,16 @@ const contextExtras = computed(() => ({
 </script>
 
 <template>
-  <div class="space-y-4">
-    <UCard class="border-white/10 bg-white/5">
+
+  <div class="h-full flex flex-col overflow-hidden space-y-4">
+    <UCard class="flex-1 min-h-0 flex flex-col border-[hsl(var(--border))] bg-[hsl(var(--card))]" :ui="{ body: { base: 'flex-1 min-h-0 flex flex-col' } }">
       <template #header>
-        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between shrink-0">
           <div>
-            <p
-              :class="[
-                'text-xs uppercase tracking-wide font-medium',
-                colorMode.value === 'dark' ? 'text-slate-400' : 'text-slate-500'
-              ]"
-            >
+            <p class="text-xs uppercase tracking-wide font-medium text-[hsl(var(--muted-foreground))]">
               Progetti e commesse
             </p>
-            <h1
-              :class="[
-                'text-lg font-semibold',
-                colorMode.value === 'dark' ? 'text-slate-100' : 'text-slate-900'
-              ]"
-            >
+            <h1 class="text-lg font-semibold text-[hsl(var(--foreground))]">
               Elenco
             </h1>
           </div>
@@ -169,10 +174,10 @@ const contextExtras = computed(() => ({
 
       <!-- DataGrid Component -->
       <DataGrid
+        class="h-full"
         :config="gridConfig"
         :row-data="rowData"
         :loading="loading"
-        dom-layout="autoHeight"
         row-selection="single"
         toolbar-placeholder="Filtra per codice, nome, descrizione, BU..."
         export-filename="progetti-commesse"

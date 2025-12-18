@@ -1,6 +1,6 @@
-import { defineEventHandler, createError, getRouterParam } from 'h3';
+import { defineEventHandler, createError, getRouterParam, getQuery } from 'h3';
 import { Types } from 'mongoose';
-import { EstimateItem } from '#models'; // Updated import
+import { EstimateItem, Offer } from '#models';
 
 export default defineEventHandler(async (event) => {
   const projectId = getRouterParam(event, 'id');
@@ -9,33 +9,16 @@ export default defineEventHandler(async (event) => {
   }
 
   const projectObjectId = new Types.ObjectId(projectId);
+  const estimateId = getQuery(event).estimate_id?.toString();
+  if (!estimateId) {
+    throw createError({ statusCode: 400, statusMessage: 'Estimate ID required for analytics' });
+  }
+  const estimateObjectId = new Types.ObjectId(estimateId);
 
-  const projectAmountExpr = {
-    $ifNull: [
-      '$project.amount',
-      {
-        $multiply: [
-          { $ifNull: ['$project.quantity', 0] },
-          { $ifNull: ['$project.unit_price', 0] }
-        ]
-      }
-    ]
-  };
-
-  const offerAmountExpr = {
-    $ifNull: [
-      '$offers.amount',
-      {
-        $multiply: [
-          { $ifNull: ['$offers.quantity', 0] },
-          { $ifNull: ['$offers.unit_price', 0] }
-        ]
-      }
-    ]
-  };
-
+  // 1. Calculate Baseline Total (Project Estimate)
+  // We need to support calculated fields if not stored directly
   const [baselineAgg] = await EstimateItem.aggregate([
-    { $match: { project_id: projectObjectId } },
+    { $match: { project_id: projectObjectId, 'project.estimate_id': estimateObjectId } },
     { $addFields: { pli_oid: { $toObjectId: "$price_list_item_id" } } },
     {
       $lookup: {
@@ -60,31 +43,23 @@ export default defineEventHandler(async (event) => {
     { $group: { _id: null, total: { $sum: '$project.amount' } } }
   ]);
 
-  const offerAgg = await EstimateItem.aggregate([
-    { $match: { project_id: projectObjectId } },
-    { $unwind: '$offers' },
-    {
-      $group: {
-        _id: { company: '$offers.company', round: { $ifNull: ['$offers.round_number', 1] } },
-        total_amount: { $sum: offerAmountExpr }
-      }
-    },
-    {
-      $project: {
-        _id: 0,
-        company: '$_id.company',
-        round_number: '$_id.round',
-        total_amount: 1
-      }
-    },
-    { $sort: { round_number: 1, company: 1 } }
-  ]);
+  // 2. Fetch Offers (Total Amounts)
+  // Since we store total_amount in Offer header, we can just query offers linked to this baseline
+  const offers = await Offer.find({
+    project_id: projectObjectId,
+    estimate_id: estimateObjectId
+  }).lean();
 
   const roundMap = new Map<number, { totals: Record<string, number> }>();
-  for (const row of offerAgg) {
-    const round = row.round_number || 1;
+
+  for (const offer of offers) {
+    const round = offer.round_number || 1;
     if (!roundMap.has(round)) roundMap.set(round, { totals: {} });
-    roundMap.get(round)!.totals[row.company || ''] = row.total_amount || 0;
+
+    const companyKey = offer.company_name;
+    const amount = offer.total_amount || 0;
+
+    roundMap.get(round)!.totals[companyKey] = amount;
   }
 
   const rounds = Array.from(roundMap.entries()).sort(([a], [b]) => a - b).map(([round, data]) => {

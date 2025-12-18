@@ -48,10 +48,11 @@ const deriveLevelAndType = (code?: string, levelHint?: number, typeHint?: string
  * Upsert WBS nodes with parent relationships.
  * Returns maps of code -> ObjectId for spatial/wbs6/wbs7.
  */
-export async function upsertWbsHierarchy(projectId: string, nodes: WbsNodeInput[] = []) {
+export async function upsertWbsHierarchy(projectId: string, estimateId: string, nodes: WbsNodeInput[] = []) {
     if (!nodes.length) return { spatial: {}, wbs6: {}, wbs7: {} as Record<string, string> };
 
     const projectObjectId = new Types.ObjectId(projectId);
+    const estimateObjectId = new Types.ObjectId(estimateId);
 
     const filtered = nodes
         .map((n) => {
@@ -65,18 +66,20 @@ export async function upsertWbsHierarchy(projectId: string, nodes: WbsNodeInput[
                 level,
                 type: type as any,
                 category,
+                estimate_id: estimateObjectId,
                 parentKey: n.parentKey ?? null,
             };
         })
-        .filter(Boolean) as Array<{ code: string; description?: string; level?: number; type: 'spatial' | 'commodity'; category?: string; parentKey?: string | null }>;
+        .filter(Boolean) as Array<{ code: string; description?: string; level?: number; type: 'spatial' | 'commodity'; category?: string; parentKey?: string | null; estimate_id: Types.ObjectId }>;
 
     if (filtered.length) {
         const ops = filtered.map((n) => ({
             updateOne: {
-                filter: { project_id: projectObjectId, type: n.type, code: n.code },
+                filter: { project_id: projectObjectId, estimate_id: estimateObjectId, type: n.type, code: n.code },
                 update: {
                     $set: {
                         project_id: projectObjectId,
+                        estimate_id: estimateObjectId,
                         type: n.type,
                         code: n.code,
                         description: n.description,
@@ -90,7 +93,7 @@ export async function upsertWbsHierarchy(projectId: string, nodes: WbsNodeInput[
         await WbsNode.bulkWrite(ops, { ordered: false });
     }
 
-    const docs = await WbsNode.find({ project_id: projectObjectId });
+    const docs = await WbsNode.find({ project_id: projectObjectId, estimate_id: estimateObjectId });
     const idMap: Record<string, string> = {};
     const ancestorsById: Record<string, Types.ObjectId[]> = {};
     for (const doc of docs) {
@@ -138,6 +141,7 @@ export async function upsertWbsHierarchy(projectId: string, nodes: WbsNodeInput[
  */
 export async function buildAndUpsertWbsFromItems(
     projectId: string,
+    estimateId: string,
     items: AnyRecord[] = [],
     fallbackNodes: { spatial?: AnyRecord[]; wbs6?: AnyRecord[]; wbs7?: AnyRecord[] } = {},
 ) {
@@ -182,5 +186,5 @@ export async function buildAndUpsertWbsFromItems(
         (fallbackNodes.wbs7 ?? []).forEach((n) => addNode('wbs7', normalizeWbsCode(n) ?? undefined, n.description, n.level));
     }
 
-    return upsertWbsHierarchy(projectId, nodes);
+    return upsertWbsHierarchy(projectId, estimateId, nodes);
 }

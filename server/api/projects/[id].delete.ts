@@ -1,8 +1,12 @@
 import { defineEventHandler, createError, getRouterParam } from 'h3';
-import { Project, Estimate, WbsNode, EstimateItem, PriceListItem } from '#models';
+import { Project, Estimate } from '#models';
+import { deleteEstimateCascade } from '#services/EstimateService';
 
 export default defineEventHandler(async (event) => {
   const id = getRouterParam(event, 'id');
+  if (!id) {
+    throw createError({ statusCode: 400, statusMessage: 'Project ID required' });
+  }
 
   try {
     const project = await Project.findById(id);
@@ -14,12 +18,10 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    // Cascade delete related entities
-    await EstimateItem.deleteMany({ project_id: id });
-    await WbsNode.deleteMany({ project_id: id }); // Updated key name in model
-    await Estimate.deleteMany({ project_id: id });
-    await PriceListItem.deleteMany({ project_id: id }); // Updated key name in model
-
+    const estimates = await Estimate.find({ project_id: id });
+    for (const est of estimates) {
+      await deleteEstimateCascade(id, est._id.toString());
+    }
     await Project.findByIdAndDelete(id);
 
     return { success: true };

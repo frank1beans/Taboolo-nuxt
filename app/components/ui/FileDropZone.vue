@@ -87,7 +87,7 @@ const triggerSelect = () => {
   <div
     class="relative flex flex-col items-center justify-center w-full p-8 border-2 border-dashed rounded-lg transition-colors duration-200"
     :class="[
-      isDragging ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/10' : 'border-gray-300 dark:border-gray-700 hover:border-primary-400 dark:hover:border-primary-500',
+      isDragging ? 'border-[hsl(var(--primary))] bg-[hsl(var(--accent-light))]' : 'border-[hsl(var(--border))] hover:border-[hsl(var(--primary)/0.6)]',
       disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
     ]"
     @dragover="onDragOver"
@@ -107,19 +107,20 @@ const triggerSelect = () => {
     <div class="flex flex-col items-center text-center space-y-3">
       <div 
         class="w-12 h-12 rounded-full flex items-center justify-center transition-colors"
-        :class="isDragging ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400' : 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500'"
+        :class="isDragging ? 'bg-[hsl(var(--primary)/0.15)] text-[hsl(var(--primary))]' : 'bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]'"
       >
         <UIcon :name="icon || 'i-heroicons-cloud-arrow-up'" class="w-6 h-6" />
       </div>
       
       <div>
-        <p class="text-sm font-medium text-gray-700 dark:text-gray-200">
+        <p class="text-sm font-medium text-[hsl(var(--foreground))]">
           {{ label || 'Clicca per caricare o trascina un file qui' }}
         </p>
-        <p v-if="sublabel" class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+        <p v-if="sublabel" class="text-xs text-[hsl(var(--muted-foreground))] mt-1">
           {{ sublabel }}
         </p>
       </div>
     </div>
   </div>
 </template>
+

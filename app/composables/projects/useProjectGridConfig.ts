@@ -98,8 +98,6 @@ export const useProjectGridConfig = (rowData: Ref<Project[]>) => {
                 filter: false,
                 sortable: false,
                 resizable: false,
-                suppressMenu: true,
-                suppressHeaderMenuButton: true,
                 lockPosition: 'right',
                 cellRenderer: 'actionsRenderer',
                 cellClass: 'actions-cell',

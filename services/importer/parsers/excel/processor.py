@@ -26,11 +26,35 @@ def drop_empty_columns(rows: list[tuple[Any, ...]]):
 
 
 def locate_header_row(rows: list[tuple[Any, ...]]) -> int | None:
-    """Find the header row in Excel data."""
-    for idx, row in enumerate(rows[:10]):
-        values = [cell for cell in row if cell is not None]
-        if len(values) >= 2:
+    """
+    Find the header row in Excel data.
+    
+    Improved logic: finds the first row where at least 60% of columns 
+    are filled (or minimum 4 cells). This skips sparse title/header rows.
+    """
+    if not rows:
+        return None
+    
+    # Find max column count
+    max_cols = max(len(row) for row in rows) if rows else 0
+    if max_cols == 0:
+        return None
+    
+    # Threshold: at least 60% filled, minimum 4
+    threshold = max(4, int(max_cols * 0.6))
+    
+    # Search first 30 rows
+    for idx, row in enumerate(rows[:30]):
+        filled = sum(1 for cell in row if cell not in (None, "", " "))
+        if filled >= threshold:
             return idx
+    
+    # Fallback: first row with at least 3 values
+    for idx, row in enumerate(rows[:30]):
+        filled = sum(1 for cell in row if cell not in (None, "", " "))
+        if filled >= 3:
+            return idx
+    
     return None
 
 

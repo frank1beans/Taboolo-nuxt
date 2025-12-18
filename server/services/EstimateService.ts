@@ -1,6 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Types } from 'mongoose';
 import { Estimate, EstimateItem } from '#models';
+import { normalizeTextFields } from '#utils/normalize';
+import { PriceList, PriceListItem, WbsNode } from '#models';
 
 type AnyRecord = Record<string, any>;
 
@@ -108,12 +110,15 @@ export async function upsertEstimateItems(
       if (wbs6Id) ids.push(new Types.ObjectId(wbs6Id));
       if (w7) { const id7 = wbs7Map[w7]; if (id7) ids.push(new Types.ObjectId(id7)); }
 
+      const { short_description, long_description, unit } = normalizeTextFields(entry);
+
       return {
         project_id: projectObjectId,
         wbs_ids: ids,
         code: entry.code ?? '',
-        description: entry.description ?? '',
-        unit: entry.unit ?? entry.unit_label,
+        description: short_description,
+        description_extended: long_description,
+        unit: unit,
         progressive: entry.progressive ?? entry.order,
         order: entry.order ?? 0,
         import_run_id: importRunId,
@@ -133,4 +138,89 @@ export async function upsertEstimateItems(
   if (docs.length) {
     await EstimateItem.insertMany(docs, { ordered: false });
   }
+}
+
+/**
+ * Delete an estimate and all related data (items, price lists/items, WBS) in a single helper.
+ * Accepts optional session to participate in a wider transaction.
+ */
+export async function deleteEstimateCascade(
+  projectId: string,
+  estimateId: string,
+  session?: any,
+) {
+  const projectObjectId = new Types.ObjectId(projectId);
+  const estimateObjectId = new Types.ObjectId(estimateId);
+  const opts = session ? { session } : undefined;
+
+  /*
+  const itemsResult = await EstimateItem.deleteMany({
+    project_id: projectObjectId,
+    'project.estimate_id': estimateObjectId,
+  }, opts);
+
+  const priceItemsResult = await PriceListItem.deleteMany({
+    project_id: projectObjectId,
+    estimate_id: estimateObjectId,
+  }, opts);
+
+  const priceListsResult = await PriceList.deleteMany({
+    project_id: projectObjectId,
+    estimate_id: estimateObjectId,
+  }, opts);
+
+  const wbsResult = await WbsNode.deleteMany({
+    project_id: projectObjectId,
+    estimate_id: estimateObjectId,
+  }, opts);
+
+  const estimateResult = await Estimate.deleteOne({
+    _id: estimateObjectId,
+    project_id: projectObjectId,
+  }, opts);
+  */
+
+  // Sequential execution with logging
+  console.log(`[EstimateService] Deleting EstimateItems for Est ${estimateId}...`);
+  const itemsResult = await EstimateItem.deleteMany({
+    project_id: projectObjectId,
+    'project.estimate_id': estimateObjectId,
+  }, opts);
+  console.log(`[EstimateService] Deleted ${itemsResult.deletedCount} EstimateItems`);
+
+  console.log(`[EstimateService] Deleting PriceListItems for Est ${estimateId}...`);
+  const priceItemsResult = await PriceListItem.deleteMany({
+    project_id: projectObjectId,
+    estimate_id: estimateObjectId,
+  }, opts);
+  console.log(`[EstimateService] Deleted ${priceItemsResult.deletedCount} PriceListItems`);
+
+  console.log(`[EstimateService] Deleting PriceLists for Est ${estimateId}...`);
+  const priceListsResult = await PriceList.deleteMany({
+    project_id: projectObjectId,
+    estimate_id: estimateObjectId,
+  }, opts);
+  console.log(`[EstimateService] Deleted ${priceListsResult.deletedCount} PriceLists`);
+
+  console.log(`[EstimateService] Deleting WBS for Est ${estimateId}...`);
+  const wbsResult = await WbsNode.deleteMany({
+    project_id: projectObjectId,
+    estimate_id: estimateObjectId,
+  }, opts);
+  console.log(`[EstimateService] Deleted ${wbsResult.deletedCount} WBSNodes`);
+
+  console.log(`[EstimateService] Deleting Estimate doc ${estimateId}...`);
+  const estimateResult = await Estimate.deleteOne({
+    _id: estimateObjectId,
+    project_id: projectObjectId,
+  }, opts);
+  console.log(`[EstimateService] Deleted ${estimateResult.deletedCount} Estimate doc`);
+
+  return {
+    deletedItems: itemsResult.deletedCount ?? 0,
+    deletedPriceItems: priceItemsResult.deletedCount ?? 0,
+    deletedPriceLists: priceListsResult.deletedCount ?? 0,
+    deletedWbs: wbsResult.deletedCount ?? 0,
+    deletedEstimates: estimateResult.deletedCount ?? 0,
+  };
 }

@@ -93,9 +93,9 @@ const EstimateItemSchema = new Schema<IEstimateItem>({
 
 // Index for efficient retrieval of all items for a WBS node
 EstimateItemSchema.index({ project_id: 1, wbs_ids: 1 });
+EstimateItemSchema.index({ project_id: 1, 'project.estimate_id': 1 });
 
 export const EstimateItem = model<IEstimateItem>('EstimateItem', EstimateItemSchema);
-
 
 
 

@@ -6,11 +6,15 @@ export interface PriceCatalog {
 export interface Round {
     id: string;
     name?: string;
+    companies?: Company[];
 }
 
 export interface Company {
     id: string;
     name?: string;
+    // Offer Metadata for Navigation
+    offerMode?: 'detailed' | 'aggregated';
+    offerId?: string;
 }
 
 export interface Estimate {

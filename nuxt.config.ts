@@ -4,7 +4,15 @@ import { fileURLToPath } from 'node:url';
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
-  builder: '@nuxt/vite-builder',
+
+  // Custom Loading Indicator Color (Green)
+  app: {
+    pageTransition: { name: 'page', mode: 'out-in' },
+    layoutTransition: { name: 'layout', mode: 'out-in' },
+  },
+
+  spaLoadingTemplate: false, // Optional: disable default loading template if needed
+
 
   srcDir: 'app/',
 
@@ -53,6 +61,12 @@ export default defineNuxtConfig({
     imports: {
       dirs: ['./server/models', './server/utils', './server/importers']
     }
+  },
+
+  typescript: {
+    tsConfig: {
+      include: ['../types/**/*.d.ts'],
+    },
   },
 
   runtimeConfig: {

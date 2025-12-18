@@ -352,8 +352,9 @@ export const api = {
 
   async getProjectWbsStructure(
     projectId: number | string,
+    estimateId: number | string,
   ): Promise<ApiProjectWbs> {
-    return apiFetch<ApiProjectWbs>(`/projects/${projectId}/wbs`);
+    return apiFetch<ApiProjectWbs>(`/projects/${projectId}/estimates/${estimateId}/wbs`);
   },
 
   async uploadProjectWbs(
@@ -488,7 +489,7 @@ export const api = {
     params: {
       file: File;
       company: string;
-      mode?: "mc" | "lc";
+      mode?: "lx" | "mx";
       roundMode: "auto" | "new" | "replace";
       roundNumber?: number | null;
       discipline?: string;
@@ -498,6 +499,7 @@ export const api = {
       priceColumn?: string;
       quantityColumn?: string;
       progressColumn?: string;
+      sourceEstimateId?: string;
     },
   ): Promise<ApiEstimate> {
     const {
@@ -542,7 +544,21 @@ export const api = {
     if (progressColumn) {
       formData.append("progressive_column", progressColumn);
     }
-    return apiFetch<ApiEstimate>(`/projects/${projectId}/offers`, {
+    if (params.sourceEstimateId) {
+      formData.append("estimate_id", params.sourceEstimateId);
+    }
+
+    // Also pass as Query Param for easier server access (bypass proxy body consumption)
+    const query = new URLSearchParams();
+    if (params.sourceEstimateId) query.set('estimate_id', params.sourceEstimateId);
+    if (params.mode) query.set('mode', params.mode);
+    if (params.company) query.set('company', params.company);
+    if (params.roundNumber !== undefined && params.roundNumber !== null) query.set('round_number', String(params.roundNumber));
+    if (params.roundMode) query.set('round_mode', params.roundMode);
+
+    const suffix = query.toString() ? `?${query.toString()}` : '';
+
+    return apiFetch<ApiEstimate>(`/projects/${projectId}/offers${suffix}`, {
       method: "POST",
       body: formData,
     });
@@ -552,7 +568,7 @@ export const api = {
     projectId: number | string,
     params: {
       file: File;
-      mode?: "mc" | "lc";
+      mode?: "lx" | "mx";
       companiesConfig: {
         company_name: string;
         price_column?: string;
@@ -851,14 +867,20 @@ export const api = {
 
   async getProjectPriceCatalog(
     projectId: number | string,
-    options?: { usedOnly?: boolean },
+    options?: { estimateId?: string | number; usedOnly?: boolean },
   ): Promise<ApiPriceListItem[]> {
     const params = new URLSearchParams();
+    if (options?.estimateId !== undefined && options?.estimateId !== null) {
+      params.set("estimate_id", String(options.estimateId));
+    }
     if (options?.usedOnly) {
       params.set("used_only", "true");
     }
     const suffix = params.toString() ? `?${params.toString()}` : "";
-    return apiFetch<ApiPriceListItem[]>(`/projects/${projectId}/price-catalog${suffix}`);
+    if (!options?.estimateId) {
+      throw new Error("estimateId is required for project price list");
+    }
+    return apiFetch<ApiPriceListItem[]>(`/projects/${projectId}/estimates/${options.estimateId}/price-list${suffix}`);
   },
 
   async getGlobalPriceCatalog(options?: {
@@ -877,7 +899,7 @@ export const api = {
       params.set("business_unit", options.businessUnit);
     }
     const suffix = params.toString() ? `?${params.toString()}` : "";
-    return apiFetch<ApiPriceListItem[]>(`/projects/price-catalog${suffix}`);
+    return apiFetch<ApiPriceListItem[]>(`/catalog${suffix}`);
   },
 
   async semanticPriceCatalogSearch(params: {
@@ -899,12 +921,12 @@ export const api = {
     }
     const suffix = searchParams.toString();
     return apiFetch<ApiPriceListItemSearchResult[]>(
-      `/projects/price-catalog/semantic-search?${suffix}`,
+      `/catalog/semantic-search?${suffix}`,
     );
   },
 
   async getPriceCatalogSummary(): Promise<ApiPriceCatalogSummary> {
-    return apiFetch<ApiPriceCatalogSummary>(`/projects/price-catalog/summary`);
+    return apiFetch<ApiPriceCatalogSummary>(`/catalog/summary`);
   },
 
   async updateManualOfferPrice(

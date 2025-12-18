@@ -15,6 +15,7 @@ export interface DataGridColumn {
   headerClass?: string;
   headerComponent?: string | any;
   hide?: boolean;
+  valueGetter?: (params: any) => any; // AG Grid Standard
   valuesGetter?: () => string[];
   pinned?: 'left' | 'right' | boolean | null;
   lockPosition?: boolean | 'left' | 'right';
@@ -22,7 +23,15 @@ export interface DataGridColumn {
   suppressMenu?: boolean;
   resizable?: boolean;
   suppressSizeToFit?: boolean;
+  suppressMovable?: boolean;
   suppressMovableColumns?: boolean;
+  /**
+   * Hint for the grid/filter UI to treat the column as numeric.
+  cellStyle?: any;
+  /**
+   * Column Group Children
+   */
+  children?: DataGridColumn[];
   /**
    * Hint for the grid/filter UI to treat the column as numeric.
    * If set to "number" the column will use AG Grid number filter and show numeric operators.
@@ -55,12 +64,14 @@ export interface DataGridConfig {
   defaultColDef?: any;
   rowHeight?: number;
   headerHeight?: number;
+  groupHeaderHeight?: number;
   animateRows?: boolean;
   suppressCellFocus?: boolean;
   pagination?: PaginationConfig;
   enableQuickFilter?: boolean;
   enableExport?: boolean;
   enableColumnToggle?: boolean;
+  rowClassRules?: Record<string, (params: any) => boolean> | { [cssClassName: string]: string | ((params: any) => boolean) };
 }
 
 export interface PaginationConfig {

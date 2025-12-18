@@ -19,18 +19,28 @@ export function useDataGridColumns() {
     }
   };
 
-  const getNestedValue = (obj: any, path: string) => {
+  const getNestedValue = (obj: any, path: string | undefined) => {
+    if (!path) return undefined;
     return path.split('.').reduce((acc, part) => (acc && acc[part] !== undefined ? acc[part] : undefined), obj);
   };
 
-  const createColumnDefs = (columns: DataGridColumn[], rowData: any[] = []) => {
+  const createColumnDefs = (columns: DataGridColumn[], rowData: any[] = []): any[] => {
     return columns.map((col) => {
+      // Handle Column Groups recursively
+      if (col.children && col.children.length > 0) {
+        return {
+          ...col,
+          children: createColumnDefs(col.children, rowData),
+        };
+      }
+
       let filterSetting: any = col.filter ?? 'agTextColumnFilter';
 
       if (filterSetting === true) filterSetting = 'agTextColumnFilter';
       if (filterSetting === 'number') filterSetting = 'agNumberColumnFilter';
 
       const shouldTreatAsNumeric = (() => {
+        if (!col.field) return false;
         if (col.filterType === 'number' || filterSetting === 'agNumberColumnFilter') return true;
         for (const row of rowData) {
           const val = getNestedValue(row, col.field);
@@ -61,14 +71,14 @@ export function useDataGridColumns() {
         suppressSizeToFit: col.suppressSizeToFit ?? false,
         filter: filterSetting,
         floatingFilter: col.floatingFilter ?? false,
-        suppressMenu: col.suppressMenu ?? true,
-        suppressHeaderMenuButton: col.suppressHeaderMenuButton ?? true,
+        menuTabs: col.suppressMenu ? [] : col.menuTabs,
+        suppressHeaderMenuButton: col.suppressHeaderMenuButton ?? false,
         sortable: col.sortable ?? true,
         resizable: col.resizable ?? true,
         hide: col.hide ?? false,
         headerClass: col.headerClass,
         cellClass: col.cellClass,
-        suppressMovableColumns: col.suppressMovableColumns,
+        suppressMovable: col.suppressMovable ?? col.suppressMovableColumns,
       };
 
       if (filterSetting && filterSetting !== 'agNumberColumnFilter') {
@@ -88,8 +98,13 @@ export function useDataGridColumns() {
         colDef.cellRenderer = col.cellRenderer;
       }
 
+      if (col.cellStyle) {
+        colDef.cellStyle = col.cellStyle;
+      }
+
       // Add valuesGetter for filter dropdown only when filtering is enabled
-      if (filterSetting !== false) {
+      // Only set valuesGetter if field is present
+      if (filterSetting !== false && col.field) {
         if (col.valuesGetter) {
           colDef.headerComponentParams = {
             valuesGetter: col.valuesGetter,
@@ -127,9 +142,9 @@ export function useDataGridColumns() {
     // Keep filter for API, hide UI via CSS and props
     filter: 'agTextColumnFilter',
     floatingFilter: false,
-    suppressMenu: true,
+    menuTabs: [],
     suppressHeaderMenuButton: true,
-    suppressMovableColumns: true,
+    suppressMovable: true,
     filterParams: {
       textMatcher: (params: any) => {
         const operator = mapAgOptionToOperator(params.filterOption || 'contains');

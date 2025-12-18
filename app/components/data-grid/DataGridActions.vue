@@ -25,7 +25,7 @@ const onDelete = () => {
     <UTooltip text="Dettaglio">
       <button
         type="button"
-        class="inline-flex items-center justify-center w-7 h-7 rounded-md transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary)/0.55)] text-[hsl(var(--primary))] hover:bg-[hsl(var(--primary)/0.12)] hover:text-[hsl(var(--primary))]"
+        class="inline-flex items-center justify-center w-7 h-7 rounded-md transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary)/0.55)] bg-[hsl(var(--primary)/0.1)] text-[hsl(var(--primary))] hover:bg-[hsl(var(--primary))] hover:text-[hsl(var(--primary-foreground))]"
         aria-label="Apri dettaglio"
         @click.stop="onOpen"
       >
@@ -36,7 +36,7 @@ const onDelete = () => {
     <UTooltip text="Modifica">
       <button
         type="button"
-        class="inline-flex items-center justify-center w-7 h-7 rounded-md transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-[hsl(var(--warning)/0.55)] text-[hsl(var(--warning))] hover:bg-[hsl(var(--warning)/0.12)] hover:text-[hsl(var(--warning))]"
+        class="inline-flex items-center justify-center w-7 h-7 rounded-md transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-[hsl(var(--warning)/0.55)] bg-[hsl(var(--warning)/0.1)] text-[hsl(var(--warning))] hover:bg-[hsl(var(--warning))] hover:text-[hsl(var(--warning-foreground))]"
         aria-label="Modifica"
         @click.stop="onEdit"
       >
@@ -47,7 +47,7 @@ const onDelete = () => {
     <UTooltip text="Elimina">
       <button
         type="button"
-        class="inline-flex items-center justify-center w-7 h-7 rounded-md transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-[hsl(var(--destructive)/0.55)] text-[hsl(var(--destructive))] hover:bg-[hsl(var(--destructive)/0.12)] hover:text-[hsl(var(--destructive))]"
+        class="inline-flex items-center justify-center w-7 h-7 rounded-md transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-[hsl(var(--destructive)/0.55)] bg-[hsl(var(--destructive)/0.1)] text-[hsl(var(--destructive))] hover:bg-[hsl(var(--destructive))] hover:text-[hsl(var(--destructive-foreground))]"
         aria-label="Elimina"
         @click.stop="onDelete"
       >

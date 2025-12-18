@@ -69,7 +69,7 @@ const statusOptions = [
           <UButton
             icon="i-heroicons-x-mark"
             variant="ghost"
-            color="gray"
+            color="neutral"
             size="sm"
             @click="handleClose"
           />
@@ -84,6 +84,7 @@ const statusOptions = [
                 v-model="form.code"
                 placeholder="es. PRJ-001"
                 icon="i-heroicons-hashtag"
+                color="neutral"
               />
             </UFormField>
             <UFormField label="Nome" required>
@@ -91,6 +92,7 @@ const statusOptions = [
                 v-model="form.name"
                 placeholder="Nome del progetto"
                 icon="i-heroicons-document-text"
+                color="neutral"
               />
             </UFormField>
           </div>
@@ -101,6 +103,7 @@ const statusOptions = [
               v-model="form.description"
               placeholder="Descrizione opzionale del progetto..."
               :rows="3"
+              color="neutral"
             />
           </UFormField>
 
@@ -111,6 +114,7 @@ const statusOptions = [
                 v-model="form.business_unit"
                 placeholder="es. Engineering"
                 icon="i-heroicons-building-office"
+                color="neutral"
               />
             </UFormField>
             <UFormField label="Stato">
@@ -119,6 +123,7 @@ const statusOptions = [
                 :options="statusOptions"
                 value-key="value"
                 option-attribute="label"
+                color="neutral"
               />
             </UFormField>
           </div>
@@ -128,7 +133,7 @@ const statusOptions = [
         <div class="px-6 py-4 border-t flex items-center justify-end gap-3 border-[hsl(var(--border))] bg-[hsl(var(--secondary))]">
           <UButton
             variant="ghost"
-            color="gray"
+            color="neutral"
             @click="handleClose"
           >
             Annulla

@@ -84,7 +84,7 @@ export const CRITICALITY_CONFIG: Record<CriticalityLevel, { label: string; color
 // ============= CHART COLORS =============
 
 export const CHART_COLORS = {
-  primary: "#1E93BD",
+  primary: "#10B981", // Emerald 500
   secondary: "#64748b",
   success: "#10b981",
   warning: "#f59e0b",

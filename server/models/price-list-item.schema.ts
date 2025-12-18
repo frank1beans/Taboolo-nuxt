@@ -2,6 +2,7 @@ import { Schema, model, type Types } from 'mongoose';
 
 export interface IPriceListItem {
   project_id?: Types.ObjectId;
+  estimate_id: Types.ObjectId;
   code: string;
   description?: string;
   long_description?: string;
@@ -24,6 +25,7 @@ export interface IPriceListItem {
 
 const PriceListItemSchema = new Schema<IPriceListItem>({
   project_id: { type: Schema.Types.ObjectId, ref: 'Project', index: true },
+  estimate_id: { type: Schema.Types.ObjectId, ref: 'Estimate', required: true, index: true },
   code: { type: String, required: true },
   description: { type: String },
   long_description: { type: String },
@@ -43,5 +45,6 @@ const PriceListItemSchema = new Schema<IPriceListItem>({
 
 // Text index
 PriceListItemSchema.index({ code: 'text', description: 'text', long_description: 'text' });
+PriceListItemSchema.index({ project_id: 1, estimate_id: 1 });
 
 export const PriceListItem = model<IPriceListItem>('PriceListItem', PriceListItemSchema);

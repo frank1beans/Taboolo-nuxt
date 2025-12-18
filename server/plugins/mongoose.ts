@@ -1,6 +1,5 @@
 import mongoose from 'mongoose';
-import { defineNitroPlugin } from '#nitro';
-import { useRuntimeConfig } from '#nitro';
+
 
 export default defineNitroPlugin(async (_nitroApp) => {
   const config = useRuntimeConfig();

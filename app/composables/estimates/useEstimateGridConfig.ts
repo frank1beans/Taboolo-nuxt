@@ -53,42 +53,6 @@ export const useEstimateGridConfig = (rowData: Ref<EstimateItem[]>) => {
                 width: 120,
                 pinned: 'left',
             },
-            // WBS Hierarchy Columns (wbs01-wbs07)
-            {
-                field: 'wbs_hierarchy.wbs01',
-                headerName: 'WBS 01',
-                width: 150,
-            },
-            {
-                field: 'wbs_hierarchy.wbs02',
-                headerName: 'WBS 02',
-                width: 150,
-            },
-            {
-                field: 'wbs_hierarchy.wbs03',
-                headerName: 'WBS 03',
-                width: 150,
-            },
-            {
-                field: 'wbs_hierarchy.wbs04',
-                headerName: 'WBS 04',
-                width: 150,
-            },
-            {
-                field: 'wbs_hierarchy.wbs05',
-                headerName: 'WBS 05',
-                width: 150,
-            },
-            {
-                field: 'wbs_hierarchy.wbs06',
-                headerName: 'WBS 06',
-                width: 150,
-            },
-            {
-                field: 'wbs_hierarchy.wbs07',
-                headerName: 'WBS 07',
-                width: 150,
-            },
             {
                 field: 'description',
                 headerName: 'Descrizione',
@@ -108,8 +72,6 @@ export const useEstimateGridConfig = (rowData: Ref<EstimateItem[]>) => {
                 valueFormatter: (params: any) => formatNumber(params.value),
                 filter: 'agNumberColumnFilter',
                 headerComponent: null,
-                suppressMenu: false,
-                suppressHeaderMenuButton: false,
             },
             {
                 field: 'project.unit_price',
@@ -119,8 +81,6 @@ export const useEstimateGridConfig = (rowData: Ref<EstimateItem[]>) => {
                 valueFormatter: (params: any) => formatCurrency(params.value),
                 filter: 'agNumberColumnFilter',
                 headerComponent: null,
-                suppressMenu: false,
-                suppressHeaderMenuButton: false,
             },
             {
                 field: 'project.amount',
@@ -130,8 +90,49 @@ export const useEstimateGridConfig = (rowData: Ref<EstimateItem[]>) => {
                 valueFormatter: (params: any) => formatCurrency(params.value),
                 filter: 'agNumberColumnFilter',
                 headerComponent: null,
-                suppressMenu: false,
-                suppressHeaderMenuButton: false,
+            },
+            // WBS Hierarchy Columns (wbs01-wbs07) - Moved to end
+            {
+                field: 'wbs_hierarchy.wbs01',
+                headerName: 'WBS 01',
+                width: 150,
+                hide: true,
+            },
+            {
+                field: 'wbs_hierarchy.wbs02',
+                headerName: 'WBS 02',
+                width: 150,
+                hide: true,
+            },
+            {
+                field: 'wbs_hierarchy.wbs03',
+                headerName: 'WBS 03',
+                width: 150,
+                hide: true,
+            },
+            {
+                field: 'wbs_hierarchy.wbs04',
+                headerName: 'WBS 04',
+                width: 150,
+                hide: true,
+            },
+            {
+                field: 'wbs_hierarchy.wbs05',
+                headerName: 'WBS 05',
+                width: 150,
+                hide: true,
+            },
+            {
+                field: 'wbs_hierarchy.wbs06',
+                headerName: 'WBS 06',
+                width: 150,
+                hide: true,
+            },
+            {
+                field: 'wbs_hierarchy.wbs07',
+                headerName: 'WBS 07',
+                width: 150,
+                hide: true,
             },
         ],
         defaultColDef: {

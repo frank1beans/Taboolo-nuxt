@@ -8,6 +8,28 @@ const COMPUTO_TYPE_MAP: Record<string, string> = {
 
 export function mapComputoToEstimate(data: Json) {
   if (!data || typeof data !== 'object') return data;
+
+  const mapItem = (item: Json) => {
+    const shortDescription = item.short_description ?? item.descrizione ?? item.description ?? item.code ?? item.codice;
+    const longDescription = item.long_description ?? item.description_extended ?? item.descrizione_estesa ?? item.note_estese ?? null;
+    const wbsIds = item.wbs_ids ?? item.wbsIds ?? item.groupIds ?? null;
+    return {
+      order: item.ordine ?? item.order ?? 0,
+      progressive: item.progressivo ?? item.progressive,
+      code: item.codice ?? item.code,
+      short_description: shortDescription,
+      long_description: longDescription || shortDescription,
+      unit: item.unita_misura ?? item.unit,
+      quantity: item.quantita ?? item.quantity,
+      unit_price: item.prezzo_unitario ?? item.unit_price,
+      amount: item.importo ?? item.amount,
+      notes: item.note ?? item.notes,
+      metadata: item.metadata,
+      wbs_ids: wbsIds,
+      wbs_levels: item.wbs_levels,
+    };
+  };
+
   return {
     id: data.id,
     project_id: data.commessa_id ?? data.project_id,
@@ -18,7 +40,7 @@ export function mapComputoToEstimate(data: Json) {
     is_baseline: data.is_baseline ?? false,
     company: data.impresa,
     round_number: data.round_number,
-    total_amount: data.importo_totale,
+    total_amount: data.importo_totale ?? data.total_amount,
     delta_vs_project: data.delta_vs_progetto,
     delta_percentage: data.percentuale_delta,
     notes: data.note,
@@ -29,7 +51,9 @@ export function mapComputoToEstimate(data: Json) {
     import_run_id: data.import_run_id,
     matching_report: data.matching_report,
     created_at: data.created_at,
-    updated_at: data.updated_at
+    updated_at: data.updated_at,
+    // Include items for LX/MX import
+    items: Array.isArray(data.items) ? data.items.map(mapItem) : [],
   };
 }
 
@@ -166,8 +190,8 @@ export function mapRawImportPayload(result: any) {
   const products = (result?.products ?? []).map((p: any) => ({
     prodottoId: p.prodottoId,
     code: p.code ?? null,
-    descriptionShort: p.descriptionShort ?? p.code ?? '',
-    descriptionLong: p.descriptionLong ?? null,
+    short_description: p.descriptionShort ?? p.description_short ?? p.code ?? '',
+    long_description: p.descriptionLong ?? p.description_long ?? null,
     unitId: p.unitId ?? null,
     wbs6: p.wbs6,
     wbs7: p.wbs7,

@@ -85,8 +85,8 @@ export interface ImpresaColorTheme {
 
 export const IMPRESA_COLOR_PALETTE: Record<string, ImpresaColorTheme> = {
   blue: {
-    light: { bg: "rgba(59,130,246,0.08)", border: "rgba(59,130,246,0.25)", text: "#1e3a8a" },
-    dark: { bg: "rgba(59,130,246,0.18)", border: "rgba(147,197,253,0.35)", text: "#dbeafe" },
+    light: { bg: "rgba(16, 185, 129, 0.08)", border: "rgba(16, 185, 129, 0.25)", text: "#064E3B" },
+    dark: { bg: "rgba(16, 185, 129, 0.15)", border: "rgba(16, 185, 129, 0.30)", text: "#ECFDF5" }
   },
   amber: {
     light: { bg: "rgba(245,158,11,0.08)", border: "rgba(245,158,11,0.22)", text: "#92400e" },
@@ -411,28 +411,28 @@ export const createColumnGroup = (options: ColumnGroupOptions) => ({
 export const createProjectPriceColumns = (
   _isDarkMode: boolean = false
 ): ColDef[] => [
-  {
-    field: "project_price",
-    headerName: "Base price",
-    width: 160,
-    type: "numericColumn",
-    cellClass: "font-mono text-sm font-semibold text-blue-700 dark:text-blue-200",
-    headerClass: "text-right font-bold",
-    valueFormatter: currencyValueFormatter,
-    ...BASE_COLUMN_DEFAULTS,
-  },
-  {
-    field: "project_quantity",
-    headerName: "Project qty",
-    width: 150,
-    type: "numericColumn",
-    cellClass: "font-mono text-sm",
-    headerClass: "text-right font-semibold",
-    valueFormatter: (params) =>
-      params.value != null ? Number(params.value).toLocaleString("en-US") : "-",
-    ...BASE_COLUMN_DEFAULTS,
-  },
-];
+    {
+      field: "project_price",
+      headerName: "Base price",
+      width: 160,
+      type: "numericColumn",
+      cellClass: "font-mono text-sm font-semibold text-[hsl(var(--primary))] dark:text-[hsl(var(--primary))]",
+      headerClass: "text-right font-bold",
+      valueFormatter: currencyValueFormatter,
+      ...BASE_COLUMN_DEFAULTS,
+    },
+    {
+      field: "project_quantity",
+      headerName: "Project qty",
+      width: 150,
+      type: "numericColumn",
+      cellClass: "font-mono text-sm",
+      headerClass: "text-right font-semibold",
+      valueFormatter: (params) =>
+        params.value != null ? Number(params.value).toLocaleString("en-US") : "-",
+      ...BASE_COLUMN_DEFAULTS,
+    },
+  ];
 
 // ============= GRID OPTIONS =============
 
@@ -711,7 +711,7 @@ export const exportToExcelJS = async (options: ExcelJSExportOptions): Promise<vo
     const addedRow = worksheet.addRow(excelRow);
 
     // Apply data styling
-  const defaultDataStyle: Partial<ExcelJSTypes.Style> = {
+    const defaultDataStyle: Partial<ExcelJSTypes.Style> = {
       alignment: { vertical: "middle", horizontal: "left" },
       border: {
         top: { style: "thin", color: { argb: "FFE9ECEF" } },

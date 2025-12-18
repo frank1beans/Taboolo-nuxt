@@ -1,16 +1,17 @@
 import { ref } from 'vue';
 import type { WbsNode, WbsTreeState } from '~/types/wbs';
 
-export function useWbsTree(projectId?: string) {
+export function useWbsTree(projectId?: string, estimateId?: string) {
   const nodes = ref<WbsNode[]>([]);
   const loading = ref(false);
   const selectedNode = ref<WbsNode | null>(null);
   const expandedNodes = ref<Set<string>>(new Set());
 
-  const fetchWbsTree = async (pid: string) => {
+  const fetchWbsTree = async (pid: string, estId?: string) => {
     loading.value = true;
     try {
-      const response = await $fetch(`/api/projects/${pid}/wbs`);
+      if (!estId) throw new Error('estimateId is required for WBS');
+      const response = await $fetch(`/api/projects/${pid}/estimates/${estId}/wbs`);
 
       // Build tree structure
       const allNodes = [
@@ -112,8 +113,8 @@ export function useWbsTree(projectId?: string) {
   };
 
   // Auto-fetch if projectId provided
-  if (projectId) {
-    fetchWbsTree(projectId);
+  if (projectId && estimateId) {
+    fetchWbsTree(projectId, estimateId);
   }
 
   return {

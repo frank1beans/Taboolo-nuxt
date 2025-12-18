@@ -21,25 +21,25 @@ const emit = defineEmits<{
 const statusConfig = computed(() => {
   switch (props.status) {
     case 'uploading':
-      return { icon: 'i-heroicons-arrow-path', color: 'text-blue-500', title: 'Caricamento in corso...' };
+      return { icon: 'i-heroicons-arrow-path', color: 'text-[hsl(var(--info))]', title: 'Caricamento in corso...' };
     case 'processing':
-      return { icon: 'i-heroicons-cog-6-tooth', color: 'text-amber-500', title: 'Elaborazione file...' };
+      return { icon: 'i-heroicons-cog-6-tooth', color: 'text-[hsl(var(--warning))]', title: 'Elaborazione file...' };
     case 'success':
-      return { icon: 'i-heroicons-check-circle', color: 'text-green-500', title: 'Import completato' };
+      return { icon: 'i-heroicons-check-circle', color: 'text-[hsl(var(--success))]', title: 'Import completato' };
     case 'error':
-      return { icon: 'i-heroicons-x-circle', color: 'text-red-500', title: 'Errore durante l\'import' };
+      return { icon: 'i-heroicons-x-circle', color: 'text-[hsl(var(--destructive))]', title: 'Errore durante l\'import' };
     default:
-      return { icon: 'i-heroicons-document', color: 'text-gray-400', title: 'Pronto' };
+      return { icon: 'i-heroicons-document', color: 'text-[hsl(var(--muted-foreground))]', title: 'Pronto' };
   }
 });
 </script>
 
 <template>
-  <UCard v-if="status !== 'idle'" class="w-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+  <UCard v-if="status !== 'idle'" class="w-full border border-[hsl(var(--border))] bg-[hsl(var(--card))]">
     <div class="flex items-start gap-4">
       <!-- Icon Wrapper -->
       <div 
-        class="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center bg-gray-50 dark:bg-gray-700/50"
+        class="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center bg-[hsl(var(--secondary))]"
       >
         <UIcon 
           :name="statusConfig.icon" 
@@ -50,24 +50,24 @@ const statusConfig = computed(() => {
 
       <!-- Content -->
       <div class="flex-1 min-w-0">
-        <h4 class="text-sm font-medium text-gray-900 dark:text-white">
+        <h4 class="text-sm font-medium text-[hsl(var(--foreground))]">
           {{ statusConfig.title }}
         </h4>
         
-        <p v-if="fileName" class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">
+        <p v-if="fileName" class="text-xs text-[hsl(var(--muted-foreground))] mt-0.5 truncate">
           {{ fileName }}
         </p>
 
         <!-- Progress Bar (for uploading/processing) -->
-        <div v-if="status === 'uploading' || status === 'processing'" class="mt-3 w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 overflow-hidden">
+        <div v-if="status === 'uploading' || status === 'processing'" class="mt-3 w-full bg-[hsl(var(--muted))] rounded-full h-1.5 overflow-hidden">
           <div 
-            class="bg-primary-500 h-1.5 rounded-full transition-all duration-300" 
+            class="bg-[hsl(var(--primary))] h-1.5 rounded-full transition-all duration-300" 
             :style="{ width: `${progress || 0}%` }"
           ></div>
         </div>
 
         <!-- Success Details -->
-        <div v-if="status === 'success' && result" class="mt-2 text-sm text-gray-600 dark:text-gray-300 space-y-1">
+        <div v-if="status === 'success' && result" class="mt-2 text-sm text-[hsl(var(--foreground)/0.8)] space-y-1">
           <p v-if="result.message">{{ result.message }}</p>
           <div class="flex flex-wrap gap-2 mt-2">
             <UBadge v-if="result.totalItems" color="primary" variant="subtle" size="xs">
@@ -80,7 +80,7 @@ const statusConfig = computed(() => {
         </div>
 
         <!-- Error Message -->
-        <div v-if="status === 'error' && errorMessage" class="mt-2 p-2 rounded bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-xs">
+        <div v-if="status === 'error' && errorMessage" class="mt-2 p-2 rounded bg-[hsl(var(--destructive-light))] text-[hsl(var(--destructive))] text-xs">
           {{ errorMessage }}
         </div>
       </div>

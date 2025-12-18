@@ -12,14 +12,15 @@
       <template v-else-if="rowData.length > 0">
         <!-- Toolbar -->
         <DataGridToolbar
-          v-if="config.enableQuickFilter !== false"
           v-model="quickFilterText"
           :placeholder="toolbarPlaceholder"
           :enable-reset="true"
           :enable-export="config.enableExport !== false"
+          :enable-column-toggle="config.enableColumnToggle !== false"
           @apply-filter="applyQuickFilter"
           @clear-filter="clearQuickFilter"
           @export="exportToXlsx(exportFilename)"
+          @toggle-columns="openColumnConfig"
         />
 
         <!-- AG Grid -->
@@ -32,8 +33,9 @@
           :defaultColDef="defaultColDef"
           :components="components"
           :context="context"
-          :rowSelection="rowSelection"
+          :rowSelection="rowSelectionProp"
           :headerHeight="config.headerHeight || 48"
+          :groupHeaderHeight="config.groupHeaderHeight || 40"
           :rowHeight="config.rowHeight || 44"
           :floatingFiltersHeight="0"
           :suppressMenuHide="true"
@@ -59,6 +61,16 @@
           :panel="filterPanel"
           @apply-filter="applyColumnFilter"
           @close="filterPanel = null"
+        />
+
+        <!-- Column Visibility Popover -->
+        <ColumnVisibilityPopover
+          :open="showColumnConfig"
+          :trigger="columnConfigTrigger"
+          :columns="columnState"
+          @close="showColumnConfig = false"
+          @toggle="toggleColumnVisibility"
+          @reset="resetColumnVisibility"
         />
       </template>
 
@@ -87,20 +99,25 @@
 <script setup lang="ts">
 import { ref, computed, defineComponent, h } from 'vue';
 import { AgGridVue } from 'ag-grid-vue3';
+import { AllCommunityModule, ModuleRegistry } from 'ag-grid-community';
 import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-quartz.css';
+
+// Register AG Grid Modules
+ModuleRegistry.registerModules([AllCommunityModule]);
 import '~/assets/css/styles/ag-grid-custom.css';
 
 import type { DataGridConfig } from '~/types/data-grid';
 import DataGridHeader from './DataGridHeader.vue';
 import ColumnFilterPopover from './ColumnFilterPopover.vue';
+import ColumnVisibilityPopover from './ColumnVisibilityPopover.vue';
 
 const props = withDefaults(
   defineProps<{
     config: DataGridConfig;
     rowData?: any[];
     height?: string;
-    rowSelection?: 'single' | 'multiple';
+    rowSelection?: 'single' | 'multiple' | 'singleRow' | 'multiRow' | { mode: 'singleRow' | 'multiRow' };
     toolbarPlaceholder?: string;
     emptyStateTitle?: string;
     emptyStateMessage?: string;
@@ -115,7 +132,7 @@ const props = withDefaults(
   {
     rowData: () => [],
     height: '660px',
-    rowSelection: 'single',
+    rowSelection: 'singleRow',
     toolbarPlaceholder: 'Filtra per codice, descrizione...',
     emptyStateTitle: 'Nessun dato disponibile',
     emptyStateMessage: 'Non ci sono dati da visualizzare.',
@@ -148,6 +165,21 @@ const gridKey = computed(() => `grid-${isDark.value ? 'dark' : 'light'}`);
 // Use composables
 const { gridApi, gridReady, onGridReady: onGridReadyBase } = useDataGrid(props.config);
 
+const rowSelectionProp = computed(() => {
+  if (typeof props.rowSelection === 'string') {
+    if (props.rowSelection === 'single' || props.rowSelection === 'singleRow') {
+      return { mode: 'singleRow' as const, checkboxes: false, headers: false }
+    }
+    if (props.rowSelection === 'multiple' || props.rowSelection === 'multiRow') {
+      return { mode: 'multiRow' as const, checkboxes: false, headers: false }
+    }
+  }
+  if (props.rowSelection && typeof props.rowSelection === 'object') {
+    return props.rowSelection
+  }
+  return { mode: 'singleRow' as const, checkboxes: false, headers: false }
+})
+
 const {
   quickFilterText,
   activeFilters,
@@ -163,25 +195,57 @@ const {
 
 const { exportToXlsx } = useDataGridExport(gridApi);
 
+// Column Visibility State
+const showColumnConfig = ref(false);
+const columnConfigTrigger = ref<HTMLElement | null>(null);
+const columnState = ref<Array<{ colId: string; headerName: string; visible: boolean }>>([]);
+
+const openColumnConfig = (trigger: HTMLElement) => {
+  if (!gridApi.value) return;
+  columnConfigTrigger.value = trigger;
+  
+  const cols = gridApi.value.getAllGridColumns();
+  columnState.value = cols.map((col: any) => ({
+    colId: col.getColId(),
+    headerName: col.getColDef().headerName || col.getColId(),
+    visible: col.isVisible(),
+  }));
+  showColumnConfig.value = true;
+};
+
+const toggleColumnVisibility = (colId: string, visible: boolean) => {
+  if (!gridApi.value) return;
+  gridApi.value.setColumnsVisible([colId], visible);
+  // Update local state to reflect change immediately in UI
+  const col = columnState.value.find(c => c.colId === colId);
+  if (col) col.visible = visible;
+};
+
+const resetColumnVisibility = () => {
+  if (!gridApi.value) return;
+  gridApi.value.resetColumnState();
+  // Refresh state
+  openColumnConfig();
+};
+
 const { createColumnDefs, getDefaultColDef } = useDataGridColumns();
 
-// Generate column definitions with valuesGetter
+// Generate column definitions with valuesGetter and custom header
 const columnDefs = computed(() => {
   return createColumnDefs(props.config.columns, props.rowData).map((col) => ({
     ...col,
-    headerComponent: col.headerComponent !== undefined ? col.headerComponent : 'dataGridHeader',
+    headerComponent: col.headerComponent !== undefined
+      ? col.headerComponent
+      : (!col.children ? 'dataGridHeader' : undefined),
   }));
 });
 
 const defaultColDef = computed(() => ({
-  sortable: true,
-  resizable: true,
-  // Keep filter for API (setFilterModel), hide UI via CSS
+  ...getDefaultColDef(),
   filter: 'agTextColumnFilter',
   floatingFilter: false,
-  suppressMenu: true,
-  suppressHeaderMenuButton: true,
-  ...getDefaultColDef(),
+  menuTabs: ['generalMenuTab', 'filterMenuTab', 'columnsMenuTab'],
+  suppressHeaderMenuButton: false,
 }));
 
 // Custom header component
@@ -273,7 +337,7 @@ defineExpose({
 
 :deep(.ag-theme-quartz .ag-cell),
 :deep(.ag-theme-quartz-dark .ag-cell) {
-  padding-top: 8px;
-  padding-bottom: 8px;
+  padding-top: 0;
+  padding-bottom: 0;
 }
 </style>

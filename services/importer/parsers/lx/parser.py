@@ -67,8 +67,29 @@ def parse_lx_return_excel(
     if dropped_columns:
         column_warnings.append(f"Ignorate automaticamente {dropped_columns} colonne completamente vuote.")
 
-    code_indexes = _ensure_indexes_lc("codice", code_columns, data_rows, header_row, column_warnings, suggestions)
-    description_indexes = _ensure_indexes_lc("descrizione", description_columns, data_rows, header_row, column_warnings, suggestions)
+    # Try to resolve code columns - optional if description is provided
+    # If the user did not select a code column, do NOT auto-suggest one: ignore codes entirely.
+    try:
+        if code_columns and any(col for col in code_columns):
+            code_indexes = _ensure_indexes_lc("codice", code_columns, data_rows, header_row, column_warnings, suggestions)
+        else:
+            code_indexes = []
+    except ValueError:
+        code_indexes = []  # Code is optional if description is present
+    
+    # Try to resolve description columns - optional if code is provided
+    try:
+        description_indexes = _ensure_indexes_lc("descrizione", description_columns, data_rows, header_row, column_warnings, suggestions)
+    except ValueError:
+        description_indexes = []  # Description is optional if code is present
+    
+    # At least one of code or description must be present
+    if not code_indexes and not description_indexes:
+        available = ", ".join([str(cell) for cell in header_row if cell]) if header_row else ""
+        raise ValueError(
+            f"È necessario selezionare almeno una colonna codice o descrizione. "
+            f"Intestazioni rilevate: {available or 'nessuna'}"
+        )
 
     price_index = single_column_index(price_column, "prezzo unitario", header_row=header_row)
     if not _has_values(data_rows, [price_index]):
@@ -88,8 +109,20 @@ def parse_lx_return_excel(
     finally:
         workbook_formulas.close()
 
+    # Debug logging
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info(f"[LX Parser] Header row index: {header_idx}")
+    logger.info(f"[LX Parser] Header content: {header_row[:10] if header_row else 'None'}...")
+    logger.info(f"[LX Parser] Code indexes: {code_indexes}, Description indexes: {description_indexes}")
+    logger.info(f"[LX Parser] Price index: {price_index}, Quantity index: {quantity_index}")
+    logger.info(f"[LX Parser] Data rows count: {len(data_rows)}")
+    if data_rows:
+        logger.info(f"[LX Parser] First data row: {data_rows[0][:10]}...")
+
     voci: list[ParsedItem] = []
     ordine = 0
+    skipped_reasons = {"no_quantity": 0, "has_formula": 0}
     for data_row, formula_row in zip(data_rows, formula_rows):
         codice = combine_code(data_row, code_indexes)
         descrizione = combine_text(data_row, description_indexes)
@@ -100,7 +133,11 @@ def parse_lx_return_excel(
         tokens = tokenize_description(descrizione or "")
 
         # Skip item if quantity is an external formula or missing
-        if has_formula or quantita is None:
+        if has_formula:
+            skipped_reasons["has_formula"] += 1
+            continue
+        if quantita is None:
+            skipped_reasons["no_quantity"] += 1
             continue
 
         quantita, importo = calculate_line_amount(quantita, prezzo_unitario)
@@ -123,6 +160,9 @@ def parse_lx_return_excel(
         )
         voci.append(voce)
         ordine += 1
+
+    # Log summary
+    logger.info(f"[LX Parser] Parsed {len(voci)} items, skipped: {skipped_reasons}")
 
     total_amount = ceil_amount(sum([voce.amount or 0 for voce in voci])) if voci else None
     return ParsedEstimate(

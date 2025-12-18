@@ -4,6 +4,7 @@ export type WbsNodeType = 'spatial' | 'commodity';
 
 export interface IWbsNode {
   project_id: Types.ObjectId;
+  estimate_id: Types.ObjectId;
   parent_id?: Types.ObjectId;
   type: WbsNodeType;
   level: number;
@@ -26,6 +27,7 @@ export interface IWbsNode {
 
 const WbsNodeSchema = new Schema<IWbsNode>({
   project_id: { type: Schema.Types.ObjectId, ref: 'Project', required: true, index: true },
+  estimate_id: { type: Schema.Types.ObjectId, ref: 'Estimate', required: true, index: true },
   parent_id: { type: Schema.Types.ObjectId, ref: 'WbsNode', index: true },
   type: { type: String, enum: ['spatial', 'commodity'], required: true },
   level: { type: Number, required: true },
@@ -43,5 +45,6 @@ const WbsNodeSchema = new Schema<IWbsNode>({
 
 WbsNodeSchema.index({ project_id: 1, code: 1, type: 1 });
 WbsNodeSchema.index({ project_id: 1, parent_id: 1 });
+WbsNodeSchema.index({ project_id: 1, estimate_id: 1, level: 1 });
 
 export const WbsNode = model<IWbsNode>('WbsNode', WbsNodeSchema);

@@ -1,10 +1,11 @@
-import { Estimate } from '../../../../models/estimate.schema';
-import { EstimateItem } from '../../../../models/estimate-item.schema';
-import { Project } from '../../../../models/project.schema';
+import { defineEventHandler, createError, getRouterParam } from 'h3';
+import { Types } from 'mongoose';
+import { Estimate } from '#models';
+import { deleteEstimateCascade } from '#services/EstimateService';
 
 export default defineEventHandler(async (event) => {
-    const projectId = event.context.params?.id;
-    const estimateId = event.context.params?.estimateId;
+    const projectId = getRouterParam(event, 'id');
+    const estimateId = getRouterParam(event, 'estimateId');
 
     if (!projectId || !estimateId) {
         throw createError({
@@ -13,9 +14,11 @@ export default defineEventHandler(async (event) => {
         });
     }
 
+    const projectObjectId = new Types.ObjectId(projectId);
+    const estimateObjectId = new Types.ObjectId(estimateId);
+
     try {
-        // 1. Check existence
-        const estimate = await Estimate.findOne({ _id: estimateId, project_id: projectId });
+        const estimate = await Estimate.findOne({ _id: estimateObjectId, project_id: projectObjectId });
         if (!estimate) {
             throw createError({
                 statusCode: 404,
@@ -23,25 +26,20 @@ export default defineEventHandler(async (event) => {
             });
         }
 
-        // 2. Delete Items associated with this estimate
-        // Accessing strict nested query property
-        const deleteItemsResult = await EstimateItem.deleteMany({ 'project.estimate_id': estimateId });
-        console.log(`[Delete Estimate] Deleted ${deleteItemsResult.deletedCount} items for estimate ${estimateId}`);
-
-        // 3. Delete the Estimate itself
-        await Estimate.findByIdAndDelete(estimateId);
-        console.log(`[Delete Estimate] Deleted estimate ${estimateId}`);
+        console.log(`[API] Deleting estimate ${estimateId} for project ${projectId}`);
+        const result = await deleteEstimateCascade(projectObjectId.toString(), estimateObjectId.toString());
+        console.log(`[API] Deletion result:`, result);
 
         return {
             success: true,
-            deletedItems: deleteItemsResult.deletedCount
+            ...result,
+            message: 'Estimate deleted',
         };
-
     } catch (error: any) {
-        console.error('Error deleting estimate:', error);
         throw createError({
-            statusCode: 500,
-            statusMessage: error.message || 'Internal Server Error',
+            statusCode: error?.statusCode || 500,
+            statusMessage: error?.statusMessage || 'Error deleting estimate',
+            data: error?.data,
         });
     }
 });

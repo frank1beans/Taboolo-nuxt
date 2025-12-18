@@ -2,7 +2,7 @@
   <aside
     v-if="visible"
     ref="sidebarRef"
-    class="bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col shadow-sm overflow-hidden relative"
+    class="bg-[hsl(var(--card))] border border-[hsl(var(--border))] rounded-xl flex flex-col shadow-sm overflow-hidden relative"
     :style="{ 
       width: `${sidebarWidth}px`,
       minWidth: '200px',
@@ -12,46 +12,48 @@
     }"
   >
     <!-- Header -->
-    <div class="px-3 py-2.5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-800/50 flex-shrink-0">
+    <div class="h-[72px] px-4 border-b border-[hsl(var(--border))] flex items-center justify-between flex-shrink-0 bg-[hsl(var(--card))]">
       <div class="flex items-center gap-2">
-        <UIcon name="i-heroicons-folder-tree" class="w-4 h-4 text-primary-500" />
-        <span class="text-sm font-semibold text-slate-700 dark:text-slate-200">WBS</span>
+        <UIcon name="i-heroicons-list-bullet" class="w-5 h-5 text-[hsl(var(--primary))]" />
+        <span class="text-sm font-bold text-[hsl(var(--foreground))] tracking-wide">WBS</span>
         <UBadge 
           v-if="totalNodes > 0" 
           color="neutral" 
-          variant="soft" 
+          variant="subtle" 
           size="xs"
+          class="ml-1"
           :aria-label="`${totalNodes} nodi totali`"
         >
           {{ totalNodes }}
         </UBadge>
       </div>
-      <div class="flex items-center gap-0.5">
-        <UButton
-          icon="i-heroicons-arrows-pointing-in"
-          color="neutral"
-          variant="ghost"
-          size="xs"
-          title="Espandi tutto"
-          aria-label="Espandi tutti i nodi"
-          @click="expandAll"
-        />
+      <div class="flex items-center gap-1">
         <UButton
           icon="i-heroicons-arrows-pointing-out"
           color="neutral"
           variant="ghost"
           size="xs"
+          title="Espandi tutto"
+          class="transition-transform active:scale-90 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
+          @click="expandAll"
+        />
+        <UButton
+          icon="i-heroicons-arrows-pointing-in"
+          color="neutral"
+          variant="ghost"
+          size="xs"
           title="Collassa tutto"
-          aria-label="Collassa tutti i nodi"
+          class="transition-transform active:scale-90 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
           @click="collapseAll"
         />
+        <div class="w-px h-4 bg-[hsl(var(--border))] mx-1" />
         <UButton
           icon="i-heroicons-x-mark"
           color="neutral"
           variant="ghost"
           size="xs"
           title="Chiudi sidebar"
-          aria-label="Chiudi sidebar WBS"
+          class="transition-transform active:scale-90 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
           @click="toggleVisible(false)"
         />
       </div>
@@ -79,21 +81,22 @@
 
       <!-- Empty State -->
       <div v-else class="text-center py-8 px-4">
-        <UIcon name="i-heroicons-folder-open" class="w-10 h-10 mx-auto mb-3 text-slate-300 dark:text-slate-600" />
-        <p class="text-sm text-slate-500 dark:text-slate-400">Nessun nodo WBS</p>
-        <p class="text-xs text-slate-400 dark:text-slate-500 mt-1">La struttura WBS apparirà qui</p>
+        <UIcon name="i-heroicons-folder-open" class="w-10 h-10 mx-auto mb-3 text-[hsl(var(--muted-foreground)/0.5)]" />
+        <p class="text-sm text-[hsl(var(--muted-foreground))]">Nessun nodo WBS</p>
+        <p class="text-xs text-[hsl(var(--muted-foreground)/0.7)] mt-1">La struttura WBS apparirà qui</p>
       </div>
     </div>
 
     <!-- Resize Handle -->
     <div
-      class="absolute top-0 right-0 w-1 h-full cursor-ew-resize hover:bg-primary-500/50 transition-colors group"
+      class="absolute top-0 left-0 w-1 h-full cursor-ew-resize hover:bg-[hsl(var(--primary)/0.5)] transition-colors group z-20"
       @mousedown="startResize"
     >
-      <div class="absolute top-1/2 right-0 -translate-y-1/2 w-1 h-8 bg-slate-300 dark:bg-slate-600 rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
+      <div class="absolute top-1/2 left-0 -translate-y-1/2 w-1 h-8 bg-[hsl(var(--border))] rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
     </div>
   </aside>
 </template>
+
 
 <script setup lang="ts">
 import { ref, watch, computed, onUnmounted } from 'vue';
@@ -169,7 +172,7 @@ const startResize = (e: MouseEvent) => {
 
 const handleDragging = (e: MouseEvent) => {
   if (!isDragging.value) return;
-  const delta = e.clientX - dragStartX.value;
+  const delta = dragStartX.value - e.clientX;
   const newWidth = dragStartWidth.value + delta;
   sidebarWidth.value = Math.min(500, Math.max(200, newWidth));
 };

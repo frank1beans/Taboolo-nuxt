@@ -1,7 +1,8 @@
 import { Schema, model, type Types } from 'mongoose';
 
 export interface IPriceList {
-    project_id: Types.ObjectId;
+    project_id?: Types.ObjectId; // Optional for global catalogs
+    estimate_id?: Types.ObjectId; // Optional for global catalogs
     name: string;
     currency: string;
     description?: string;
@@ -14,7 +15,8 @@ export interface IPriceList {
 }
 
 const PriceListSchema = new Schema<IPriceList>({
-    project_id: { type: Schema.Types.ObjectId, ref: 'Project', required: true, index: true },
+    project_id: { type: Schema.Types.ObjectId, ref: 'Project', required: false, index: true },
+    estimate_id: { type: Schema.Types.ObjectId, ref: 'Estimate', required: false, index: true },
     name: { type: String, required: true },
     currency: { type: String, default: 'EUR' },
     description: { type: String },
@@ -24,5 +26,7 @@ const PriceListSchema = new Schema<IPriceList>({
 }, {
     timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' }
 });
+
+PriceListSchema.index({ project_id: 1, estimate_id: 1 });
 
 export const PriceList = model<IPriceList>('PriceList', PriceListSchema);

@@ -6,20 +6,22 @@ type AnyRecord = Record<string, any>;
 
 /**
  * Upsert price catalog entries coming from SIX import.
- * Uses project_id + product_id as key.
+ * Uses project_id + estimate_id + product_id as key.
  */
-export async function upsertPriceCatalog(projectId: string, catalog: AnyRecord[] = []) {
+export async function upsertPriceCatalog(projectId: string, estimateId: string, catalog: AnyRecord[] = []) {
     if (!catalog.length) return;
 
     const projectObjectId = new Types.ObjectId(projectId);
+    const estimateObjectId = new Types.ObjectId(estimateId);
     const operations = catalog.map((entry) => {
         const productId = entry.product_id ?? entry.code;
         return {
             updateOne: {
-                filter: { project_id: projectObjectId, product_id: productId },
+                filter: { project_id: projectObjectId, estimate_id: estimateObjectId, product_id: productId },
                 update: {
                     $set: {
                         project_id: projectObjectId,
+                        estimate_id: estimateObjectId,
                         product_id: productId,
                         code: entry.code ?? '',
                         description: entry.description,

@@ -33,3 +33,20 @@ logs
 
 #Coding assistant
 .claude
+
+# Project archives and temporary artifacts
+.archive/
+old/
+manual_debug_payload.json
+check_totals.json
+check_baseline_totals.json
+.tmp-tailwind.css
+debug-estimates.ts
+old_importer.py
+
+# Importer noise
+services/importer/.venv/
+services/importer/__pycache__/
+services/importer/**/__pycache__/
+services/importer/**/*.pyc
+services/importer/**/*.log

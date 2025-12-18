@@ -60,8 +60,20 @@
         aria-label="Esporta"
         @click="$emit('export')"
       >
-        <Icon name="heroicons:arrow-down-tray" class="w-4 h-4 mr-1.5" />
         Esporta
+      </UButton>
+
+      <UButton
+        v-if="enableColumnToggle"
+        color="gray"
+        variant="outline"
+        size="md"
+        class="px-4 interactive-touch focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring)/0.6)] border-[hsl(var(--border))] text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted)/0.6)] hover:text-[hsl(var(--foreground))]"
+        aria-label="Colonne"
+        @click="(e: any) => $emit('toggle-columns', e.currentTarget)"
+      >
+        <Icon name="heroicons:view-columns" class="w-4 h-4 mr-1.5" />
+        Colonne
       </UButton>
     </div>
   </div>
@@ -75,6 +87,7 @@ const props = defineProps<{
   placeholder?: string;
   enableReset?: boolean;
   enableExport?: boolean;
+  enableColumnToggle?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -82,6 +95,7 @@ const emit = defineEmits<{
   'apply-filter': [];
   'clear-filter': [];
   export: [];
+  'toggle-columns': [target: HTMLElement];
 }>();
 
 const searchModel = computed({

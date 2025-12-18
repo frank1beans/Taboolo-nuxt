@@ -2,7 +2,7 @@
 import { createError, getRequestHeader, readMultipartFormData, setResponseStatus } from 'h3';
 
 type FieldMapper = (name: string) => string;
-type ValueMapper = (name: string, value: string, part: any) => string | Blob | Buffer;
+type ValueMapper = (name: string, value: string, part: any) => string | Buffer;
 
 interface ProxyOptions {
   method?: string;
@@ -10,7 +10,7 @@ interface ProxyOptions {
   mapFieldValue?: ValueMapper;
 }
 
-async function parseResponse(event: any, res: Response) {
+async function parseResponse(event: any, res: Response | any, url: string) {
   const text = await res.text();
   let payload: any = text;
   try {
@@ -20,6 +20,14 @@ async function parseResponse(event: any, res: Response) {
   }
   setResponseStatus(event, res.status, res.statusText);
   if (!res.ok) {
+    if (process.env.NODE_ENV !== 'production' || res.status >= 500) {
+      console.error('[python-proxy] Error from Python:', {
+        url,
+        status: res.status,
+        statusText: res.statusText,
+        payload,
+      });
+    }
     throw createError({
       statusCode: res.status,
       statusMessage: res.statusText,
@@ -51,21 +59,17 @@ export async function proxyMultipartToPython(
     const originalName = part.name || 'file';
     const name = options?.mapFieldName ? options.mapFieldName(originalName) : originalName;
     if (part.filename) {
-      form.append(name, new Blob([part.data]), part.filename);
+      // Use Web Blob to keep undici fetch compatibility
+      const blob = new Blob([part.data], { type: part.type || 'application/octet-stream' });
+      form.append(name, blob, part.filename);
     } else {
       const raw = part.data.toString();
       const mapped = options?.mapFieldValue ? options.mapFieldValue(name, raw, part) : raw;
-      if (mapped instanceof Blob) {
-        form.append(name, mapped);
-      } else if (mapped instanceof Buffer) {
-        form.append(name, new Blob([mapped]));
-      } else {
-        form.append(name, mapped);
-      }
+      form.append(name, mapped);
     }
   }
 
-  const headers: Record<string, string> = {};
+  const headers: Record<string, any> = {};
   const auth = getRequestHeader(event, 'authorization');
   if (auth) headers['authorization'] = auth;
 
@@ -75,8 +79,8 @@ export async function proxyMultipartToPython(
   const res = await fetch(url, {
     method,
     headers,
-    body: form,
+    body: form as any,
   });
 
-  return parseResponse(event, res);
+  return parseResponse(event, res, url);
 }

@@ -1,6 +1,6 @@
 import { defineEventHandler, createError, getRouterParam } from 'h3';
 import { Types } from 'mongoose';
-import { Estimate, EstimateItem, Project } from '#models';
+import { Estimate, EstimateItem, Project, Offer } from '#models';
 import { serializeDoc } from '#utils/serialize';
 
 export default defineEventHandler(async (event) => {
@@ -26,46 +26,35 @@ export default defineEventHandler(async (event) => {
   const estimates = await Estimate.find({ project_id: id }).sort({ created_at: -1 }).lean();
   const estimateObjectIds = estimates.map((est) => new Types.ObjectId(est._id));
 
-  const offerAgg = estimateObjectIds.length
-    ? await EstimateItem.aggregate([
-      {
-        $match: {
-          project_id: projectObjectId,
-          'offers.estimate_id': { $in: estimateObjectIds },
-        },
-      },
-      { $unwind: '$offers' },
-      {
-        $match: {
-          'offers.estimate_id': { $in: estimateObjectIds },
-        },
-      },
-      {
-        $group: {
-          _id: '$offers.estimate_id',
-          rounds: { $addToSet: '$offers.round_number' },
-          companies: { $addToSet: '$offers.company' },
-        },
-      },
-    ])
-    : [];
+  // Fetch associated offers from the new Offer collection
+  const offers = await Offer.find({ project_id: id }).lean();
 
-  const offerMap = new Map<
-    string,
-    {
-      rounds: number[];
-      companies: string[];
+  // Map: EstimateID -> RoundNum -> Map<CompanyName, OfferInfo>
+  const hierarchyMap = new Map<string, Map<number, Map<string, { mode: string, id: string }>>>();
+
+  // Group offers by estimate_id -> round -> company
+  offers.forEach((offer) => {
+    const estId = offer.estimate_id?.toString();
+    if (!estId) return;
+
+    if (!hierarchyMap.has(estId)) {
+      hierarchyMap.set(estId, new Map());
     }
-  >();
 
-  offerAgg.forEach((row) => {
-    const idStr = row._id?.toString();
-    if (!idStr) return;
-    const rounds = (row.rounds || []).filter(
-      (round: number | null | undefined) => round !== null && round !== undefined,
-    ) as number[];
-    const companies = (row.companies || []).filter((company: string | null | undefined) => company) as string[];
-    offerMap.set(idStr, { rounds, companies });
+    const roundMap = hierarchyMap.get(estId)!;
+    const roundNum = offer.round_number || 0;
+
+    if (roundNum > 0) {
+      if (!roundMap.has(roundNum)) {
+        roundMap.set(roundNum, new Map());
+      }
+      if (offer.company_name) {
+        roundMap.get(roundNum)!.set(offer.company_name, {
+          mode: offer.mode || 'detailed', // Default to detailed for legacy
+          id: offer._id.toString()
+        });
+      }
+    }
   });
 
   // Calculate total amount for each estimate
@@ -121,24 +110,43 @@ export default defineEventHandler(async (event) => {
     ...serializedProject,
     estimates: estimates.map((est) => {
       const estimateId = est._id.toString();
-      const offerInfo = offerMap.get(estimateId);
-      const rounds = (offerInfo?.rounds ?? []).map((roundNumber) => ({
-        id: `${estimateId}-${roundNumber}`,
-        name: `Round ${roundNumber}`,
-      }));
-      const companies = (offerInfo?.companies ?? []).map((companyName) => ({
-        id: `${estimateId}-${companyName}`,
-        name: companyName,
-      }));
+      const roundMap = hierarchyMap.get(estimateId);
+
+      const rounds = roundMap
+        ? Array.from(roundMap.keys()).sort((a, b) => a - b).map(rNum => {
+          const companyMap = roundMap.get(rNum)!;
+          const companiesInRound = Array.from(companyMap.keys()).sort().map(cName => {
+            const info = companyMap.get(cName)!;
+            return {
+              id: cName, // Company Name as ID for now
+              name: cName,
+              offerMode: info.mode,
+              offerId: info.id
+            };
+          });
+
+          return {
+            id: String(rNum),
+            name: `Round ${rNum}`,
+            companies: companiesInRound
+          };
+        })
+        : [];
+
+      // Legacy flat companies list just in case needed, or empty
+      const companies = rounds.flatMap(r => r.companies || []);
 
       return {
         id: estimateId,
         name: est.name,
         priceCatalog: est.price_list_id
-          ? { id: est.price_list_id, name: `Listino ${est.price_list_id}` }
+          ? {
+            id: est.price_list_id,
+            name: est.name ? `Listino ${est.name}` : `Listino ${est.price_list_id}`,
+          }
           : undefined,
         rounds,
-        companies,
+        companies, // Kept for backward compat if any
         roundsCount: rounds.length,
         companiesCount: companies.length,
         totalAmount: totalsMap.get(estimateId) || 0,
