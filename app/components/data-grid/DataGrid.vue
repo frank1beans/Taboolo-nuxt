@@ -244,7 +244,6 @@ const defaultColDef = computed(() => ({
   ...getDefaultColDef(),
   filter: 'agTextColumnFilter',
   floatingFilter: false,
-  menuTabs: ['generalMenuTab', 'filterMenuTab', 'columnsMenuTab'],
   suppressHeaderMenuButton: false,
 }));
 

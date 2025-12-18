@@ -34,10 +34,21 @@ def _parse_companies_config(raw: str | None) -> list[dict[str, Any]]:
     return []
 
 
-def _build_computo_payload(project_id: str, estimate: Any, company_id: str | None) -> dict[str, Any]:
+def _build_computo_payload(
+    project_id: str,
+    estimate: Any,
+    company_id: str | None,
+    round_number: int | None = None,
+    round_mode: str | None = None,
+    mode: str | None = None,
+) -> dict[str, Any]:
     return {
         "project_id": project_id,
         "company": company_id,
+        "round_number": round_number,
+        "round_mode": round_mode,
+        "mode": mode,
+        "tipo": "ritorno",
         "importo_totale": estimate.total_amount,
         "total_amount": estimate.total_amount,
         "items": [
@@ -209,19 +220,62 @@ async def import_ritorni_batch_single_file(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
 
     companies = _parse_companies_config(companies_config)
-    company_id = None
-    if companies:
-        company_id = companies[0].get("id") or companies[0].get("name")
-    key = company_id or "default"
+    # If no companies were provided, fallback to a single default entry
+    if not companies:
+        companies = [{}]
 
-    computi = {key: _build_computo_payload(commessa_id, parsed, company_id)}
+    computi: dict[str, Any] = {}
+    success: list[str] = []
+    failed: list[dict[str, Any]] = []
+
+    for idx, cfg in enumerate(companies):
+        company_id = cfg.get("id") or cfg.get("name") or f"company_{idx+1}"
+        price_col = cfg.get("price_column") or price_column or ""
+        quantity_col = cfg.get("quantity_column") or quantity_column
+        code_cols = cfg.get("code_columns") or code_columns
+        desc_cols = cfg.get("description_columns") or description_columns
+        round_number = cfg.get("round_number") or cfg.get("round")
+        round_mode = cfg.get("round_mode")
+
+        try:
+            parsed_for_company = parser_fn(
+                file_bytes=payload,
+                filename=file.filename,
+                sheet_name=sheet_name,
+                code_columns=(code_cols or "").split(",") if code_cols else None,
+                description_columns=(desc_cols or "").split(",") if desc_cols else None,
+                price_column=price_col,
+                quantity_column=quantity_col,
+                progressive_column=progressive_column,
+            )
+        except Exception as exc:
+            failed.append(
+                {
+                    "company": company_id,
+                    "error": str(exc),
+                    "error_type": exc.__class__.__name__,
+                    "details": None,
+                    "config": cfg,
+                }
+            )
+            continue
+
+        computi[company_id] = _build_computo_payload(
+            commessa_id,
+            parsed_for_company,
+            company_id,
+            round_number=round_number,
+            round_mode=round_mode,
+            mode=mode,
+        )
+        success.append(company_id)
 
     return {
-        "success": [key],
-        "failed": [],
-        "total": 1,
-        "success_count": 1,
-        "failed_count": 0,
+        "success": success,
+        "failed": failed,
+        "total": len(companies),
+        "success_count": len(success),
+        "failed_count": len(failed),
         "computi": computi,
     }
 

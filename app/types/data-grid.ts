@@ -1,6 +1,6 @@
 export interface DataGridColumn {
   colId?: string;
-  field: string;
+  field?: string;
   headerName: string;
   flex?: number;
   width?: number;
@@ -72,6 +72,7 @@ export interface DataGridConfig {
   enableExport?: boolean;
   enableColumnToggle?: boolean;
   rowClassRules?: Record<string, (params: any) => boolean> | { [cssClassName: string]: string | ((params: any) => boolean) };
+  getRowClass?: (params: any) => string | string[];
 }
 
 export interface PaginationConfig {

@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Types } from 'mongoose';
-import { Estimate, EstimateItem } from '#models';
+import { Estimate, EstimateItem, Offer, OfferItem } from '#models';
 import { normalizeTextFields } from '#utils/normalize';
 import { PriceList, PriceListItem, WbsNode } from '#models';
 
@@ -141,7 +141,7 @@ export async function upsertEstimateItems(
 }
 
 /**
- * Delete an estimate and all related data (items, price lists/items, WBS) in a single helper.
+ * Delete an estimate and all related data (items, price lists/items, WBS, OFFERS) in a single helper.
  * Accepts optional session to participate in a wider transaction.
  */
 export async function deleteEstimateCascade(
@@ -153,34 +153,34 @@ export async function deleteEstimateCascade(
   const estimateObjectId = new Types.ObjectId(estimateId);
   const opts = session ? { session } : undefined;
 
-  /*
-  const itemsResult = await EstimateItem.deleteMany({
+  // 1. Delete associated Offers and OfferItems
+  console.log(`[EstimateService] Finding Offers for Est ${estimateId}...`);
+  const offers = await Offer.find({
     project_id: projectObjectId,
-    'project.estimate_id': estimateObjectId,
-  }, opts);
+    estimate_id: estimateObjectId
+  }, '_id', opts);
 
-  const priceItemsResult = await PriceListItem.deleteMany({
+  const offerIds = offers.map(o => o._id);
+  console.log(`[EstimateService] Found ${offerIds.length} Offers to delete`);
+
+  let deletedOfferItems = 0;
+  if (offerIds.length > 0) {
+    console.log(`[EstimateService] Deleting OfferItems for ${offerIds.length} offers...`);
+    const offerItemsResult = await OfferItem.deleteMany({
+      offer_id: { $in: offerIds }
+    }, opts);
+    deletedOfferItems = offerItemsResult.deletedCount ?? 0;
+    console.log(`[EstimateService] Deleted ${deletedOfferItems} OfferItems`);
+  }
+
+  console.log(`[EstimateService] Deleting Offers...`);
+  const offersResult = await Offer.deleteMany({
     project_id: projectObjectId,
-    estimate_id: estimateObjectId,
+    estimate_id: estimateObjectId
   }, opts);
+  console.log(`[EstimateService] Deleted ${offersResult.deletedCount} Offers`);
 
-  const priceListsResult = await PriceList.deleteMany({
-    project_id: projectObjectId,
-    estimate_id: estimateObjectId,
-  }, opts);
-
-  const wbsResult = await WbsNode.deleteMany({
-    project_id: projectObjectId,
-    estimate_id: estimateObjectId,
-  }, opts);
-
-  const estimateResult = await Estimate.deleteOne({
-    _id: estimateObjectId,
-    project_id: projectObjectId,
-  }, opts);
-  */
-
-  // Sequential execution with logging
+  // 2. Existing Deletions
   console.log(`[EstimateService] Deleting EstimateItems for Est ${estimateId}...`);
   const itemsResult = await EstimateItem.deleteMany({
     project_id: projectObjectId,
@@ -217,6 +217,8 @@ export async function deleteEstimateCascade(
   console.log(`[EstimateService] Deleted ${estimateResult.deletedCount} Estimate doc`);
 
   return {
+    deletedOffers: offersResult.deletedCount ?? 0,
+    deletedOfferItems,
     deletedItems: itemsResult.deletedCount ?? 0,
     deletedPriceItems: priceItemsResult.deletedCount ?? 0,
     deletedPriceLists: priceListsResult.deletedCount ?? 0,

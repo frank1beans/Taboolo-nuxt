@@ -1,7 +1,7 @@
 import { defineEventHandler, createError, getRouterParam } from 'h3';
 import { proxyMultipartToPython } from '#utils/python-proxy';
 import { mapBatchSingleFileResult } from '#utils/python-mappers';
-import { upsertEstimatesBatch } from '#utils/import-adapter';
+import { persistOffer } from '#services/ImportPersistenceService';
 
 const fieldMap = (name: string) => {
   if (name === 'companies_config') return 'imprese_config';
@@ -39,9 +39,20 @@ export default defineEventHandler(async (event) => {
 
   const mapped = mapBatchSingleFileResult(result);
 
-  // Persist all returned estimates
-  if (mapped.estimates) {
-    mapped.estimates = await upsertEstimatesBatch(projectId, Object.values(mapped.estimates));
+  // Persist all returned offers (headers + items) using existing offer pipeline
+  const estimatesArray = mapped.estimates ? Object.values(mapped.estimates) : [];
+  for (const est of estimatesArray) {
+    const payload = {
+      project: {},
+      groups: [],
+      price_list: {},
+      estimate: {
+        ...est,
+        type: 'offer',
+        mode: est.mode || result?.mode || 'aggregated',
+      },
+    };
+    await persistOffer(payload as any, projectId);
   }
 
   return mapped;

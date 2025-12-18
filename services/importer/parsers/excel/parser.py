@@ -225,14 +225,34 @@ def _parse_custom_return_excel(
     if not progressive_indexes:
         raise ValueError("No progressive value found: select the correct column.")
 
+    def _find_tail_price(rows, start_idx: int, price_idx: int | None, prog_idx: int | None):
+        """Find first non-empty price after head row, stop at next progressive."""
+        if price_idx is None:
+            return None
+        for tail in rows[start_idx + 1 :]:
+            if prog_idx is not None and cell_to_progressive(tail, prog_idx) is not None:
+                break
+            tail_price = sanitize_price_candidate(cell_to_float(tail, price_idx))
+            if tail_price is not None:
+                return tail_price
+        return None
+
     for prog_idx, prog_value, row in progressive_indexes:
         description_value = combine_text(row, description_indexes)
         unit_price = sanitize_price_candidate(cell_to_float(row, price_index))
+        if unit_price is None:
+            unit_price = _find_tail_price(cleaned_rows, prog_idx, price_index, progressive_index)
 
         # Quantity: either from the same row or from following measure rows
         quantity_value = cell_to_float(row, quantity_index) if quantity_index is not None else None
         if quantity_value is None:
-            quantity_value = head_to_tail_quantity(cleaned_rows, prog_idx)
+            # Read tail quantities using the actual mapped columns (not defaults 0/1)
+            quantity_value = head_to_tail_quantity(
+                cleaned_rows,
+                prog_idx,
+                qty_col=quantity_index if quantity_index is not None else 1,
+                price_col=price_index if price_index is not None else 0,
+            )
 
         if quantity_value is None:
             # logger_warning = (

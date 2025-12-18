@@ -334,16 +334,29 @@ export async function persistOffer(payload: PythonImportResult, projectId: strin
     // But we should have 'progressive' and 'order'. 
 
     // Fetch Baseline Items to map against
-    type DetailedBaseline = { id: Types.ObjectId; progressive?: number | null };
+    type DetailedBaseline = {
+        id: Types.ObjectId;
+        progressive?: number | null;
+        unit_price?: number | null;
+        unit_measure?: string | null;
+    };
     let baselineItemsMap: Map<string | number, DetailedBaseline> | Map<string, Types.ObjectId[]> = new Map(); // Key: Progressive (detailed) or Code (aggregated maps live in plCodeMap)
     const warnings: string[] = [];
 
     if (importMode === 'detailed') {
-        const blItems = await EstimateItem.find({ project_id: projectObjectId, 'project.estimate_id': baselineEstId }).select('progressive code _id');
+        const blItems = await EstimateItem.find({
+            project_id: projectObjectId,
+            'project.estimate_id': baselineEstId
+        }).select('progressive _id project.unit_price unit_measure');
         for (const bli of blItems) {
             // Fix: explicit check for undefined/null because progressive can be 0
             if (bli.progressive !== undefined && bli.progressive !== null) {
-                (baselineItemsMap as Map<number, DetailedBaseline>).set(bli.progressive, { id: bli._id as Types.ObjectId, progressive: bli.progressive });
+                (baselineItemsMap as Map<number, DetailedBaseline>).set(bli.progressive, {
+                    id: bli._id as Types.ObjectId,
+                    progressive: bli.progressive,
+                    unit_price: (bli as any)?.project?.unit_price,
+                    unit_measure: (bli as any)?.unit_measure
+                });
             }
         }
     } else {
@@ -412,6 +425,13 @@ export async function persistOffer(payload: PythonImportResult, projectId: strin
             const match = (baselineItemsMap as Map<number, DetailedBaseline>).get(progressive);
             if (match) {
                 estimateItemId = match.id;
+                // Fallback to baseline unit price/measure if missing from import
+                if (item.unit_price === undefined || item.unit_price === null || Number.isNaN(item.unit_price)) {
+                    item.unit_price = match.unit_price;
+                }
+                if (!item.unit_measure && match.unit_measure) {
+                    item.unit_measure = match.unit_measure;
+                }
             } else {
                 origin = 'addendum';
                 resolutionStatus = 'pending';

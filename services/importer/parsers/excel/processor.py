@@ -95,16 +95,35 @@ def combine_text(row: tuple[Any, ...], indexes: list[int]) -> str | None:
 
 
 def cell_to_float(row: tuple[Any, ...], index: int | None) -> float | None:
-    """Extract a float value from a cell."""
+    """Extract a float value from a cell, handling EU-style decimals and currency symbols."""
     if index is None or index >= len(row):
         return None
     value = row[index]
     if value is None:
         return None
-    try:
+    # Numeric types pass through
+    if isinstance(value, (int, float)):
         return float(value)
-    except (ValueError, TypeError):
-        return None
+    if isinstance(value, str):
+        raw = value.strip()
+        if not raw:
+            return None
+        # Remove currency and spaces, keep signs/separators
+        import re
+        cleaned = re.sub(r"[^\d,.\-]", "", raw)
+        if not cleaned:
+            return None
+        # If both '.' and ',' are present, assume ',' is decimal and '.' thousand
+        if "," in cleaned and "." in cleaned:
+            cleaned = cleaned.replace(".", "").replace(",", ".")
+        elif "," in cleaned and "." not in cleaned:
+            # Only comma present -> decimal separator
+            cleaned = cleaned.replace(",", ".")
+        try:
+            return float(cleaned)
+        except (ValueError, TypeError):
+            return None
+    return None
 
 
 def cell_to_progressive(row: tuple[Any, ...], index: int | None) -> int | None:

@@ -243,16 +243,16 @@ const upload = async () => {
           </div>
           
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <UFormGroup label="Nome Impresa" required class="sm:col-span-2">
+            <UFormField label="Nome Impresa" required class="sm:col-span-2">
               <UInput 
                 v-model="config.company" 
                 placeholder="Es. Edilizia Rossi Srl" 
                 icon="i-heroicons-building-office" 
                 size="lg"
               />
-            </UFormGroup>
+            </UFormField>
 
-            <UFormGroup label="Round">
+            <UFormField label="Round">
               <UInput 
                 v-model="config.round" 
                 type="number" 
@@ -260,7 +260,7 @@ const upload = async () => {
                 placeholder="1" 
                 size="lg"
               />
-            </UFormGroup>
+            </UFormField>
           </div>
         </div>
 
@@ -271,7 +271,7 @@ const upload = async () => {
             <h4 class="font-semibold text-[hsl(var(--foreground))]">Seleziona Foglio</h4>
           </div>
           
-          <UFormGroup label="Foglio Excel" help="Il file contiene più fogli. Seleziona quello da importare.">
+          <UFormField label="Foglio Excel" description="Il file contiene più fogli. Seleziona quello da importare.">
             <USelectMenu
               :model-value="selectedSheet"
               :items="sheetItems"
@@ -285,7 +285,7 @@ const upload = async () => {
                 <UIcon name="i-heroicons-table-cells" class="w-4 h-4" />
               </template>
             </USelectMenu>
-          </UFormGroup>
+          </UFormField>
         </div>
 
         <!-- SECTION 3: Mappatura Colonne -->
@@ -328,7 +328,7 @@ const upload = async () => {
           </div>
           
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <UFormGroup label="Colonne Codice" required help="Puoi selezionare più colonne">
+            <UFormField label="Colonne Codice" required description="Puoi selezionare più colonne">
               <USelectMenu
                 v-model="selectedCodeColumns"
                 :items="headerItems"
@@ -337,9 +337,9 @@ const upload = async () => {
                 placeholder="Seleziona colonne..."
                 size="lg"
               />
-            </UFormGroup>
+            </UFormField>
 
-            <UFormGroup label="Colonne Descrizione" help="Puoi selezionare più colonne">
+            <UFormField label="Colonne Descrizione" description="Puoi selezionare più colonne">
               <USelectMenu
                 v-model="selectedDescriptionColumns"
                 :items="headerItems"
@@ -348,9 +348,9 @@ const upload = async () => {
                 placeholder="Seleziona colonne..."
                 size="lg"
               />
-            </UFormGroup>
+            </UFormField>
 
-            <UFormGroup label="Colonna Prezzo" required>
+            <UFormField label="Colonna Prezzo" required>
               <USelectMenu
                 v-model="selectedPriceColumn"
                 :items="headerItems"
@@ -358,9 +358,9 @@ const upload = async () => {
                 placeholder="Seleziona..."
                 size="lg"
               />
-            </UFormGroup>
+            </UFormField>
 
-            <UFormGroup label="Colonna Quantità">
+            <UFormField label="Colonna Quantità">
               <USelectMenu
                 v-model="selectedQuantityColumn"
                 :items="headerItems"
@@ -368,9 +368,9 @@ const upload = async () => {
                 placeholder="Opzionale"
                 size="lg"
               />
-            </UFormGroup>
+            </UFormField>
 
-            <UFormGroup label="Colonna Progressivo" class="sm:col-span-2">
+            <UFormField label="Colonna Progressivo" class="sm:col-span-2">
               <USelectMenu
                 v-model="selectedProgressiveColumn"
                 :items="headerItems"
@@ -378,7 +378,7 @@ const upload = async () => {
                 placeholder="Opzionale - utile per ordinamento"
                 size="lg"
               />
-            </UFormGroup>
+            </UFormField>
           </div>
         </div>
 

@@ -35,10 +35,18 @@ def head_to_tail_quantity(
             # se è stringa non vuota, interrompe
             if isinstance(price, str) and price.strip():
                 break
-        if qty is not None and price in (None, "", " "):
-            total = (total or 0.0) + float(qty)
-        else:
+        if price not in (None, "", " "):
             break
+        if qty is None:
+            continue
+        if isinstance(qty, str) and not qty.strip():
+            continue
+        try:
+            qty_val = float(qty)
+        except (ValueError, TypeError):
+            # se il valore quantità non è convertibile, interrompe per evitare errori
+            break
+        total = (total or 0.0) + qty_val
     return total
 
 

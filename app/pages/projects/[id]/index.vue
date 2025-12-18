@@ -3,11 +3,12 @@ import { useRoute } from 'vue-router';
 import { computed, onMounted, ref, watch } from 'vue';
 import type { DataGridConfig } from '~/types/data-grid';
 import { useCurrentContext } from '~/composables/useCurrentContext';
+import DataGridActions from '~/components/data-grid/DataGridActions.vue';
+import DataGridPage from '~/components/layout/DataGridPage.vue';
+import type { Project } from '~/types/project';
 
 const route = useRoute();
 const projectId = route.params.id as string;
-
-import type { Project } from '~/types/project';
 
 // Explicitly type the useFetch result or cast it
 const { data: context, status, refresh } = await useFetch<Project>(`/api/projects/${projectId}/context`, {
@@ -140,6 +141,17 @@ const gridConfig: DataGridConfig = {
       cellClass: 'ag-right-aligned-cell',
       valueFormatter: (params: any) => formatDeltaPerc(params.value),
     },
+    {
+      field: 'actions',
+      headerName: 'Azioni',
+      width: 120,
+      cellRenderer: 'actionsRenderer',
+      pinned: 'right',
+      sortable: false,
+      filter: false,
+      suppressMenu: true,
+      cellClass: 'no-border',
+    },
   ],
   defaultColDef: {
     sortable: true,
@@ -192,64 +204,51 @@ const activeEstimateStats = computed(() => {
   return statsMap.value[activeEstimateId.value] || null;
 });
 
-const links = computed(() => [
-  { label: 'Home', to: '/' },
-  { label: 'Progetti', to: '/projects' },
-  { label: project.value?.name || 'Dettaglio Progetto', to: route.path },
-]);
+const gridContext = computed(() => ({
+  rowActions: {
+    open: (row: any) => navigateToEstimate(row),
+    remove: (row: any) => deleteEstimate(row),
+  },
+}));
 </script>
 
 <template>
-  <div class="space-y-4">
-    <UCard class="border-[hsl(var(--border))] bg-[hsl(var(--card))]">
-      <template #header>
-        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p class="text-xs uppercase tracking-wide font-medium text-[hsl(var(--muted-foreground))]">
-              Preventivi
-            </p>
-            <h1 class="text-lg font-semibold text-[hsl(var(--foreground))]">
-              {{ project?.name || 'Dettaglio Progetto' }}
-            </h1>
-          </div>
-          <div class="flex flex-wrap items-center gap-2">
-            <UBadge v-if="estimates.length > 0" color="neutral" variant="soft">
-              <Icon name="heroicons:document-text" class="w-3.5 h-3.5 mr-1" />
-              {{ estimates.length }} {{ estimates.length === 1 ? 'preventivo' : 'preventivi' }}
-            </UBadge>
-            <div v-if="activeEstimateStats?.bestOffer" class="flex items-center gap-2 text-sm">
-              <span class="stat-pill">
-                Migliore offerta: {{ formatCurrency(activeEstimateStats.bestOffer) }}
-              </span>
-              <span v-if="activeEstimateStats.deltaPerc !== null && activeEstimateStats.deltaPerc !== undefined" :class="['stat-pill', (activeEstimateStats.deltaPerc || 0) <= 0 ? 'stat-pill--success' : 'stat-pill--warning']">
-                Delta: {{ formatDeltaPerc(activeEstimateStats.deltaPerc) }}
-              </span>
-            </div>
-            <UButton 
-              color="primary" 
-              size="sm" 
-              icon="i-heroicons-arrow-up-tray" 
-              variant="solid"
-              @click="navigateTo(`/projects/${projectId}/import`)"
-            >
-              Importa Dati
-            </UButton>
-          </div>
-        </div>
-      </template>
-
-
-      <DataGrid
-        :config="gridConfig"
-        :row-data="gridRows"
-        :loading="loading || statsLoading"
-        height="calc(100vh - 240px)"
-        toolbar-placeholder="Cerca preventivo..."
-        export-filename="preventivi"
-        empty-state-title="Nessun preventivo"
-        empty-state-message="Non ci sono preventivi associati a questo progetto."
-        @row-dblclick="(params) => navigateToEstimate(params)"
-      />
-    </UCard>
-  </div>
+  <DataGridPage
+    title="Preventivi"
+    :subtitle="project?.name || 'Dettaglio Progetto'"
+    :grid-config="gridConfig"
+    :row-data="gridRows"
+    :loading="loading || statsLoading"
+    toolbar-placeholder="Cerca preventivo..."
+    export-filename="preventivi"
+    empty-state-title="Nessun preventivo"
+    empty-state-message="Non ci sono preventivi associati a questo progetto."
+    :custom-components="{ actionsRenderer: DataGridActions }"
+    :context-extras="gridContext"
+    @row-dblclick="(params) => navigateToEstimate(params)"
+  >
+    <template #actions>
+      <UBadge v-if="estimates.length > 0" color="neutral" variant="soft">
+        <Icon name="heroicons:document-text" class="w-3.5 h-3.5 mr-1" />
+        {{ estimates.length }} {{ estimates.length === 1 ? 'preventivo' : 'preventivi' }}
+      </UBadge>
+      <div v-if="activeEstimateStats?.bestOffer" class="flex items-center gap-2 text-sm">
+        <span class="stat-pill">
+          Migliore offerta: {{ formatCurrency(activeEstimateStats.bestOffer) }}
+        </span>
+        <span v-if="activeEstimateStats.deltaPerc !== null && activeEstimateStats.deltaPerc !== undefined" :class="['stat-pill', (activeEstimateStats.deltaPerc || 0) <= 0 ? 'stat-pill--success' : 'stat-pill--warning']">
+          Delta: {{ formatDeltaPerc(activeEstimateStats.deltaPerc) }}
+        </span>
+      </div>
+      <UButton 
+        color="primary" 
+        size="sm" 
+        icon="i-heroicons-arrow-up-tray" 
+        variant="solid"
+        @click="navigateTo(`/projects/${projectId}/import`)"
+      >
+        Importa Dati
+      </UButton>
+    </template>
+  </DataGridPage>
 </template>

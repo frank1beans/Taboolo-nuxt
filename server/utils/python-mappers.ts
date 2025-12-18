@@ -35,6 +35,7 @@ export function mapComputoToEstimate(data: Json) {
     project_id: data.commessa_id ?? data.project_id,
     name: data.nome ?? data.name,
     type: COMPUTO_TYPE_MAP[data.tipo] || data.type || 'project',
+    mode: data.mode,
     discipline: data.disciplina,
     revision: data.revisione,
     is_baseline: data.is_baseline ?? false,

@@ -1,132 +1,132 @@
-import { ref } from 'vue';
-import type { WbsNode, WbsTreeState } from '~/types/wbs';
+import { ref, computed, type Ref } from 'vue'
 
-export function useWbsTree(projectId?: string, estimateId?: string) {
-  const nodes = ref<WbsNode[]>([]);
-  const loading = ref(false);
-  const selectedNode = ref<WbsNode | null>(null);
-  const expandedNodes = ref<Set<string>>(new Set());
+export interface WbsNode {
+  id: string
+  code: string
+  name: string
+  level: number
+  children?: WbsNode[]
+}
 
-  const fetchWbsTree = async (pid: string, estId?: string) => {
-    loading.value = true;
-    try {
-      if (!estId) throw new Error('estimateId is required for WBS');
-      const response = await $fetch(`/api/projects/${pid}/estimates/${estId}/wbs`);
+export interface WithWbsHierarchy {
+  wbs_hierarchy?: {
+    [key: string]: string | undefined
+    wbs01?: string
+    wbs02?: string
+    wbs03?: string
+    wbs04?: string
+    wbs05?: string
+    wbs06?: string
+    wbs07?: string
+  }
+}
 
-      // Build tree structure
-      const allNodes = [
-        ...(response.spatial || []),
-        ...(response.wbs6 || []),
-        ...(response.wbs7 || []),
-      ];
+export function useWbsTree<T extends WithWbsHierarchy>(rowData: Ref<T[]>) {
+  const selectedWbsNode = ref<WbsNode | null>(null)
+  const wbsSidebarVisible = ref(true)
 
-      // Convert to tree
-      nodes.value = buildTree(allNodes);
-    } catch (error) {
-      console.error('Error fetching WBS tree:', error);
-      throw error;
-    } finally {
-      loading.value = false;
-    }
-  };
+  const wbsNodes = computed<WbsNode[]>(() => {
+    const nodeMap = new Map<string, WbsNode>()
 
-  const buildTree = (flatNodes: WbsNode[]): WbsNode[] => {
-    const nodeMap = new Map<string, WbsNode>();
-    const rootNodes: WbsNode[] = [];
+    for (const item of rowData.value as T[]) {
+      const hierarchy = item.wbs_hierarchy || {}
+      let pathParts: string[] = []
 
-    // Create node map
-    flatNodes.forEach((node) => {
-      nodeMap.set(node.id, { ...node, children: [] });
-    });
+      for (let level = 1; level <= 7; level++) {
+        const key = `wbs0${level}`
+        const value = hierarchy[key]
 
-    // Build tree
-    flatNodes.forEach((node) => {
-      const treeNode = nodeMap.get(node.id)!;
+        if (!value) continue
 
-      if (node.parent_id) {
-        const parent = nodeMap.get(node.parent_id);
-        if (parent) {
-          if (!parent.children) parent.children = [];
-          parent.children.push(treeNode);
-        } else {
-          rootNodes.push(treeNode);
+        pathParts.push(value)
+        const fullPath = pathParts.join('/')
+
+        if (!nodeMap.has(fullPath)) {
+          nodeMap.set(fullPath, {
+            id: fullPath,
+            code: value.length > 25 ? value.substring(0, 25) + '...' : value,
+            name: value,
+            level: level,
+            children: [],
+          })
         }
-      } else {
-        rootNodes.push(treeNode);
-      }
-    });
 
-    // Sort children by level and code
-    const sortChildren = (node: WbsNode) => {
-      if (node.children && node.children.length > 0) {
-        node.children.sort((a, b) => {
-          if (a.level !== b.level) return a.level - b.level;
-          return a.code.localeCompare(b.code);
-        });
-        node.children.forEach(sortChildren);
-      }
-    };
+        if (pathParts.length > 1) {
+          const parentPath = pathParts.slice(0, -1).join('/')
+          const parentNode = nodeMap.get(parentPath)
+          const currentNode = nodeMap.get(fullPath)!
 
-    rootNodes.forEach(sortChildren);
-
-    return rootNodes.sort((a, b) => {
-      if (a.level !== b.level) return a.level - b.level;
-      return a.code.localeCompare(b.code);
-    });
-  };
-
-  const toggleExpand = (nodeId: string) => {
-    if (expandedNodes.value.has(nodeId)) {
-      expandedNodes.value.delete(nodeId);
-    } else {
-      expandedNodes.value.add(nodeId);
-    }
-  };
-
-  const expandAll = () => {
-    const collectIds = (nodes: WbsNode[]): string[] => {
-      return nodes.flatMap((node) => [
-        node.id,
-        ...(node.children ? collectIds(node.children) : []),
-      ]);
-    };
-    expandedNodes.value = new Set(collectIds(nodes.value));
-  };
-
-  const collapseAll = () => {
-    expandedNodes.value.clear();
-  };
-
-  const selectNode = (node: WbsNode | null) => {
-    selectedNode.value = node;
-  };
-
-  const findNode = (nodeId: string, searchNodes = nodes.value): WbsNode | null => {
-    for (const node of searchNodes) {
-      if (node.id === nodeId) return node;
-      if (node.children) {
-        const found = findNode(nodeId, node.children);
-        if (found) return found;
+          if (parentNode && !parentNode.children?.some(c => c.id === currentNode.id)) {
+            parentNode.children = parentNode.children || []
+            parentNode.children.push(currentNode)
+          }
+        }
       }
     }
-    return null;
-  };
 
-  // Auto-fetch if projectId provided
-  if (projectId && estimateId) {
-    fetchWbsTree(projectId, estimateId);
+    const rootNodes: WbsNode[] = []
+    for (const [path, node] of nodeMap) {
+      if (!path.includes('/')) {
+        rootNodes.push(node)
+      }
+    }
+
+    const sortChildren = (nodes: WbsNode[]) => {
+      nodes.sort((a, b) => a.name.localeCompare(b.name))
+      for (const node of nodes) {
+        if (node.children?.length) {
+          sortChildren(node.children)
+        }
+      }
+    }
+
+    sortChildren(rootNodes)
+    return rootNodes
+  })
+
+  const onWbsNodeSelected = (node: WbsNode | null) => {
+    selectedWbsNode.value = node
   }
 
+  const filteredRowData = computed(() => {
+    if (!selectedWbsNode.value) {
+      return rowData.value
+    }
+
+    const selectedPath = selectedWbsNode.value.id
+    const pathSegments = selectedPath.split('/')
+
+    return (rowData.value as T[]).filter(item => {
+      const hierarchy = item.wbs_hierarchy || {}
+      const itemPath: string[] = []
+
+      for (let level = 1; level <= 7; level++) {
+        const key = `wbs0${level}`
+        const value = hierarchy[key]
+        if (value) {
+          itemPath.push(value)
+        }
+      }
+
+      if (pathSegments.length > itemPath.length) {
+        return false
+      }
+
+      for (let i = 0; i < pathSegments.length; i++) {
+        if (itemPath[i] !== pathSegments[i]) {
+          return false
+        }
+      }
+
+      return true
+    })
+  })
+
   return {
-    nodes,
-    loading,
-    selectedNode,
-    expandedNodes,
-    fetchWbsTree,
-    toggleExpand,
-    expandAll,
-    collapseAll,
-    selectNode,
-    findNode,
-  };
+    wbsNodes,
+    selectedWbsNode,
+    wbsSidebarVisible,
+    filteredRowData,
+    onWbsNodeSelected
+  }
 }

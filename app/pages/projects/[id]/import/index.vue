@@ -238,7 +238,7 @@ const navigateToProject = () => {
 
                      <!-- ESTIMATE SELECTION (Dropdown) -->
                      <div v-if="sixPreview && previewEstimates.length > 0" class="space-y-4">
-                       <UFormGroup label="Seleziona Preventivo" help="Scegli quale preventivo importare dal file.">
+                       <UFormField label="Seleziona Preventivo" description="Scegli quale preventivo importare dal file.">
                          <USelectMenu
                            v-model="selectedEstimateId"
                            :items="previewEstimates"
@@ -279,7 +279,7 @@ const navigateToProject = () => {
                              </UButton>
                            </template>
                          </USelectMenu>
-                       </UFormGroup>
+                       </UFormField>
                        
                        <div v-if="selectedEstimateId" class="text-sm text-green-600 flex items-center gap-2">
                           <UIcon name="i-heroicons-check-circle" />

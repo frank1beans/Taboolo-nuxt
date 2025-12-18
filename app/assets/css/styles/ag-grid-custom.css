@@ -75,11 +75,7 @@
 }
 
 /* Force header row height to not include floating filter space */
-.ag-theme-quartz .ag-header,
-.ag-theme-quartz-dark .ag-header {
-  height: auto !important;
-  min-height: 48px !important;
-}
+/* Removed strict height override */
 
 /* Ensure only column header row is visible */
 /* Keep header rows visible (group + column); floating filters are already hidden above */
@@ -92,7 +88,6 @@
   border-bottom: 1px solid hsl(var(--border) / 0.6);
   font-weight: 700;
   background: hsl(var(--secondary));
-  overflow: visible;
 }
 
 /* Make sure both group row and column row are rendered (avoid accidental collapse) */
@@ -101,9 +96,10 @@
   display: flex !important;
   min-height: 32px;
 }
+
 .ag-theme-quartz .ag-header-viewport,
 .ag-theme-quartz-dark .ag-header-viewport {
-  overflow: visible;
+  overflow: hidden;
 }
 
 .ag-theme-quartz {
@@ -146,8 +142,6 @@
   display: flex;
   align-items: center;
   padding: 6px 10px;
-  min-height: 34px;
-  height: 34px;
 }
 
 .ag-theme-quartz .ag-header-cell-label,

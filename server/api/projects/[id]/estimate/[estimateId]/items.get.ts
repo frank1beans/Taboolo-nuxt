@@ -41,28 +41,62 @@ export default defineEventHandler(async (event) => {
             }
 
             // B. Aggregate Offer Items
+
             const items = await OfferItem.aggregate([
                 {
                     $match: {
                         offer_id: { $in: offerIds }
                     }
                 },
+                {
+                    $addFields: {
+                        estimate_item_oid: {
+                            $cond: {
+                                if: { $eq: [{ $type: '$estimate_item_id' }, 'string'] },
+                                then: { $toObjectId: '$estimate_item_id' },
+                                else: '$estimate_item_id'
+                            }
+                        }
+                    }
+                },
                 // Lookup Baseline Link (EstimateItem) - for Detailed
                 {
                     $lookup: {
                         from: 'estimateitems',
-                        localField: 'estimate_item_id',
+                        localField: 'estimate_item_oid',
                         foreignField: '_id',
                         as: 'estimate_item'
                     }
                 },
                 { $unwind: { path: '$estimate_item', preserveNullAndEmptyArrays: true } },
 
+                // Resolve effective price list item id (offer if present, else from estimate item)
+                {
+                    $addFields: {
+                        effective_price_list_item_id: {
+                            $ifNull: ['$price_list_item_id', '$estimate_item.price_list_item_id']
+                        }
+                    }
+                },
+
+                // Normalize effective price list id to ObjectId when stored as string (baseline stores string)
+                {
+                    $addFields: {
+                        effective_price_list_item_oid: {
+                            $cond: {
+                                if: { $eq: [{ $type: '$effective_price_list_item_id' }, 'string'] },
+                                then: { $toObjectId: '$effective_price_list_item_id' },
+                                else: '$effective_price_list_item_id'
+                            }
+                        }
+                    }
+                },
+
                 // Lookup Price List Link (PriceListItem) - for Aggregated
                 {
                     $lookup: {
                         from: 'pricelistitems',
-                        localField: 'price_list_item_id',
+                        localField: 'effective_price_list_item_oid',
                         foreignField: '_id',
                         as: 'price_item'
                     }
@@ -75,14 +109,35 @@ export default defineEventHandler(async (event) => {
                 {
                     $addFields: {
                         effective_wbs_ids: {
-                            $ifNull: ['$estimate_item.wbs_ids', '$price_item.wbs_ids', []]
+                            $setUnion: [
+                                { $ifNull: ['$estimate_item.wbs_ids', []] },
+                                { $ifNull: ['$price_item.wbs_ids', []] }
+                            ]
+                        },
+                    }
+                },
+                // Normalize WBS ids to ObjectId for lookup
+                {
+                    $addFields: {
+                        effective_wbs_ids_oid: {
+                            $map: {
+                                input: '$effective_wbs_ids',
+                                as: 'wid',
+                                in: {
+                                    $cond: {
+                                        if: { $eq: [{ $type: '$$wid' }, 'string'] },
+                                        then: { $toObjectId: '$$wid' },
+                                        else: '$$wid'
+                                    }
+                                }
+                            }
                         }
                     }
                 },
                 {
                     $lookup: {
                         from: 'wbsnodes',
-                        let: { wbs_ids: '$effective_wbs_ids' },
+                        let: { wbs_ids: '$effective_wbs_ids_oid' },
                         pipeline: [
                             {
                                 $match: {
@@ -98,12 +153,83 @@ export default defineEventHandler(async (event) => {
                 {
                     $addFields: {
                         // Keys
-                        progressive: { $ifNull: ['$progressive', '$estimate_item.order', '$estimate_item.progressive'] },
-                        code: { $ifNull: ['$code', '$price_item.code', '$estimate_item.code'] },
+                        progressive: {
+                            $ifNull: [
+                                '$progressive',
+                                { $ifNull: ['$estimate_item.progressive', '$estimate_item.order'] }
+                            ]
+                        },
+                        code: {
+                            $cond: {
+                                if: { $eq: ['$source', 'aggregated'] },
+                                then: { $ifNull: ['$price_item.code', null] },
+                                else: { $ifNull: ['$estimate_item.code', { $ifNull: ['$price_item.code', null] }] }
+                            }
+                        },
 
                         // Content
-                        description: { $ifNull: ['$description', '$estimate_item.description', '$price_item.description'] },
-                        unit_measure: { $ifNull: ['$unit_measure', '$estimate_item.unit_measure', '$price_item.unit'] },
+                        description: {
+                            $cond: {
+                                if: { $eq: ['$source', 'aggregated'] },
+                                then: {
+                                    $ifNull: [
+                                        '$price_item.description',
+                                        '$price_item.long_description',
+                                        '$price_item.code'
+                                    ]
+                                },
+                                else: {
+                                    $switch: {
+                                        branches: [
+                                            // Priority 1: Estimate Item Description (if not null AND not empty)
+                                            {
+                                                case: {
+                                                    $and: [
+                                                        { $ne: ['$estimate_item.description', null] },
+                                                        { $ne: ['$estimate_item.description', ''] }
+                                                    ]
+                                                },
+                                                then: '$estimate_item.description'
+                                            },
+                                            // Priority 2: Estimate Item Description Extended (if not null AND not empty)
+                                            {
+                                                case: {
+                                                    $and: [
+                                                        { $ne: ['$estimate_item.description_extended', null] },
+                                                        { $ne: ['$estimate_item.description_extended', ''] }
+                                                    ]
+                                                },
+                                                then: '$estimate_item.description_extended'
+                                            },
+                                            // Priority 3: Price List Item Description (if not null AND not empty)
+                                            {
+                                                case: {
+                                                    $and: [
+                                                        { $ne: ['$price_item.description', null] },
+                                                        { $ne: ['$price_item.description', ''] }
+                                                    ]
+                                                },
+                                                then: '$price_item.description'
+                                            }
+                                        ],
+                                        // Default: Price List Item Code or PLI Long Description
+                                        default: {
+                                            $ifNull: [
+                                                '$price_item.long_description',
+                                                '$price_item.code'
+                                            ]
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        unit_measure: {
+                            $cond: {
+                                if: { $eq: ['$source', 'aggregated'] },
+                                then: { $ifNull: ['$price_item.unit', null] },
+                                else: { $ifNull: ['$estimate_item.unit_measure', { $ifNull: ['$price_item.unit', null] }] }
+                            }
+                        },
 
                         // Hierarchy
                         wbs_hierarchy: {
@@ -113,7 +239,9 @@ export default defineEventHandler(async (event) => {
                                     as: 'node',
                                     in: {
                                         k: { $concat: ['wbs0', { $toString: '$$node.level' }] },
-                                        v: '$$node.description'
+                                        v: {
+                                            $ifNull: ['$$node.description', '$$node.code']
+                                        }
                                     }
                                 }
                             }
@@ -141,6 +269,12 @@ export default defineEventHandler(async (event) => {
                         progressive: 1,
                         unit_measure: 1,
                         wbs_hierarchy: 1,
+                        wbs_nodes: {
+                            _id: 1,
+                            level: 1,
+                            code: 1,
+                            description: 1
+                        },
                         project: 1
                     }
                 }

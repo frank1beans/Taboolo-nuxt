@@ -9,6 +9,8 @@ import { useProjectCrud } from '~/composables/useProjectCrud';
 import { useProjectForm } from '~/composables/useProjectForm';
 import ProjectFormModal from '~/components/projects/ProjectFormModal.vue';
 import { useCurrentContext } from '~/composables/useCurrentContext';
+import { useProjectGridConfig } from '~/composables/projects/useProjectGridConfig';
+import DataGridPage from '~/components/layout/DataGridPage.vue';
 
 definePageMeta({
   breadcrumb: 'Progetti'
@@ -36,10 +38,6 @@ const { setCurrentProject } = useCurrentContext();
 
 // Modal form state
 const { showModal, formMode, form, openCreateModal, openEditModal, closeModal } = useProjectForm();
-
-import { useProjectGridConfig } from '~/composables/projects/useProjectGridConfig';
-
-// ... (imports)
 
 // Grid Config composable
 const { gridConfig } = useProjectGridConfig(rowData);
@@ -147,47 +145,32 @@ const contextExtras = computed(() => ({
 </script>
 
 <template>
-
-  <div class="h-full flex flex-col overflow-hidden space-y-4">
-    <UCard class="flex-1 min-h-0 flex flex-col border-[hsl(var(--border))] bg-[hsl(var(--card))]" :ui="{ body: { base: 'flex-1 min-h-0 flex flex-col' } }">
-      <template #header>
-        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between shrink-0">
-          <div>
-            <p class="text-xs uppercase tracking-wide font-medium text-[hsl(var(--muted-foreground))]">
-              Progetti e commesse
-            </p>
-            <h1 class="text-lg font-semibold text-[hsl(var(--foreground))]">
-              Elenco
-            </h1>
-          </div>
-          <div class="flex flex-wrap items-center gap-2">
-            <UBadge v-if="rowData.length > 0" color="neutral" variant="soft">
-              <Icon name="heroicons:folder" class="w-3.5 h-3.5 mr-1" />
-              {{ rowData.length }} {{ rowData.length === 1 ? 'progetto' : 'progetti' }}
-            </UBadge>
-            <UButton color="primary" size="sm" icon="i-heroicons-plus" class="interactive-touch" @click="openCreateModal">
-              Nuovo progetto
-            </UButton>
-          </div>
-        </div>
+  <div class="h-full flex flex-col">
+    <DataGridPage
+      title="Elenco"
+      subtitle="Progetti e commesse"
+      :grid-config="gridConfig"
+      :row-data="rowData"
+      :loading="loading"
+      row-selection="single"
+      toolbar-placeholder="Filtra per codice, nome, descrizione, BU..."
+      export-filename="progetti-commesse"
+      empty-state-title="Nessun progetto trovato"
+      empty-state-message="Non ci sono progetti da visualizzare. Crea il tuo primo progetto per iniziare."
+      :custom-components="{ actionsRenderer: DataGridActions, statusBadgeRenderer: StatusBadgeRenderer }"
+      :context-extras="contextExtras"
+      @row-dblclick="handleRowDoubleClick"
+    >
+      <template #actions>
+        <UBadge v-if="rowData.length > 0" color="neutral" variant="soft">
+          <Icon name="heroicons:folder" class="w-3.5 h-3.5 mr-1" />
+          {{ rowData.length }} {{ rowData.length === 1 ? 'progetto' : 'progetti' }}
+        </UBadge>
+        <UButton color="primary" size="sm" icon="i-heroicons-plus" class="interactive-touch" @click="openCreateModal">
+          Nuovo progetto
+        </UButton>
       </template>
-
-      <!-- DataGrid Component -->
-      <DataGrid
-        class="h-full"
-        :config="gridConfig"
-        :row-data="rowData"
-        :loading="loading"
-        row-selection="single"
-        toolbar-placeholder="Filtra per codice, nome, descrizione, BU..."
-        export-filename="progetti-commesse"
-        empty-state-title="Nessun progetto trovato"
-        empty-state-message="Non ci sono progetti da visualizzare. Crea il tuo primo progetto per iniziare."
-        @row-dblclick="handleRowDoubleClick"
-        :custom-components="{ actionsRenderer: DataGridActions, statusBadgeRenderer: StatusBadgeRenderer }"
-        :context-extras="contextExtras"
-      />
-    </UCard>
+    </DataGridPage>
 
     <ClientOnly>
       <ProjectFormModal

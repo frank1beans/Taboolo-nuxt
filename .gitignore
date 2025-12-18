@@ -43,6 +43,7 @@ check_baseline_totals.json
 .tmp-tailwind.css
 debug-estimates.ts
 old_importer.py
+image/
 
 # Importer noise
 services/importer/.venv/

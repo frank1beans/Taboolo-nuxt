@@ -71,7 +71,6 @@ export function useDataGridColumns() {
         suppressSizeToFit: col.suppressSizeToFit ?? false,
         filter: filterSetting,
         floatingFilter: col.floatingFilter ?? false,
-        menuTabs: col.suppressMenu ? [] : col.menuTabs,
         suppressHeaderMenuButton: col.suppressHeaderMenuButton ?? false,
         sortable: col.sortable ?? true,
         resizable: col.resizable ?? true,
@@ -79,6 +78,8 @@ export function useDataGridColumns() {
         headerClass: col.headerClass,
         cellClass: col.cellClass,
         suppressMovable: col.suppressMovable ?? col.suppressMovableColumns,
+        headerComponent: col.headerComponent ?? (!col.children ? 'dataGridHeader' : undefined),
+        headerComponentParams: col.headerComponentParams,
       };
 
       if (filterSetting && filterSetting !== 'agNumberColumnFilter') {
@@ -102,6 +103,10 @@ export function useDataGridColumns() {
         colDef.cellStyle = col.cellStyle;
       }
 
+      if (col.valueGetter) {
+        colDef.valueGetter = col.valueGetter;
+      }
+
       // Add valuesGetter for filter dropdown only when filtering is enabled
       // Only set valuesGetter if field is present
       if (filterSetting !== false && col.field) {
@@ -114,7 +119,18 @@ export function useDataGridColumns() {
           colDef.headerComponentParams = {
             valuesGetter: () => {
               const unique = Array.from(
-                new Set(rowData.map((r) => getNestedValue(r, col.field)))
+                new Set(rowData.map((r) => {
+                  if (col.valueGetter) {
+                    // Construct minimal params object if valueGetter expects it
+                    try {
+                      // Safe to cast or assume basic usage for value extraction
+                      return col.valueGetter({ data: r } as any);
+                    } catch (e) {
+                      return undefined;
+                    }
+                  }
+                  return getNestedValue(r, col.field)
+                }))
               ).filter(v => v !== undefined && v !== null);
 
               unique.sort((a, b) => {

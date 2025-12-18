@@ -27,12 +27,34 @@ const placement = ref<'left' | 'right'>('right');
 const pos = ref({ top: 0, left: 0 });
 const widthPx = ref(300);
 
-// Filtering
+// Filtering & Grouping
 const filteredColumns = computed(() => {
-  if (!searchQuery.value) return props.columns;
-  const q = searchQuery.value.toLowerCase();
-  return props.columns.filter(c => c.headerName.toLowerCase().includes(q));
+  // Group by headerName
+  const grouped = new Map<string, ColumnState & { ids: string[] }>();
+  
+  props.columns.forEach(col => {
+    if (!grouped.has(col.headerName)) {
+      grouped.set(col.headerName, { ...col, ids: [col.colId] });
+    } else {
+      grouped.get(col.headerName)?.ids.push(col.colId);
+    }
+  });
+
+  let result = Array.from(grouped.values());
+
+  if (searchQuery.value) {
+    const q = searchQuery.value.toLowerCase();
+    result = result.filter(c => c.headerName.toLowerCase().includes(q));
+  }
+  
+  return result;
 });
+
+const toggleGroup = (group: any, visible: boolean) => {
+  group.ids.forEach((id: string) => {
+    emit('toggle', id, visible);
+  });
+};
 
 // Positioning Logic (Adapted from ColumnFilterPopover)
 const updatePosition = () => {
@@ -174,11 +196,11 @@ onBeforeUnmount(() => {
             v-for="col in filteredColumns"
             :key="col.colId"
             class="flex items-center justify-between px-2 py-1.5 rounded-md hover:bg-[hsl(var(--muted))] cursor-pointer group"
-            @click="$emit('toggle', col.colId, !col.visible)"
+            @click="toggleGroup(col, !col.visible)"
           >
             <span class="text-sm text-[hsl(var(--foreground))] select-none">{{ col.headerName }}</span>
              <div class="relative flex items-center" @click.stop>
-               <UCheckbox :model-value="col.visible" size="sm" @update:model-value="(val: any) => $emit('toggle', col.colId, !!val)" />
+               <UCheckbox :model-value="col.visible" size="sm" @update:model-value="(val: any) => toggleGroup(col, !!val)" />
             </div>
           </div>
         </div>

@@ -8,6 +8,7 @@ const props = defineProps<{
   sublabel?: string;
   icon?: string;
   disabled?: boolean;
+  multiple?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -50,6 +51,12 @@ const validateFile = (file: File): boolean => {
   return true;
 };
 
+const emitFile = (file: File) => {
+  if (validateFile(file)) {
+    emit('file-selected', file);
+  }
+};
+
 const onDrop = (e: DragEvent) => {
   if (props.disabled) return;
   e.preventDefault();
@@ -58,9 +65,11 @@ const onDrop = (e: DragEvent) => {
   const files = e.dataTransfer?.files;
   if (!files || files.length === 0) return;
 
-  const file = files[0];
-  if (file && validateFile(file)) {
-    emit('file-selected', file);
+  if (props.multiple) {
+    Array.from(files).forEach((file) => emitFile(file));
+  } else {
+    const file = files[0];
+    if (file) emitFile(file);
   }
 };
 
@@ -68,9 +77,11 @@ const onFileChange = (e: Event) => {
   const target = e.target as HTMLInputElement;
   if (!target.files || target.files.length === 0) return;
 
-  const file = target.files[0];
-  if (file && validateFile(file)) {
-    emit('file-selected', file);
+  if (props.multiple) {
+    Array.from(target.files).forEach((file) => emitFile(file));
+  } else {
+    const file = target.files[0];
+    if (file) emitFile(file);
   }
   
   // Reset input to allow selecting the same file again
@@ -100,6 +111,7 @@ const triggerSelect = () => {
       type="file"
       class="hidden"
       :accept="accept"
+      :multiple="multiple"
       :disabled="disabled"
       @change="onFileChange"
     />

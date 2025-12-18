@@ -1,4 +1,5 @@
 import { defineEventHandler, createError, getRouterParam } from 'h3';
+import { Types } from 'mongoose';
 import { WbsNode } from '#models';
 import { serializeDocs } from '#utils/serialize';
 
@@ -11,7 +12,10 @@ export default defineEventHandler(async (event) => {
   }
 
   try {
-    const nodes = await WbsNode.find({ project_id: projectId, estimate_id: estimateId }).lean();
+    // Use ObjectId for proper filtering
+    const projectObjectId = new Types.ObjectId(projectId);
+    const estimateObjectId = new Types.ObjectId(estimateId);
+    const nodes = await WbsNode.find({ project_id: projectObjectId, estimate_id: estimateObjectId }).lean();
 
     const spatial = nodes.filter(n => n.type === 'spatial' || (n.level && n.level <= 5));
     const wbs6 = nodes.filter(n => n.level === 6);

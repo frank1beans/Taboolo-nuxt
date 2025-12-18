@@ -70,8 +70,7 @@ export const useEstimateGridConfig = (rowData: Ref<EstimateItem[]>) => {
                 width: 100,
                 cellClass: 'ag-right-aligned-cell',
                 valueFormatter: (params: any) => formatNumber(params.value),
-                filter: 'agNumberColumnFilter',
-                headerComponent: null,
+                filter: 'number',
             },
             {
                 field: 'project.unit_price',
@@ -79,8 +78,7 @@ export const useEstimateGridConfig = (rowData: Ref<EstimateItem[]>) => {
                 width: 140,
                 cellClass: 'ag-right-aligned-cell',
                 valueFormatter: (params: any) => formatCurrency(params.value),
-                filter: 'agNumberColumnFilter',
-                headerComponent: null,
+                filter: 'number',
             },
             {
                 field: 'project.amount',
@@ -88,8 +86,7 @@ export const useEstimateGridConfig = (rowData: Ref<EstimateItem[]>) => {
                 width: 140,
                 cellClass: 'ag-right-aligned-cell font-bold',
                 valueFormatter: (params: any) => formatCurrency(params.value),
-                filter: 'agNumberColumnFilter',
-                headerComponent: null,
+                filter: 'number',
             },
             // WBS Hierarchy Columns (wbs01-wbs07) - Moved to end
             {

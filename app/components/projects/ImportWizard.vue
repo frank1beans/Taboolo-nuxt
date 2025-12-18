@@ -10,6 +10,7 @@ import { api } from '~/lib/api-client';
 import GridInputCell from './import-wizard/GridInputCell.vue';
 import GridSelectCell from './import-wizard/GridSelectCell.vue';
 import GridNumberCell from './import-wizard/GridNumberCell.vue';
+import { toast } from 'vue-sonner';
 
 ModuleRegistry.registerModules([AllCommunityModule]);
 
@@ -64,6 +65,9 @@ const multiCompanyRows = ref<MultiCompanyRow[]>([]);
 // Baseline Estimate Selection
 const selectedEstimateId = ref<string | undefined>(undefined);
 const estimateOptions = ref<{ id: string; label: string }[]>([]);
+const submissionState = ref<'idle' | 'loading' | 'success' | 'error'>('idle');
+const submissionMessage = ref<string>('');
+const submissionDetails = ref<string>('');
 
 onMounted(async () => {
     try {
@@ -393,52 +397,104 @@ const goNext = () => {
 const submit = async () => {
   if (!canSubmit.value || files.value.length === 0) return;
   isSubmitting.value = true;
+  submissionState.value = 'loading';
+  submissionMessage.value = 'Import in corso...';
+  submissionDetails.value = '';
 
   try {
-    const fileEntry = files.value[0];
-    if (!fileEntry) return;
-
     const codice = mappingRows.value.find((r) => r.campo === 'Codice')?.colonna || '';
     const descr = mappingRows.value.find((r) => r.campo === 'Descrizione')?.colonna || '';
     const prog = mappingRows.value.find((r) => r.campo === 'Progressivo')?.colonna || '';
 
-    let company: string;
-    let priceCol: string;
-    let qtyCol: string;
-    let roundNum: number;
+    const priceCol = mappingRows.value.find((r) => r.campo === 'Prezzo')?.colonna || '';
+    const qtyCol = mappingRows.value.find((r) => r.campo === 'Quantita')?.colonna || '';
 
-    if (uploadType.value === 'multi') {
-      const row = multiCompanyRows.value[0];
-      if (!row) return;
-      company = row.impresa;
-      priceCol = row.prezzo;
-      qtyCol = row.quantita;
-      roundNum = row.round;
+    // Helper per inviare una singola offerta
+    const uploadSingle = async (entry: FileEntry, company: string, roundNum: number) => {
+      return api.uploadBidOffer(props.projectId, {
+        file: entry.file,
+        company,
+        mode: selectedMode.value,
+        sheetName: entry.sheet,
+        roundMode: 'auto',
+        roundNumber: roundNum,
+        codeColumns: codice ? [codice] : [],
+        descriptionColumns: descr ? [descr] : [],
+        priceColumn: priceCol,
+        quantityColumn: qtyCol,
+        progressColumn: prog || undefined,
+        sourceEstimateId: selectedEstimateId.value,
+      });
+    };
+
+    if (uploadType.value === 'batch') {
+      const successes: Array<{ file: string; company: string }> = [];
+      const failures: Array<{ file: string; company: string; error: string }> = [];
+
+      for (const entry of files.value) {
+        try {
+          const company = entry.impresa;
+          const roundNum = entry.round;
+          await uploadSingle(entry, company, roundNum);
+          successes.push({ file: entry.fileName, company });
+        } catch (err: any) {
+          failures.push({
+            file: entry.fileName,
+            company: entry.impresa,
+            error: err?.message || 'Errore sconosciuto',
+          });
+        }
+      }
+
+      if (failures.length === 0) {
+        submissionState.value = 'success';
+        submissionMessage.value = 'Import completato';
+        submissionDetails.value = `${successes.length} file importati`;
+        toast.success('Import offerta completato', {
+          description: submissionDetails.value,
+        });
+      } else {
+        submissionState.value = 'error';
+        submissionMessage.value = 'Import parziale';
+        submissionDetails.value = `${successes.length} ok, ${failures.length} errori`;
+        toast.error('Alcuni file non sono stati importati', { description: submissionDetails.value });
+      }
+
+      emit('success', { successes, failures });
     } else {
-      company = fileEntry.impresa;
-      priceCol = mappingRows.value.find((r) => r.campo === 'Prezzo')?.colonna || '';
-      qtyCol = mappingRows.value.find((r) => r.campo === 'Quantita')?.colonna || '';
-      roundNum = fileEntry.round;
+      const fileEntry = files.value[0];
+      if (!fileEntry) return;
+
+      let company: string;
+      let roundNum: number;
+
+      if (uploadType.value === 'multi') {
+        const row = multiCompanyRows.value[0];
+        if (!row) return;
+        company = row.impresa;
+        roundNum = row.round;
+      } else {
+        company = fileEntry.impresa;
+        roundNum = fileEntry.round;
+      }
+
+      const result = await uploadSingle(fileEntry, company, roundNum);
+
+      submissionState.value = 'success';
+      submissionMessage.value = 'Import completato';
+      submissionDetails.value = result?.name ? `${result.name} - Round ${roundNum}` : `Round ${roundNum}`;
+      toast.success('Import offerta completato', {
+        description: submissionDetails.value || 'File importato correttamente',
+      });
+      emit('success', result);
     }
-
-    const result = await api.uploadBidOffer(props.projectId, {
-      file: fileEntry.file,
-      company,
-      mode: selectedMode.value,
-      sheetName: fileEntry.sheet,
-      roundMode: 'auto',
-      roundNumber: roundNum,
-      codeColumns: codice ? [codice] : [],
-      descriptionColumns: descr ? [descr] : [],
-      priceColumn: priceCol,
-      quantityColumn: qtyCol,
-      progressColumn: prog || undefined,
-      sourceEstimateId: selectedEstimateId.value, // Add source estimate ID
-    });
-
-    emit('success', result);
   } catch (err) {
     console.error('Upload failed:', err);
+    submissionState.value = 'error';
+    const message = err instanceof Error ? err.message : 'Errore durante l\'import.';
+    submissionMessage.value = 'Errore durante l\'import';
+    submissionDetails.value = message;
+    toast.error('Import offerta non riuscito', { description: message });
   } finally {
     isSubmitting.value = false;
   }
@@ -451,11 +507,11 @@ const forceUpdateMulti = () => triggerRef(multiCompanyRows);
 </script>
 
 <template>
-  <div class="flex h-full flex-col">
-    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-neutral-200 px-4 py-3 dark:border-neutral-800">
-      <div class="flex items-center gap-3">
-        <template v-for="(label, idx) in ['Configurazione', 'File', 'Mappatura']" :key="idx">
-          <div class="flex items-center gap-1.5" :class="{ 'opacity-40': idx + 1 > currentStep }">
+    <div class="flex h-full flex-col">
+      <div class="flex flex-wrap items-center justify-between gap-3 border-b border-neutral-200 px-4 py-3 dark:border-neutral-800">
+        <div class="flex items-center gap-3">
+          <template v-for="(label, idx) in ['Configurazione', 'File', 'Mappatura']" :key="idx">
+            <div class="flex items-center gap-1.5" :class="{ 'opacity-40': idx + 1 > currentStep }">
             <div
               class="flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium"
               :class="idx + 1 <= currentStep ? 'bg-primary-500 text-white' : 'bg-neutral-200 dark:bg-neutral-700'"
@@ -473,6 +529,20 @@ const forceUpdateMulti = () => triggerRef(multiCompanyRows);
         <UBadge v-if="files.length" color="success" variant="soft" size="xs">{{ fileCountBadge }}</UBadge>
         <UButton icon="i-heroicons-x-mark" variant="ghost" size="xs" @click="emit('close')" />
       </div>
+    </div>
+
+    <div v-if="submissionState !== 'idle'" class="px-4 pt-3">
+      <UAlert
+        :title="submissionMessage || 'Stato import'"
+        :description="submissionDetails"
+        :icon="submissionState === 'loading' ? 'i-heroicons-arrow-path' : submissionState === 'success' ? 'i-heroicons-check-circle' : 'i-heroicons-exclamation-triangle'"
+        :color="submissionState === 'error' ? 'red' : submissionState === 'success' ? 'green' : 'blue'"
+        variant="soft"
+      >
+        <template #actions v-if="submissionState === 'loading'">
+          <UProgress :value="undefined" color="primary" size="xs" class="w-36" />
+        </template>
+      </UAlert>
     </div>
 
     <div class="flex-1 overflow-auto p-5">
@@ -530,7 +600,7 @@ const forceUpdateMulti = () => triggerRef(multiCompanyRows);
         <!-- BASELINE ESTIMATE SELECTION -->
          <div v-if="estimateOptions.length > 0">
            <h3 class="mb-3 text-sm font-medium">Collegamento Preventivo (Baseline)</h3>
-           <UFormGroup help="Seleziona il preventivo di riferimento per agganciare le voci e il listino prezzi.">
+           <UFormField description="Seleziona il preventivo di riferimento per agganciare le voci e il listino prezzi.">
              <USelectMenu
                v-model="selectedEstimateId"
                :items="estimateOptions"
@@ -551,7 +621,7 @@ const forceUpdateMulti = () => triggerRef(multiCompanyRows);
                  </div>
                </template>
              </USelectMenu>
-           </UFormGroup>
+           </UFormField>
          </div>
          <div v-else class="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-600">
             Nessun preventivo trovato nel progetto. Impossibile importare un'offerta senza una baseline.
