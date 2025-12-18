@@ -3,7 +3,7 @@ import type { Ref } from 'vue';
 import type { DataGridConfig } from '~/types/data-grid';
 import type { ApiPriceListItem } from '~/types/api';
 
-export const usePriceListGridConfig = (rowData: Ref<ApiPriceListItem[]>) => {
+export const usePriceListGridConfig = (_rowData: Ref<ApiPriceListItem[]>) => {
     const formatCurrency = (value: number | null | undefined) => {
         if (value === null || value === undefined) return '-';
         return new Intl.NumberFormat('it-IT', {
@@ -36,6 +36,7 @@ export const usePriceListGridConfig = (rowData: Ref<ApiPriceListItem[]>) => {
                 field: 'wbs6_description',
                 headerName: 'WBS 06',
                 width: 150,
+                hide: false
             },
             // WBS 7
             {
@@ -48,6 +49,7 @@ export const usePriceListGridConfig = (rowData: Ref<ApiPriceListItem[]>) => {
                 field: 'wbs7_description',
                 headerName: 'WBS 07',
                 width: 150,
+                hide: false
             },
             {
                 field: 'description',
@@ -81,7 +83,7 @@ export const usePriceListGridConfig = (rowData: Ref<ApiPriceListItem[]>) => {
                 headerName: 'Importo Tot.',
                 width: 140,
                 cellClass: 'ag-right-aligned-cell font-bold text-emerald-600 dark:text-emerald-400',
-                valueFormatter: (params: any) => formatCurrency(params.value),
+                valueFormatter: (params: { value: number }) => formatCurrency(params.value),
                 filter: 'agNumberColumnFilter',
             },
         ],

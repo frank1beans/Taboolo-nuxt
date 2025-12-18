@@ -2,10 +2,12 @@
 import { useRoute } from 'vue-router';
 import { computed, onMounted, reactive, ref } from 'vue';
 import type { DataGridConfig } from '~/types/data-grid';
+import type { ApiEstimate, ApiOfferSummary } from '~/types/api';
 import { useCurrentContext } from '~/composables/useCurrentContext';
 import DataGridActions from '~/components/data-grid/DataGridActions.vue';
 import { getStatusConfig } from '~/utils/status-mappings';
 import DataGridPage from '~/components/layout/DataGridPage.vue';
+import { formatCurrency as formatCurrencyLib, formatDelta } from '~/lib/formatters';
 
 const route = useRoute();
 const projectId = route.params.id as string;
@@ -35,25 +37,33 @@ onMounted(() => {
 
 const loading = computed(() => status.value === 'pending');
 const estimates = computed(() => context.value?.estimates || []);
-const currentEstimate = computed(() => estimates.value.find((e: any) => e.id === estimateId));
+const currentEstimate = computed<ApiEstimate | undefined>(() => estimates.value.find((e: ApiEstimate) => e.id === estimateId));
 
-const stats = ref<any | null>(null);
+type StatsResponse = {
+  project_total?: number;
+  total_amount?: number | null;
+  offers?: Array<{
+    id: string;
+    total_amount?: number | null;
+    round_number?: number | null;
+    company_name?: string | null;
+    name?: string | null;
+  }>;
+};
+
+const stats = ref<StatsResponse | null>(null);
 const statsLoading = ref(false);
 
 const formatCurrency = (value?: number | string | null) => {
   const numeric = typeof value === 'string' ? Number(value) : value;
   const safe = typeof numeric === 'number' && !Number.isNaN(numeric) ? numeric : 0;
-  return new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(safe);
+  return formatCurrencyLib(safe);
 };
 
-const formatDeltaPerc = (value?: number | null) => {
-  if (value === null || value === undefined) return '-';
-  const sign = value > 0 ? '+' : '';
-  return `${sign}${value.toFixed(1)}%`;
-};
+const formatDeltaPerc = (value?: number | null) => (value === null || value === undefined ? '-' : formatDelta(value));
 
 const loadStats = async () => {
-  if (!process.client) return;
+  if (!import.meta.client) return;
   statsLoading.value = true;
   try {
     stats.value = await $fetch(`/api/projects/${projectId}/analytics/stats`, {
@@ -74,18 +84,18 @@ const offersCount = computed(() => offerRows.value.length);
 
 // Find the best offer across all rounds (lowest total_amount)
 const bestOfferId = computed(() => {
-  const offers = offerRows.value.filter((o: any) => o.total_amount !== null && o.total_amount !== undefined);
+  const offers = offerRows.value.filter((o: ApiOfferSummary) => o.total_amount !== null && o.total_amount !== undefined);
   if (!offers.length) return null;
-  const best = offers.reduce((acc: any, cur: any) => {
-    if (!acc || cur.total_amount < acc.total_amount) return cur;
+  const best = offers.reduce<ApiOfferSummary | null>((acc: ApiOfferSummary | null, cur: ApiOfferSummary) => {
+    if (!acc || (cur.total_amount ?? Infinity) < (acc.total_amount ?? Infinity)) return cur;
     return acc;
-  }, offers[0]);
+  }, offers[0] || null);
   return best?.id || null;
 });
 
 // Unified rows: Project baseline + all offers
 const unifiedRows = computed(() => {
-  const rows: Array<any> = [];
+  const rows: Array<Record<string, unknown>> = [];
 
   // Add project baseline row
   rows.push({
@@ -103,7 +113,7 @@ const unifiedRows = computed(() => {
   });
 
   // Add all offers with computed deltas
-  offerRows.value.forEach((offer: any) => {
+  offerRows.value.forEach((offer: ApiOfferSummary) => {
     const amount = offer.total_amount ?? null;
     const deltaAmount = amount !== null ? amount - baselineTotal.value : null;
     const deltaPerc = deltaAmount !== null && baselineTotal.value ? (deltaAmount / baselineTotal.value) * 100 : null;
@@ -129,7 +139,7 @@ const unifiedGridConfig: DataGridConfig = {
       headerName: 'Preventivo',
       flex: 2,
       minWidth: 220,
-      cellRenderer: (params: any) => {
+      cellRenderer: (params: { value?: string }): string => {
         return `<span class="font-medium">${params.value || ''}</span>`;
       },
     },
@@ -138,7 +148,7 @@ const unifiedGridConfig: DataGridConfig = {
       headerName: 'Round',
       width: 100,
       cellClass: 'ag-right-aligned-cell',
-      valueFormatter: (params: any) => params.value !== null ? `R${params.value}` : '-',
+      valueFormatter: (params: { value: number | null }) => params.value !== null ? `R${params.value}` : '-',
     },
     {
       field: 'company_name',
@@ -150,8 +160,9 @@ const unifiedGridConfig: DataGridConfig = {
       field: 'status',
       headerName: 'Stato',
       width: 140,
-      cellRenderer: (params: any) => {
+      cellRenderer: (params: { value?: string }): string => {
         const rawStatus = params.value;
+        if (!rawStatus) return '';
         const config = getStatusConfig(rawStatus);
         return `<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${config.color}">
           <i class="${config.icon} w-3 h-3 mr-1"></i>
@@ -164,14 +175,14 @@ const unifiedGridConfig: DataGridConfig = {
       headerName: 'Importo',
       width: 150,
       cellClass: 'ag-right-aligned-cell font-semibold',
-      valueFormatter: (params: any) => formatCurrency(params.value),
+      valueFormatter: (params: { value: number | string }): string => formatCurrency(params.value as number),
     },
     {
       field: 'deltaAmount',
       headerName: 'Δ Importo',
       width: 140,
       cellClass: 'ag-right-aligned-cell',
-      cellRenderer: (params: any) => {
+      cellRenderer: (params: { value: number | null; data?: { isBaseline?: boolean } }): string => {
         const value = params.value;
         if (value === null || value === undefined || params.data?.isBaseline) return '-';
         const formatted = formatCurrency(value);
@@ -184,7 +195,7 @@ const unifiedGridConfig: DataGridConfig = {
       headerName: 'Δ %',
       width: 100,
       cellClass: 'ag-right-aligned-cell',
-      cellRenderer: (params: any) => {
+      cellRenderer: (params: { value: number | null; data?: { isBaseline?: boolean } }): string => {
         const value = params.value;
         if (value === null || value === undefined || params.data?.isBaseline) return '-';
         const formatted = formatDeltaPerc(value);
@@ -213,23 +224,11 @@ const unifiedGridConfig: DataGridConfig = {
   rowHeight: 48,
   enableQuickFilter: true,
   enableExport: true,
-  getRowClass: (params: any) => {
+  getRowClass: (params: { data?: { isBaseline?: boolean; isBest?: boolean } }) => {
     if (params.data?.isBaseline) return 'bg-blue-50/50 dark:bg-blue-950/20';
     if (params.data?.isBest) return 'bg-green-50/50 dark:bg-green-950/20';
     return '';
   },
-};
-
-const navigateToComparison = (row: any) => {
-  if (row?.isBaseline) return;
-  const params = new URLSearchParams();
-  if (row?.round_number !== undefined && row?.round_number !== null) {
-    params.set('round', String(row.round_number));
-  }
-  if (row?.company_name && row.company_name !== '-') {
-    params.set('company', row.company_name);
-  }
-  navigateTo(`/projects/${projectId}/estimate/${estimateId}/comparison?${params.toString()}`);
 };
 
 // ---------------------------------------------------------------------------
@@ -253,11 +252,6 @@ const statusOptions = [
   { label: 'Rifiutata', value: 'rejected' },
 ];
 
-const modeOptions = [
-  { label: 'Computo (dettagliato)', value: 'detailed' },
-  { label: 'Lista (aggregato)', value: 'aggregated' },
-];
-
 const resetEditForm = () => {
   editForm.id = '';
   editForm.name = '';
@@ -273,7 +267,18 @@ const closeEditModal = () => {
   resetEditForm();
 };
 
-const openOfferDetail = (row: any) => {
+type OfferRow = {
+  id: string;
+  name?: string;
+  company_name?: string;
+  round_number?: number | null;
+  status?: string;
+  mode?: string;
+  total_amount?: number | null;
+  isBaseline?: boolean;
+};
+
+const openOfferDetail = (row: OfferRow | null | undefined) => {
   if (!row || row.isBaseline) return;
   const params = new URLSearchParams();
   if (row.round_number !== undefined) params.set('round', String(row.round_number));
@@ -281,7 +286,7 @@ const openOfferDetail = (row: any) => {
   navigateTo(`/projects/${projectId}/estimate/${estimateId}/offer?${params.toString()}`);
 };
 
-const openEditOffer = (row: any) => {
+const openEditOffer = (row: OfferRow | null | undefined) => {
   if (!row || row.isBaseline) return;
   editForm.id = row.id;
   editForm.name = row.name || '';
@@ -296,7 +301,7 @@ const openEditOffer = (row: any) => {
 const saveOffer = async () => {
   if (!editForm.id) return;
   try {
-    const payload: Record<string, any> = {
+    const payload: Record<string, unknown> = {
       name: editForm.name,
       company_name: editForm.company_name,
       round_number: Number(editForm.round_number) || 0,
@@ -325,7 +330,7 @@ const saveOffer = async () => {
   }
 };
 
-const deleteOffer = async (row: any) => {
+const deleteOffer = async (row: OfferRow | null | undefined) => {
   if (!row?.id || row.isBaseline) return;
   const ok = window.confirm(`Eliminare l'offerta ${row.name || row.company_name || row.id}? Verranno rimossi anche i relativi items.`);
   if (!ok) return;
@@ -340,14 +345,31 @@ const deleteOffer = async (row: any) => {
   }
 };
 
+const deleteEstimate = async () => {
+  const confirmed = window.confirm(
+    `Sei sicuro di voler eliminare questo preventivo ("${currentEstimate.value?.name}")? L'operazione non è reversibile.`
+  );
+  if (!confirmed) return;
+
+  try {
+    await $fetch(`/api/projects/${projectId}/estimates/${estimateId}`, {
+      method: "DELETE",
+    });
+    // Redirect to project dashboard after deletion
+    navigateTo(`/projects/${projectId}`);
+  } catch (error) {
+    console.error("Errore durante l'eliminazione del preventivo", error);
+    window.alert("Si è verificato un errore durante l'eliminazione del preventivo.");
+  }
+};
+
 const gridContext = computed(() => ({
   rowActions: {
-    open: (row: any) => row?.isBaseline ? null : openOfferDetail(row),
-    edit: (row: any) => row?.isBaseline ? null : openEditOffer(row),
-    remove: (row: any) => row?.isBaseline ? null : deleteOffer(row),
+    open: (row: OfferRow) => row?.isBaseline ? null : openOfferDetail(row),
+    edit: (row: OfferRow) => row?.isBaseline ? null : openEditOffer(row),
+    remove: (row: OfferRow) => row?.isBaseline ? deleteEstimate() : deleteOffer(row),
   },
-  // Hide actions for baseline row
-  hideActionsFor: (row: any) => row?.isBaseline === true,
+  hideActionsFor: (row: OfferRow) => false, // Always show actions (renderer handles disabled states if needed, but here we want delete for all)
 }));
 </script>
 
@@ -406,7 +428,7 @@ const gridContext = computed(() => ({
                 {{ editForm.name || editForm.company_name || 'Offerta' }}
               </h3>
             </div>
-            <UButton color="gray" variant="ghost" icon="i-heroicons-x-mark" class="-mr-2" @click="closeEditModal" />
+            <UButton color="neutral" variant="ghost" icon="i-heroicons-x-mark" class="-mr-2" @click="closeEditModal" />
           </div>
 
           <!-- Scrollable Body -->
@@ -430,7 +452,7 @@ const gridContext = computed(() => ({
 
           <!-- Footer -->
           <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/50 flex items-center justify-end gap-3 shrink-0">
-            <UButton color="gray" variant="ghost" @click="closeEditModal">
+            <UButton color="neutral" variant="ghost" @click="closeEditModal">
               Annulla
             </UButton>
             <UButton color="primary" icon="i-heroicons-check" @click="saveOffer">

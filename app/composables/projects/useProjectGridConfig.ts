@@ -75,7 +75,7 @@ export const useProjectGridConfig = (rowData: Ref<Project[]>) => {
                 flex: 1,
                 minWidth: 130,
                 maxWidth: 160,
-                valueFormatter: (params: any) => formatDate(params.value),
+                valueFormatter: (params: { value: string }) => formatDate(params.value),
             },
             {
                 field: 'updated_at',
@@ -83,7 +83,7 @@ export const useProjectGridConfig = (rowData: Ref<Project[]>) => {
                 flex: 1,
                 minWidth: 160,
                 maxWidth: 180,
-                valueFormatter: (params: any) => formatDate(params.value),
+                valueFormatter: (params: { value: string }) => formatDate(params.value),
             },
             {
                 colId: 'actions',

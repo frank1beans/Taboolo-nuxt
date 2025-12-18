@@ -54,14 +54,24 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import type { IHeaderParams } from 'ag-grid-community';
+import type { ColumnFilter, FilterPanelConfig } from '~/types/data-grid';
+
+type HeaderParams = IHeaderParams & {
+  context?: {
+    getCurrentFilter?: (field: string) => ColumnFilter | null;
+    openFilterPanel?: (config: FilterPanelConfig) => void;
+  };
+  valuesGetter?: () => string[];
+};
 
 const props = defineProps<{
-  params: any;
+  params: HeaderParams;
 }>();
 
 const iconSize = 'w-4 h-4';
 
-const sortState = ref<'asc' | 'desc' | null>((props.params.column?.getSort() as any) || null);
+const sortState = ref<'asc' | 'desc' | null>((props.params.column?.getSort() as 'asc' | 'desc' | null) || null);
 const isSortable = computed(() => props.params.column?.getColDef?.()?.sortable !== false);
 const isFilterable = computed(() => props.params.column?.getColDef?.()?.filter !== false);
 
@@ -71,15 +81,9 @@ const updateFilterState = () => {
   isFilterActive.value = props.params.column?.isFilterActive?.() ?? false;
 };
 
-const onFilterChanged = (event: any) => {
-  if (event.columns.includes(props.params.column)) {
-    updateFilterState();
-  }
-};
-
 // Also listen to sort changes to update sort state
 const onSortChanged = () => {
-  sortState.value = (props.params.column?.getSort() as any) || null;
+  sortState.value = (props.params.column?.getSort() as 'asc' | 'desc' | null) || null;
 };
 
 onMounted(() => {
@@ -111,7 +115,7 @@ const sortIconName = computed(() => {
 
 const activeFilter = computed(() => {
   const colId = props.params.column?.getColId?.();
-  return props.params.context?.getCurrentFilter?.(colId || '');
+  return colId ? props.params.context?.getCurrentFilter?.(colId) ?? null : null;
 });
 
 const filterTooltip = computed(() => {

@@ -1,4 +1,5 @@
-import { Schema, model, Types } from 'mongoose';
+import type { HydratedDocument, Types } from 'mongoose';
+import { Schema, model } from 'mongoose';
 
 export interface IOfferItem {
     offer_id: Types.ObjectId;
@@ -71,21 +72,19 @@ const OfferItemSchema = new Schema<IOfferItem>({
 });
 
 // Hardening: enforce basic coherence based on source/origin
-OfferItemSchema.pre('validate', function () {
-    const doc: any = this;
-
-    if (doc.source === 'aggregated' || doc.origin === 'addendum') {
+OfferItemSchema.pre('validate', function (this: HydratedDocument<IOfferItem>) {
+    if (this.source === 'aggregated' || this.origin === 'addendum') {
         // In lista (LX) o addendum non devono restare riferimenti al computo
-        doc.estimate_item_id = undefined;
-        doc.progressive = undefined;
+        this.estimate_item_id = undefined;
+        this.progressive = undefined;
     }
 
-    if (!doc.resolution_status) {
-        doc.resolution_status = doc.price_list_item_id ? 'resolved' : 'pending';
+    if (!this.resolution_status) {
+        this.resolution_status = this.price_list_item_id ? 'resolved' : 'pending';
     }
 
-    if (doc.source === 'detailed' && doc.origin !== 'addendum') {
-        if (!doc.estimate_item_id) {
+    if (this.source === 'detailed' && this.origin !== 'addendum') {
+        if (!this.estimate_item_id) {
             throw new Error('OfferItem detailed mode requires estimate_item_id (unless addendum).');
         }
     }

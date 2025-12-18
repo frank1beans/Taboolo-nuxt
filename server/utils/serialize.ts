@@ -8,20 +8,20 @@
  * Convert a single MongoDB document to a plain JSON object
  * Removes _id and __v, adds id as string
  */
-export function serializeDoc<T extends Record<string, any>>(doc: T | null | undefined): any {
+export function serializeDoc<T extends Record<string, unknown>>(doc: T | null | undefined): Record<string, unknown> | null | undefined {
   if (!doc) return doc;
 
   const { _id, __v, ...rest } = doc;
 
   return {
     ...rest,
-    id: rest.id || _id?.toString() || undefined,
+    id: (rest as Record<string, unknown>).id ?? _id?.toString() ?? undefined,
   };
 }
 
 /**
  * Convert an array of MongoDB documents to plain JSON objects
  */
-export function serializeDocs<T extends Record<string, any>>(docs: T[]): any[] {
-  return docs.map(doc => serializeDoc(doc));
+export function serializeDocs<T extends Record<string, unknown>>(docs: T[]): Record<string, unknown>[] {
+  return docs.map(doc => serializeDoc(doc) as Record<string, unknown>);
 }

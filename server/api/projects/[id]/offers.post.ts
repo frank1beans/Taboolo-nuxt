@@ -1,7 +1,16 @@
-import { defineEventHandler, createError, getRouterParam } from 'h3';
+import { defineEventHandler, createError, getRouterParam, getQuery } from 'h3';
 import { proxyMultipartToPython } from '#utils/python-proxy';
 import { mapComputoToEstimate } from '#utils/python-mappers';
-import { upsertEstimate, upsertEstimateItems } from '#utils/import-adapter';
+
+type OfferEstimate = {
+  estimate_id?: string;
+  mode?: string;
+  company?: string;
+  round_number?: number;
+  total_amount?: number | null;
+  items?: unknown[];
+  [key: string]: unknown;
+};
 
 const fieldMap = (name: string) => {
   switch (name) {
@@ -44,7 +53,7 @@ export default defineEventHandler(async (event) => {
 
   // Proxy all offer imports (LC/MC) to Python importer
   const result = await proxyMultipartToPython(event, `/commesse/${projectId}/ritorni`, { method: 'POST', mapFieldName: fieldMap, mapFieldValue: valueMap });
-  const mapped = mapComputoToEstimate(result);
+  const mapped = mapComputoToEstimate(result) as OfferEstimate;
 
   console.log('[offers.post] Mapped result:', {
     total_amount: mapped.total_amount,
@@ -87,10 +96,10 @@ export default defineEventHandler(async (event) => {
 
   // Read metadata from query and override/augment result
   if (query.company) {
-    (mapped as any).company = query.company;
+    mapped.company = String(query.company);
   }
   if (query.round_number) {
-    (mapped as any).round_number = Number(query.round_number);
+    mapped.round_number = Number(query.round_number);
   }
 
   // Construct a pseudo-payload
@@ -102,7 +111,7 @@ export default defineEventHandler(async (event) => {
       ...mapped,
       type: 'offer',
       // Prioritize query mode, then python-mapped mode, then default
-      mode: importMode || (mapped as any).mode || 'detailed'
+      mode: importMode || mapped.mode || 'detailed'
     }
   };
 
@@ -112,7 +121,7 @@ export default defineEventHandler(async (event) => {
   // So we can inject it into valid payload.
 
   if (sourceEstimateId) {
-    (payload.estimate as any).estimate_id = sourceEstimateId;
+    payload.estimate = { ...payload.estimate, estimate_id: sourceEstimateId };
   }
 
   const persistenceResult = await persistOffer(payload, projectId);

@@ -28,20 +28,20 @@
           :key="gridKey"
           :class="['flex-1 w-full', themeClass]"
           theme="legacy"
-          :columnDefs="columnDefs"
-          :rowData="rowData"
-          :defaultColDef="defaultColDef"
+          :column-defs="columnDefs"
+          :row-data="rowData"
+          :default-col-def="defaultColDef"
           :components="components"
           :context="context"
-          :rowSelection="rowSelectionProp"
-          :headerHeight="config.headerHeight || 48"
-          :groupHeaderHeight="config.groupHeaderHeight || 40"
-          :rowHeight="config.rowHeight || 44"
-          :floatingFiltersHeight="0"
-          :suppressMenuHide="true"
-          :animateRows="config.animateRows ?? true"
-          :suppressCellFocus="config.suppressCellFocus ?? true"
-          :domLayout="domLayout"
+          :row-selection="rowSelectionProp"
+          :header-height="config.headerHeight || 48"
+          :group-header-height="config.groupHeaderHeight || 40"
+          :row-height="config.rowHeight || 44"
+          :floating-filters-height="0"
+          :suppress-menu-hide="true"
+          :animate-rows="config.animateRows ?? true"
+          :suppress-cell-focus="config.suppressCellFocus ?? true"
+          :dom-layout="domLayout"
           @grid-ready="onGridReady"
           @row-clicked="handleRowClick"
           @row-double-clicked="handleRowDoubleClick"
@@ -97,25 +97,38 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, defineComponent, h } from 'vue';
+import { ref, computed, defineComponent, h, type PropType } from 'vue';
 import { AgGridVue } from 'ag-grid-vue3';
-import { AllCommunityModule, ModuleRegistry } from 'ag-grid-community';
+import {
+  AllCommunityModule,
+  ModuleRegistry,
+  type Column,
+  type ColumnResizedEvent,
+  type GridApi,
+  type GridReadyEvent,
+  type RowClickedEvent,
+  type RowDoubleClickedEvent,
+  type SelectionChangedEvent,
+  type ColDef,
+} from 'ag-grid-community';
 import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-quartz.css';
-
-// Register AG Grid Modules
-ModuleRegistry.registerModules([AllCommunityModule]);
 import '~/assets/css/styles/ag-grid-custom.css';
 
-import type { DataGridConfig } from '~/types/data-grid';
+import type { DataGridConfig, FilterPanelConfig } from '~/types/data-grid';
 import DataGridHeader from './DataGridHeader.vue';
 import ColumnFilterPopover from './ColumnFilterPopover.vue';
 import ColumnVisibilityPopover from './ColumnVisibilityPopover.vue';
 
+// Register AG Grid Modules
+ModuleRegistry.registerModules([AllCommunityModule]);
+
+type RowData = Record<string, unknown>;
+
 const props = withDefaults(
   defineProps<{
     config: DataGridConfig;
-    rowData?: any[];
+    rowData?: RowData[];
     height?: string;
     rowSelection?: 'single' | 'multiple' | 'singleRow' | 'multiRow' | { mode: 'singleRow' | 'multiRow' };
     toolbarPlaceholder?: string;
@@ -125,8 +138,8 @@ const props = withDefaults(
     emptyActionLabel?: string;
     exportFilename?: string;
     loading?: boolean;
-    customComponents?: Record<string, any>;
-    contextExtras?: Record<string, any>;
+    customComponents?: Record<string, unknown>;
+    contextExtras?: Record<string, unknown>;
     domLayout?: 'normal' | 'autoHeight' | 'print';
   }>(),
   {
@@ -142,16 +155,17 @@ const props = withDefaults(
     loading: false,
     customComponents: () => ({}),
     contextExtras: () => ({}),
+    domLayout: 'normal',
   }
 );
 
 const emit = defineEmits<{
-  'row-click': [row: any];
-  'row-dblclick': [row: any];
-  'selection-changed': [rows: any[]];
-  'filter-changed': [filterModel: any];
-  'sort-changed': [sortModel: any[]];
-  'grid-ready': [params: any];
+  'row-click': [row: RowData];
+  'row-dblclick': [row: RowData];
+  'selection-changed': [rows: RowData[]];
+  'filter-changed': [filterModel: Record<string, unknown>];
+  'sort-changed': [sortModel: unknown[]];
+  'grid-ready': [params: GridReadyEvent];
   'empty-action': [];
 }>();
 
@@ -163,7 +177,7 @@ const themeClass = computed(() => (isDark.value ? 'ag-theme-quartz-dark' : 'ag-t
 const gridKey = computed(() => `grid-${isDark.value ? 'dark' : 'light'}`);
 
 // Use composables
-const { gridApi, gridReady, onGridReady: onGridReadyBase } = useDataGrid(props.config);
+const { gridApi, onGridReady: onGridReadyBase } = useDataGrid(props.config);
 
 const rowSelectionProp = computed(() => {
   if (typeof props.rowSelection === 'string') {
@@ -200,12 +214,13 @@ const showColumnConfig = ref(false);
 const columnConfigTrigger = ref<HTMLElement | null>(null);
 const columnState = ref<Array<{ colId: string; headerName: string; visible: boolean }>>([]);
 
-const openColumnConfig = (trigger: HTMLElement) => {
-  if (!gridApi.value) return;
-  columnConfigTrigger.value = trigger;
-  
-  const cols = gridApi.value.getAllGridColumns();
-  columnState.value = cols.map((col: any) => ({
+const openColumnConfig = (trigger?: HTMLElement) => {
+  const api = gridApi.value as GridApi<RowData> | null;
+  if (!api) return;
+  columnConfigTrigger.value = trigger ?? columnConfigTrigger.value;
+
+  const cols = api.getAllGridColumns();
+  columnState.value = cols.map((col: Column) => ({
     colId: col.getColId(),
     headerName: col.getColDef().headerName || col.getColId(),
     visible: col.isVisible(),
@@ -214,16 +229,18 @@ const openColumnConfig = (trigger: HTMLElement) => {
 };
 
 const toggleColumnVisibility = (colId: string, visible: boolean) => {
-  if (!gridApi.value) return;
-  gridApi.value.setColumnsVisible([colId], visible);
+  const api = gridApi.value as GridApi<RowData> | null;
+  if (!api) return;
+  api.setColumnsVisible([colId], visible);
   // Update local state to reflect change immediately in UI
   const col = columnState.value.find(c => c.colId === colId);
   if (col) col.visible = visible;
 };
 
 const resetColumnVisibility = () => {
-  if (!gridApi.value) return;
-  gridApi.value.resetColumnState();
+  const api = gridApi.value as GridApi<RowData> | null;
+  if (!api) return;
+  api.resetColumnState();
   // Refresh state
   openColumnConfig();
 };
@@ -232,7 +249,8 @@ const { createColumnDefs, getDefaultColDef } = useDataGridColumns();
 
 // Generate column definitions with valuesGetter and custom header
 const columnDefs = computed(() => {
-  return createColumnDefs(props.config.columns, props.rowData).map((col) => ({
+  const defs = createColumnDefs(props.config.columns, props.rowData) as ColDef[];
+  return defs.map((col) => ({
     ...col,
     headerComponent: col.headerComponent !== undefined
       ? col.headerComponent
@@ -250,7 +268,12 @@ const defaultColDef = computed(() => ({
 // Custom header component
 const DataGridHeaderComponent = defineComponent({
   name: 'DataGridHeaderComponent',
-  props: ['params'],
+  props: {
+    params: {
+      type: Object as PropType<Record<string, unknown>>,
+      required: true,
+    },
+  },
   setup(componentProps) {
     return () => h(DataGridHeader, { params: componentProps.params });
   },
@@ -263,7 +286,7 @@ const components = computed(() => ({
 
 // Context for header components
 const context = computed(() => ({
-  openFilterPanel: (config: any) => {
+  openFilterPanel: (config: FilterPanelConfig) => {
     openFilterPanel(config);
   },
   getCurrentFilter: (field: string) => getCurrentFilter(field),
@@ -271,7 +294,7 @@ const context = computed(() => ({
 }));
 
 // Grid ready handler
-const onGridReady = (params: any) => {
+const onGridReady = (params: GridReadyEvent) => {
   onGridReadyBase(params);
 
   // Emit grid-ready to parent
@@ -288,21 +311,20 @@ const onGridReady = (params: any) => {
 };
 
 // Event handlers
-const handleRowClick = (event: any) => {
-  emit('row-click', event.data);
+const handleRowClick = (event: RowClickedEvent<RowData>) => {
+  emit('row-click', event.data as RowData);
 };
 
-const handleRowDoubleClick = (event: any) => {
-  emit('row-dblclick', event.data);
+const handleRowDoubleClick = (event: RowDoubleClickedEvent<RowData>) => {
+  emit('row-dblclick', event.data as RowData);
 };
 
-const handleSelectionChange = () => {
-  if (!gridApi.value) return;
-  const selectedRows = gridApi.value.getSelectedRows();
+const handleSelectionChange = (event: SelectionChangedEvent<RowData>) => {
+  const selectedRows = event.api.getSelectedRows() as RowData[];
   emit('selection-changed', selectedRows);
 };
 
-const onColumnResized = (e: any) => {
+const onColumnResized = (_event: ColumnResizedEvent) => {
   // if (!e?.finished || e?.source === 'sizeColumnsToFit') return;
   // e.api?.sizeColumnsToFit();
 };

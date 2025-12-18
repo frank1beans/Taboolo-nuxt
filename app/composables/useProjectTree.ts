@@ -21,9 +21,6 @@ export const useProjectTree = (
     if (!project) return []
 
     const estimates = project.estimates ?? []
-    const fallbackEstimateId =
-      (estimate?.id ? String(estimate.id) : null) ?? (estimates[0]?.id ? String(estimates[0].id) : null)
-
     const estimateNodes: TreeNode[] = estimates.map((est) => {
       const estId = est.id ? String(est.id) : null
       const isActive = est.id === estimate?.id

@@ -1,12 +1,12 @@
 <template>
-  <UModal :model-value="open" @update:model-value="$emit('close')">
+  <UModal :model-value="open" @update:model-value="emit('close')">
     <UCard>
       <template #header>
         <div class="flex items-center justify-between">
           <h3 class="text-base font-semibold leading-6 text-[hsl(var(--foreground))]">
             Configura Colonne
           </h3>
-          <UButton color="neutral" variant="ghost" icon="i-heroicons-x-mark-20-solid" class="-my-1" @click="$emit('close')" />
+          <UButton color="neutral" variant="ghost" icon="i-heroicons-x-mark-20-solid" class="-my-1" @click="emit('close')" />
         </div>
       </template>
 
@@ -38,15 +38,15 @@
             class="flex items-center justify-between p-2 rounded-lg hover:bg-[hsl(var(--muted))]"
           >
             <span class="text-sm text-[hsl(var(--foreground))]">{{ col.headerName }}</span>
-            <UToggle :model-value="col.visible" @update:model-value="(val: any) => $emit('toggle', col.colId, val)" />
+            <UToggle :model-value="col.visible" @update:model-value="(val: boolean) => emit('toggle', col.colId, val)" />
           </div>
         </div>
       </div>
 
       <template #footer>
         <div class="flex justify-between">
-           <UButton color="neutral" variant="ghost" label="Ripristina Default" @click="$emit('reset')" />
-           <UButton color="primary" label="Chiudi" @click="$emit('close')" />
+           <UButton color="neutral" variant="ghost" label="Ripristina Default" @click="emit('reset')" />
+           <UButton color="primary" label="Chiudi" @click="emit('close')" />
         </div>
       </template>
     </UCard>

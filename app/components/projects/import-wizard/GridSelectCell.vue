@@ -1,7 +1,16 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue';
+import type { ColDef, RowNode } from 'ag-grid-community';
 
-const props = defineProps<{ params: any }>();
+type GridSelectParams = {
+  value: unknown;
+  values: unknown[] | ((params: GridSelectParams) => unknown[]);
+  colDef: ColDef;
+  node: RowNode;
+  onValueChange?: (value: unknown, params: GridSelectParams) => void;
+};
+
+const props = defineProps<{ params: GridSelectParams }>();
 
 const value = ref(props.params.value);
 

@@ -1,4 +1,5 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+ 
+import type { ClientSession } from 'mongoose';
 import { Types } from 'mongoose';
 import { Offer, OfferItem } from '#models';
 import { serializeDoc } from '#utils/serialize';
@@ -17,7 +18,7 @@ type OfferUpdateInput = {
 const allowedStatuses = new Set(['draft', 'submitted', 'accepted', 'rejected']);
 const allowedModes = new Set(['detailed', 'aggregated']);
 
-export async function deleteOfferCascade(projectId: string, offerId: string, session?: any) {
+export async function deleteOfferCascade(projectId: string, offerId: string, session?: ClientSession) {
   const projectObjectId = new Types.ObjectId(projectId);
   const offerObjectId = new Types.ObjectId(offerId);
   const opts = session ? { session } : undefined;
@@ -40,7 +41,7 @@ export async function updateOffer(projectId: string, offerId: string, input: Off
   const projectObjectId = new Types.ObjectId(projectId);
   const offerObjectId = new Types.ObjectId(offerId);
 
-  const update: Record<string, any> = {};
+  const update: Record<string, unknown> = {};
 
   if (typeof input.name === 'string') update.name = input.name.trim();
   if (typeof input.company_name === 'string') update.company_name = input.company_name.trim();

@@ -1,15 +1,13 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { defineEventHandler, createError, getQuery, getRouterParam } from 'h3';
-import { randomUUID } from 'crypto';
-import mongoose, { Types } from 'mongoose';
-import { runSixImport, runSixImportRaw } from '#importers/python-six/client';
-import {
-  upsertEstimate,
-  upsertEstimateItems,
-} from '#services/EstimateService';
-import { upsertPriceCatalog } from '#services/CatalogService';
-import { buildAndUpsertWbsFromItems } from '#services/WbsService';
-// import type { RawImportPayload } from '#utils/raw-types';
+import { Types } from 'mongoose';
+import { runSixImportRaw } from '#importers/python-six/client';
+
+type RawImportPayload = {
+  estimate?: unknown;
+  units?: unknown[];
+  priceLists?: unknown[];
+  [key: string]: unknown;
+};
 
 export default defineEventHandler(async (event) => {
   const projectId = getRouterParam(event, 'id');
@@ -23,7 +21,7 @@ export default defineEventHandler(async (event) => {
     const importId = new Types.ObjectId();
     console.log(`[ImportSIX] Starting Raw Import ${importId} for Project ${projectId}`);
 
-    const payload: any = await runSixImportRaw(event, projectId);
+    const payload = await runSixImportRaw(event, projectId) as RawImportPayload;
 
     // Legacy legacy or new format check
     // If payload has 'estimate', it's the new format

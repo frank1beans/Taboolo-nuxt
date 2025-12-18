@@ -21,7 +21,7 @@ class WbsNode(BaseModel):
     code: str
     name: Optional[str] = None
     level: int
-    kind: Optional[str] = None
+    type: Optional[str] = None # previously kind
     parent_id: Optional[str] = None
     path: Optional[str] = None
     properties: Dict[str, Any] = Field(default_factory=dict)

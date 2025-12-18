@@ -1,14 +1,27 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+ 
 import { Types } from 'mongoose';
 import { PriceListItem } from '#models';
 
-type AnyRecord = Record<string, any>;
+type CatalogEntry = {
+    product_id?: string;
+    code?: string;
+    description?: string;
+    extraDescription?: string;
+    unit_id?: string | null;
+    unit_label?: string | null;
+    price?: number | null;
+    wbs_id?: string | null;
+    price_list_id?: string | null;
+    source_preventivo_id?: string | null;
+    import_run_id?: string | null;
+    price_lists?: Record<string, number>;
+};
 
 /**
  * Upsert price catalog entries coming from SIX import.
  * Uses project_id + estimate_id + product_id as key.
  */
-export async function upsertPriceCatalog(projectId: string, estimateId: string, catalog: AnyRecord[] = []) {
+export async function upsertPriceCatalog(projectId: string, estimateId: string, catalog: CatalogEntry[] = []) {
     if (!catalog.length) return;
 
     const projectObjectId = new Types.ObjectId(projectId);

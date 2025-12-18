@@ -1,8 +1,7 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+ 
+import type { AnyBulkWriteOperation } from 'mongoose';
 import { Types } from 'mongoose';
 import { WbsNode } from '#models';
-
-type AnyRecord = Record<string, any>;
 
 /**
  * Upsert WBS nodes (spatial, wbs6, wbs7) and return lookup maps by code.
@@ -15,14 +14,18 @@ export type WbsNodeInput = {
     parentKey?: string | null;
 };
 
-const normalizeWbsCode = (n: AnyRecord) => {
+const normalizeWbsCode = (n: { code?: unknown; grp_id?: unknown; description?: unknown }) => {
     if (n.code) return String(n.code);
     if (n.grp_id) return String(n.grp_id);
     if (n.description) return String(n.description).trim().replace(/\s+/g, '_').toUpperCase();
     return null;
 };
 
-const deriveLevelAndType = (code?: string, levelHint?: number, typeHint?: string) => {
+const deriveLevelAndType = (
+    code?: string,
+    levelHint?: number,
+    typeHint?: 'spatial' | 'commodity' | 'wbs6' | 'wbs7'
+) => {
     let level = levelHint;
     if (!level && code) {
         const match = /wbs0*([1-7])/i.exec(code);
@@ -33,7 +36,7 @@ const deriveLevelAndType = (code?: string, levelHint?: number, typeHint?: string
     if (!level) level = typeHint === 'spatial' ? 1 : undefined;
 
     let type: 'spatial' | 'commodity' | undefined =
-        typeHint === 'wbs6' || typeHint === 'wbs7' ? 'commodity' : (typeHint as any);
+        typeHint === 'wbs6' || typeHint === 'wbs7' ? 'commodity' : typeHint;
     if (!type && level) {
         if (level >= 1 && level <= 5) type = 'spatial';
         else if (level === 6 || level === 7) type = 'commodity';
@@ -64,7 +67,7 @@ export async function upsertWbsHierarchy(projectId: string, estimateId: string, 
                 code,
                 description: n.description,
                 level,
-                type: type as any,
+                type,
                 category,
                 estimate_id: estimateObjectId,
                 parentKey: n.parentKey ?? null,
@@ -103,7 +106,7 @@ export async function upsertWbsHierarchy(projectId: string, estimateId: string, 
     }
 
     // Set parents and ancestors where parentKey is provided
-    const updates: AnyRecord[] = [];
+    const updates: AnyBulkWriteOperation[] = [];
     for (const n of filtered) {
         if (!n.parentKey) continue;
         const parentId = idMap[n.parentKey];
@@ -120,7 +123,7 @@ export async function upsertWbsHierarchy(projectId: string, estimateId: string, 
         ancestorsById[selfId] = ancestors;
     }
     if (updates.length) {
-        await WbsNode.bulkWrite(updates as any[], { ordered: false });
+        await WbsNode.bulkWrite(updates, { ordered: false });
     }
 
     const map: { spatial: Record<string, string>; wbs6: Record<string, string>; wbs7: Record<string, string> } = {
@@ -142,8 +145,8 @@ export async function upsertWbsHierarchy(projectId: string, estimateId: string, 
 export async function buildAndUpsertWbsFromItems(
     projectId: string,
     estimateId: string,
-    items: AnyRecord[] = [],
-    fallbackNodes: { spatial?: AnyRecord[]; wbs6?: AnyRecord[]; wbs7?: AnyRecord[] } = {},
+    items: Array<{ wbs_levels?: Array<{ level?: number; code?: string; grp_id?: string; description?: string }> }> = [],
+    fallbackNodes: { spatial?: WbsNodeInput[]; wbs6?: WbsNodeInput[]; wbs7?: WbsNodeInput[] } = {},
 ) {
     const nodes: WbsNodeInput[] = [];
 

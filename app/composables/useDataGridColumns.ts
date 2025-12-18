@@ -1,6 +1,8 @@
 import type { ColumnFilterOperator, DataGridColumn } from '~/types/data-grid';
 import { matchesOperator } from '~/utils/columnFilter';
 
+type GridRow = Record<string, unknown>;
+
 export function useDataGridColumns() {
   const mapAgOptionToOperator = (filterOption: string): ColumnFilterOperator => {
     switch (filterOption) {
@@ -19,12 +21,17 @@ export function useDataGridColumns() {
     }
   };
 
-  const getNestedValue = (obj: any, path: string | undefined) => {
-    if (!path) return undefined;
-    return path.split('.').reduce((acc, part) => (acc && acc[part] !== undefined ? acc[part] : undefined), obj);
+  const getNestedValue = (obj: unknown, path: string | undefined): unknown => {
+    if (!path || obj == null) return undefined;
+    return path.split('.').reduce<unknown>((acc, part) => {
+      if (acc && typeof acc === 'object' && part in (acc as Record<string, unknown>)) {
+        return (acc as Record<string, unknown>)[part];
+      }
+      return undefined;
+    }, obj);
   };
 
-  const createColumnDefs = (columns: DataGridColumn[], rowData: any[] = []): any[] => {
+  const createColumnDefs = (columns: DataGridColumn[], rowData: GridRow[] = []): Record<string, unknown>[] => {
     return columns.map((col) => {
       // Handle Column Groups recursively
       if (col.children && col.children.length > 0) {
@@ -34,7 +41,7 @@ export function useDataGridColumns() {
         };
       }
 
-      let filterSetting: any = col.filter ?? 'agTextColumnFilter';
+      let filterSetting: string | boolean = col.filter ?? 'agTextColumnFilter';
 
       if (filterSetting === true) filterSetting = 'agTextColumnFilter';
       if (filterSetting === 'number') filterSetting = 'agNumberColumnFilter';
@@ -58,7 +65,7 @@ export function useDataGridColumns() {
         filterSetting = 'agNumberColumnFilter';
       }
 
-      const colDef: any = {
+      const colDef: Record<string, unknown> = {
         colId: col.colId || col.field,
         field: col.field,
         headerName: col.headerName,
@@ -84,7 +91,7 @@ export function useDataGridColumns() {
 
       if (filterSetting && filterSetting !== 'agNumberColumnFilter') {
         colDef.filterParams = {
-          textMatcher: (params: any) => {
+          textMatcher: (params: { filterOption?: string; value: unknown; filterText?: string }) => {
             const operator = mapAgOptionToOperator(params.filterOption || 'contains');
             return matchesOperator(params.value, params.filterText || '', operator);
           },
@@ -124,8 +131,8 @@ export function useDataGridColumns() {
                     // Construct minimal params object if valueGetter expects it
                     try {
                       // Safe to cast or assume basic usage for value extraction
-                      return col.valueGetter({ data: r } as any);
-                    } catch (e) {
+                      return col.valueGetter({ data: r });
+                    } catch {
                       return undefined;
                     }
                   }
@@ -162,7 +169,7 @@ export function useDataGridColumns() {
     suppressHeaderMenuButton: true,
     suppressMovable: true,
     filterParams: {
-      textMatcher: (params: any) => {
+      textMatcher: (params: { filterOption?: string; value: unknown; filterText?: string }) => {
         const operator = mapAgOptionToOperator(params.filterOption || 'contains');
         return matchesOperator(params.value, params.filterText || '', operator);
       },

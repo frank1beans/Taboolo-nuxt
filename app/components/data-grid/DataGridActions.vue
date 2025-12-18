@@ -1,8 +1,19 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 
+type RowActionParams = {
+  data?: Record<string, unknown>;
+  context?: {
+    rowActions?: {
+      open?: (row: Record<string, unknown> | undefined) => void;
+      edit?: (row: Record<string, unknown> | undefined) => void;
+      remove?: (row: Record<string, unknown> | undefined) => void;
+    };
+  };
+};
+
 const props = defineProps<{
-  params: any;
+  params: RowActionParams;
 }>();
 
 const row = computed(() => props.params?.data);

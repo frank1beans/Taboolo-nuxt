@@ -1,25 +1,51 @@
-# Python SIX Importer (proxy da Nuxt)
+# Python SIX Importer (proxy da Nuxt/Nitro)
 
-Questa cartella documenta e centralizza le chiamate al servizio Python che gestisce il parsing dei file SIX.
+Questa cartella centralizza le chiamate dal backend Nuxt (Nitro) al servizio Python che gestisce il parsing dei file SIX/XML.
 
-## Avvio servizio Python
-- Posizionati in `python-importer` (importer FastAPI copiato fuori da `TABOOLO/backend`).
-- Attiva l'ambiente virtuale e dipendenze (esempio):
-  - Windows: `python -m venv .venv && .\\.venv\\Scripts\\activate && pip install -r requirements.txt`
-  - macOS/Linux: `python -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt`
-- Avvia: `uvicorn main:app --reload --port 8000`
-- Il servizio deve esporre gli endpoint:
-  - `POST /api/v1/commesse/{projectId}/import-six/preview`
-  - `POST /api/v1/commesse/{projectId}/import-six`
+## Dove sta il servizio Python (in questa repo)
 
-## Configurazione Nuxt
-- In `.env` (o variabili runtime) imposta `PYTHON_API_BASE_URL=http://localhost:8000/api/v1`.
-- Nitro userà questa variabile per proxare il multipart verso Python.
+Il servizio è incluso nella repo in:
 
-## Flusso supportato
-- **Preview**: restituisce la lista di preventivi trovati nel file SIX.
-- **Import**: esegue il parsing completo e restituisce il report (WBS, items, estimate_id, ecc.) che verrà poi mappato/persistito da Nitro.
+- `services/importer/`
+
+Entry point:
+
+- `services/importer/main.py` (FastAPI)
+
+## Avvio servizio Python (dev)
+
+Esempio:
+
+```bash
+cd services/importer
+python -m venv .venv
+.\.venv\Scripts\activate
+pip install -r requirements.txt
+uvicorn main:app --reload --port 8000
+```
+
+## Endpoint richiesti (SIX raw)
+
+Con prefix API di default `/api/v1`, il servizio deve esporre:
+
+- `POST /api/v1/commesse/{projectId}/import-six/raw/preview`
+- `POST /api/v1/commesse/{projectId}/import-six/raw`
+
+Nota: nel client esistono anche chiamate "non raw" per compatibilità/legacy, ma il flusso stabile per SIX in questa repo è raw.
+
+## Configurazione Nuxt/Nitro
+
+In `.env` (o variabili runtime) imposta:
+
+- `PYTHON_API_URL=http://localhost:8000/api/v1`
+
+Questo alimenta `runtimeConfig.pythonApiBaseUrl` (vedi `nuxt.config.ts`) e viene usato da:
+
+- `server/utils/python-proxy.ts` (proxy multipart)
 
 ## Convenzioni
-- Tutto il traffico verso il servizio passa da `server/importers/python-six/client.ts` per riusare mapping e gestione errori.
-- I mappers verso gli schema Mongo sono in `server/utils/python-mappers.ts`.
+
+- Tutto il traffico verso Python passa da `server/importers/python-six/client.ts` (mantenere mapping e gestione errori in un punto unico).
+- Mapper payload: `server/utils/python-mappers.ts`.
+- Persistenza su Mongo: `server/services/ImportPersistenceService.ts`.
+

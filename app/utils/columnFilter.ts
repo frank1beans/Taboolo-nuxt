@@ -46,7 +46,7 @@ export function matchesOperator(value: string | null | undefined, query: string,
         return numVal <= numQuery;
       case 'not_equals':
         return numVal !== numQuery;
-      case 'in_range':
+    case 'in_range': {
         // Expect query in "min,max" form; fall back to equals if not provided
         const [minRaw, maxRaw] = q.split(',').map((part) => part.trim());
         const min = parseNumber(minRaw);
@@ -55,6 +55,7 @@ export function matchesOperator(value: string | null | undefined, query: string,
         if (min !== null) return numVal >= min;
         if (max !== null) return numVal <= max;
         return false;
+    }
     }
   }
 

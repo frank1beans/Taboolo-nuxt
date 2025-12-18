@@ -21,7 +21,7 @@ const file = ref<File | null>(null);
 const status = ref<'idle' | 'uploading' | 'processing' | 'success' | 'error'>('idle');
 const errorMessage = ref('');
 const progress = ref(0);
-const uploadResult = ref<any>(null);
+const uploadResult = ref<{ totalItems?: number; message?: string } | null>(null);
 
 // Excel parsing state
 const sheets = ref<string[]>([]);
@@ -78,10 +78,10 @@ const handleFileSelect = async (selectedFile: File) => {
     if (result.headers.length === 0) {
       errorMessage.value = 'Nessun header trovato. Verifica che il file contenga dati.';
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('[ExcelOfferUpload] Error:', err);
     status.value = 'error';
-    errorMessage.value = err.message || 'Errore durante la lettura del file Excel.';
+    errorMessage.value = err instanceof Error ? err.message : 'Errore durante la lettura del file Excel.';
   }
 };
 
@@ -96,8 +96,8 @@ const handleSheetChange = async (newSheet: string) => {
     headers.value = result.headers;
     selectedSheet.value = newSheet;
     resetColumnSelections();
-  } catch (err: any) {
-    errorMessage.value = err.message || 'Errore durante la lettura del foglio.';
+  } catch (err: unknown) {
+    errorMessage.value = err instanceof Error ? err.message : 'Errore durante la lettura del foglio.';
   } finally {
     isLoadingSheet.value = false;
   }
@@ -189,9 +189,9 @@ const upload = async () => {
         : 'Import completato con successo',
     };
     emit('success', result);
-  } catch (err: any) {
+  } catch (err: unknown) {
     status.value = 'error';
-    errorMessage.value = err.message || 'Errore durante il caricamento dell\'offerta.';
+    errorMessage.value = err instanceof Error ? err.message : 'Errore durante il caricamento dell\'offerta.';
     console.error(err);
   }
 };

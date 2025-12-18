@@ -24,8 +24,8 @@ defineProps<Props>()
         
         <!-- Header Slot -->
         <template v-if="$slots.header" #header>
-          <div class="p-4 sm:px-6">
-            <slot name="header"></slot>
+          <div class="page-header-bar p-4 sm:px-6">
+            <slot name="header"/>
           </div>
         </template>
 
@@ -35,19 +35,19 @@ defineProps<Props>()
             <div v-if="loading" class="absolute inset-0 z-50 flex items-center justify-center bg-white/50 dark:bg-black/50 backdrop-blur-sm">
                 <UIcon name="i-heroicons-arrow-path" class="w-8 h-8 animate-spin text-primary" />
             </div>
-            <slot></slot>
+            <slot/>
         </div>
 
         <!-- Footer Slot -->
         <template v-if="$slots.footer" #footer>
-          <slot name="footer"></slot>
+          <slot name="footer"/>
         </template>
       </UCard>
     </div>
 
     <!-- Right Sidebar Slot (e.g. WBS) -->
     <div v-if="$slots.sidebar" class="flex-none">
-      <slot name="sidebar"></slot>
+      <slot name="sidebar"/>
     </div>
   </div>
 </template>

@@ -1,7 +1,7 @@
 import { defineEventHandler, createError, getRouterParam, getQuery } from 'h3';
 import mongoose from 'mongoose';
-import { PriceListItem, Offer, OfferItem, EstimateItem } from '#models';
-import { serializeDocs } from '#utils/serialize';
+import type { PipelineStage } from 'mongoose';
+import { PriceListItem, Offer } from '#models';
 
 export default defineEventHandler(async (event) => {
   const projectId = getRouterParam(event, 'id');
@@ -26,16 +26,16 @@ export default defineEventHandler(async (event) => {
 
 
 
-    const query: any = {
+    const query: Record<string, unknown> = {
       project_id: validProjectId,
       estimate_id: validEstimateId,
     };
 
-    let aggregationPipeline: any[] = [{ $match: query }];
+    const aggregationPipeline: PipelineStage[] = [{ $match: query }];
 
     if (round !== undefined || company) {
       // OFFER MODE
-      const offerMatch: any = {
+      const offerMatch: Record<string, unknown> = {
         project_id: validProjectId,
         estimate_id: validEstimateId
       };

@@ -1,13 +1,14 @@
 import { defineEventHandler, getHeader } from 'h3';
+import type { H3Event } from 'h3';
 import { UserContext } from '#models';
 
-const resolveUserScope = (event: any) => {
+const resolveUserScope = (event: H3Event) => {
   const userId = getHeader(event, 'x-user-id') || 'demo-user';
   const organizationId = getHeader(event, 'x-org-id') || null;
   return { userId, organizationId };
 };
 
-export default defineEventHandler(async (event) => {
+export default defineEventHandler(async (event: H3Event) => {
   const { userId, organizationId } = resolveUserScope(event);
 
   const existing = await UserContext.findOne({

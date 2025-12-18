@@ -14,7 +14,7 @@ export default defineEventHandler(async (event) => {
     const projectObjectId = new Types.ObjectId(projectId);
     const estimateObjectId = estimateId ? new Types.ObjectId(estimateId) : null;
 
-    const stats: any = {};
+    const stats: Record<string, unknown> = {};
 
     try {
         // 1. All Estimates in Project
@@ -72,7 +72,9 @@ export default defineEventHandler(async (event) => {
         }
 
         return stats;
-    } catch (err) {
-        return { error: err.message, stack: err.stack };
+    } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : 'Unexpected error';
+        const stack = err instanceof Error ? err.stack : undefined;
+        return { error: message, stack };
     }
 });

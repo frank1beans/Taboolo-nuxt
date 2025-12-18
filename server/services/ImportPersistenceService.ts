@@ -1,17 +1,131 @@
 import { Types } from 'mongoose';
-import { Project } from '../models/project.schema';
 import { WbsNode } from '../models/wbs.schema';
 import { PriceListItem } from '../models/price-list-item.schema';
 import { Estimate } from '../models/estimate.schema';
 import { EstimateItem } from '../models/estimate-item.schema';
 import { normalizeTextFields } from '../utils/normalize';
 
+type PythonGroup = {
+    _id?: string;
+    id?: string;
+    parentId?: string;
+    type?: string;
+    level?: number;
+    code?: string;
+    description?: string;
+};
+
+type PythonPriceListItem = {
+    _id?: string;
+    id?: string;
+    wbsIds?: string[];
+    wbs_ids?: string[];
+    groupIds?: string[];
+    code?: string;
+    description?: string;
+    long_description?: string;
+    unit?: string;
+    price?: number;
+    priceListId?: string;
+};
+
+type PythonEstimateItem = {
+    priceListItemId?: string;
+    price_list_item_id?: string;
+    wbsIds?: string[];
+    wbs_ids?: string[];
+    groupIds?: string[];
+    quantity?: number;
+    total_quantity?: number;
+    measurements?: unknown[];
+    progressive?: number;
+    order?: number;
+    code?: string;
+    description?: string;
+    description_extended?: string;
+    long_description?: string;
+    unit?: string;
+    relatedItemId?: string;
+    related_item_id?: string;
+};
+
+type PythonPriceList = {
+    name?: string;
+    currency?: string;
+    items?: PythonPriceListItem[];
+};
+
+type PythonOfferItem = {
+    progressive?: number;
+    order?: number;
+    code?: string;
+    codice?: string;
+    description?: string;
+    descrizione?: string;
+    long_description?: string;
+    descrizione_estesa?: string;
+    unit_price?: number;
+    prezzo_unitario?: number;
+    unit?: string;
+    unita_misura?: string;
+    quantity?: number;
+    note?: string;
+    notes?: string;
+};
+
+type PythonEstimate = {
+    _id?: string;
+    id?: string;
+    name?: string;
+    type?: string;
+    mode?: string;
+    company?: string;
+    round_number?: number;
+    notes?: string;
+    date?: string;
+    total_amount?: number;
+    estimate_id?: string;
+    items?: PythonEstimateItem[] | PythonOfferItem[];
+};
+
 interface PythonImportResult {
-    project: any;
-    groups: any[];
-    price_list: any;
-    estimate: any;
+    project?: unknown;
+    groups: PythonGroup[];
+    price_list?: PythonPriceList | null;
+    estimate: PythonEstimate;
 }
+
+type BaselineItemLean = {
+    _id: Types.ObjectId;
+    progressive?: number | null;
+    project?: { unit_price?: number | null };
+    unit_measure?: string | null;
+};
+
+type PriceListItemLean = {
+    _id: Types.ObjectId;
+    code?: string | null;
+    description?: string | null;
+    long_description?: string | null;
+};
+
+type OfferItemInsert = {
+    offer_id: Types.ObjectId;
+    project_id: Types.ObjectId;
+    source: 'detailed' | 'aggregated';
+    origin: 'baseline' | 'addendum';
+    resolution_status: 'resolved' | 'pending';
+    quantity: number;
+    unit_price: number;
+    notes?: string;
+    candidate_price_list_item_ids?: Types.ObjectId[];
+    code?: string;
+    description?: string;
+    unit_measure?: string;
+    price_list_item_id?: Types.ObjectId;
+    estimate_item_id?: Types.ObjectId;
+    progressive?: number;
+};
 
 export async function persistImportResult(payload: PythonImportResult, projectId: string) {
     // Branch based on estimate type
@@ -27,9 +141,8 @@ export async function persistImportResult(payload: PythonImportResult, projectId
 
 // Extracted from original persistImportResult
 async function persistProjectEstimate(payload: PythonImportResult, projectId: string) {
-    try {
-        console.log(`[Persistence] Processing Project/Baseline import for project ${projectId}...`);
-        const projectObjectId = new Types.ObjectId(projectId);
+    console.log(`[Persistence] Processing Project/Baseline import for project ${projectId}...`);
+    const projectObjectId = new Types.ObjectId(projectId);
 
         // Ensure estimate id is known up-front (per-estimate namespace)
         const estData = payload.estimate;
@@ -101,7 +214,7 @@ async function persistProjectEstimate(payload: PythonImportResult, projectId: st
         // 2b. Price List Items per estimate
         // Filter only items actually used in the estimate
         // Filter only items actually used in the estimate
-        const sourceEstItems = payload.estimate?.items || [];
+        const sourceEstItems = (payload.estimate?.items as PythonEstimateItem[] | undefined) || [];
         const usedPliIds = new Set<string>();
 
         for (const item of sourceEstItems) {
@@ -109,10 +222,10 @@ async function persistProjectEstimate(payload: PythonImportResult, projectId: st
             if (rawPliId) usedPliIds.add(rawPliId);
         }
 
-        const allPriceListItems = payload.price_list?.items || [];
-        const priceListItems = allPriceListItems.filter((item: any) => {
+        const allPriceListItems: PythonPriceListItem[] = payload.price_list?.items || [];
+        const priceListItems = allPriceListItems.filter((item) => {
             const itemId = item._id || item.id;
-            return usedPliIds.has(itemId);
+            return !!itemId && usedPliIds.has(itemId);
         });
 
         console.log(`[Persistence] Processing ${priceListItems.length} price list items (filtered from ${allPriceListItems.length})`);
@@ -120,7 +233,10 @@ async function persistProjectEstimate(payload: PythonImportResult, projectId: st
         const priceItemMap = new Map<string, Types.ObjectId>();
 
         for (const item of priceListItems) {
-            priceItemMap.set(item._id || item.id, new Types.ObjectId());
+            const sourceId = item._id || item.id;
+            if (sourceId) {
+                priceItemMap.set(sourceId, new Types.ObjectId());
+            }
         }
 
         if (priceListItems.length) {
@@ -128,10 +244,10 @@ async function persistProjectEstimate(payload: PythonImportResult, projectId: st
             await PriceListItem.deleteMany({ project_id: projectObjectId, estimate_id: estimateId });
 
             await PriceListItem.bulkWrite(
-                priceListItems.map((item: any) => {
+                priceListItems.map((item) => {
                     const mappedId = priceItemMap.get(item._id || item.id);
                     const rawGroups = item.wbsIds || item.wbs_ids || item.groupIds || [];
-                    const mappedGroups = rawGroups.map((gid: string) => groupMap.get(gid)).filter(Boolean);
+                    const mappedGroups = rawGroups.map((gid) => groupMap.get(gid)).filter(Boolean);
                     const { short_description, long_description, unit } = normalizeTextFields(item);
 
                     return {
@@ -175,26 +291,29 @@ async function persistProjectEstimate(payload: PythonImportResult, projectId: st
         }
 
         // 4. Estimate Items per estimate
-        const estItems = estData.items || [];
+        const estItems: PythonEstimateItem[] = (estData.items as PythonEstimateItem[] | undefined) || [];
         console.log(`[Persistence] Processing ${estItems.length} estimate items`);
 
         await EstimateItem.deleteMany({ project_id: projectObjectId, 'project.estimate_id': estimateId });
 
         const priceValueMap = new Map<string, number>();
         for (const pli of priceListItems) {
-            priceValueMap.set(pli._id || pli.id, pli.price || 0);
+            const id = pli._id || pli.id;
+            if (id) {
+                priceValueMap.set(id, pli.price ?? 0);
+            }
         }
 
-        const itemDocs = estItems.map((item: any) => {
+        const itemDocs = estItems.map((item) => {
             const rawGroups = item.wbsIds || item.wbs_ids || item.groupIds || [];
-            const mappedGroups = rawGroups.map((gid: string) => groupMap.get(gid)).filter(Boolean);
+            const mappedGroups = rawGroups.map((gid) => groupMap.get(gid)).filter(Boolean);
 
             const rawPliId = item.priceListItemId || item.price_list_item_id;
-            const mappedPliId = priceItemMap.get(rawPliId);
+            const mappedPliId = rawPliId ? priceItemMap.get(rawPliId) : undefined;
             const finalPliId = mappedPliId ? mappedPliId.toString() : rawPliId;
 
-            const quantity = item.quantity || item.total_quantity || 0;
-            const itemPrice = priceValueMap.get(rawPliId) || 0;
+            const quantity = item.quantity ?? item.total_quantity ?? 0;
+            const itemPrice = (rawPliId && priceValueMap.get(rawPliId)) || 0;
             const { short_description, long_description, unit } = normalizeTextFields(item);
 
             return {
@@ -223,18 +342,14 @@ async function persistProjectEstimate(payload: PythonImportResult, projectId: st
             await EstimateItem.insertMany(itemDocs);
         }
 
-        return {
-            success: true,
-            summary: {
-                groups: wbsDocs.length,
-                products: priceListItems.length,
-                items: itemDocs.length
-            }
-        };
-
-    } catch (error) {
-        throw error;
-    }
+    return {
+        success: true,
+        summary: {
+            groups: wbsDocs.length,
+            products: priceListItems.length,
+            items: itemDocs.length
+        }
+    };
 }
 
 export async function persistOffer(payload: PythonImportResult, projectId: string) {
@@ -317,7 +432,7 @@ export async function persistOffer(payload: PythonImportResult, projectId: strin
     const offerId = offerDoc._id;
 
     // 2. Process Items
-    const rawItems = estData.items || [];
+    const rawItems: PythonOfferItem[] = (estData.items as PythonOfferItem[] | undefined) || [];
     console.log(`[Persistence] Saving ${rawItems.length} offer items for Offer ${offerId} (Mode: ${importMode})`);
 
     // Clean old items for this offer
@@ -340,22 +455,25 @@ export async function persistOffer(payload: PythonImportResult, projectId: strin
         unit_price?: number | null;
         unit_measure?: string | null;
     };
-    let baselineItemsMap: Map<string | number, DetailedBaseline> | Map<string, Types.ObjectId[]> = new Map(); // Key: Progressive (detailed) or Code (aggregated maps live in plCodeMap)
     const warnings: string[] = [];
+    let detailedBaselineMap: Map<number, DetailedBaseline> | null = null;
+    let plCodeMap: Map<string, Types.ObjectId[]> | null = null;
+    let plDescMap: Map<string, Types.ObjectId[]> | null = null;
 
     if (importMode === 'detailed') {
+        detailedBaselineMap = new Map();
         const blItems = await EstimateItem.find({
             project_id: projectObjectId,
             'project.estimate_id': baselineEstId
-        }).select('progressive _id project.unit_price unit_measure');
+        }).select('progressive _id project.unit_price unit_measure').lean<BaselineItemLean[]>();
         for (const bli of blItems) {
             // Fix: explicit check for undefined/null because progressive can be 0
             if (bli.progressive !== undefined && bli.progressive !== null) {
-                (baselineItemsMap as Map<number, DetailedBaseline>).set(bli.progressive, {
+                detailedBaselineMap.set(bli.progressive, {
                     id: bli._id as Types.ObjectId,
                     progressive: bli.progressive,
-                    unit_price: (bli as any)?.project?.unit_price,
-                    unit_measure: (bli as any)?.unit_measure
+                    unit_price: bli.project?.unit_price ?? null,
+                    unit_measure: bli.unit_measure ?? null
                 });
             }
         }
@@ -365,11 +483,11 @@ export async function persistOffer(payload: PythonImportResult, projectId: strin
         const plItems = await PriceListItem.find({
             project_id: projectObjectId,
             estimate_id: baselineEstId
-        }).select('code description long_description _id');
+        }).select('code description long_description _id').lean<PriceListItemLean[]>();
 
         // Build Lookups
-        const plCodeMap = new Map<string, Types.ObjectId[]>();
-        const plDescMap = new Map<string, Types.ObjectId[]>();
+        plCodeMap = new Map<string, Types.ObjectId[]>();
+        plDescMap = new Map<string, Types.ObjectId[]>();
 
         for (const pli of plItems) {
             if (pli.code) {
@@ -379,7 +497,7 @@ export async function persistOffer(payload: PythonImportResult, projectId: strin
             }
 
             // Map regular description
-            const normDesc = normalizeDescription(pli.description);
+            const normDesc = normalizeDescription(pli.description || undefined);
             if (normDesc) {
                 const arr = plDescMap.get(normDesc) || [];
                 arr.push(pli._id as Types.ObjectId);
@@ -387,20 +505,16 @@ export async function persistOffer(payload: PythonImportResult, projectId: strin
             }
 
             // Map long description
-            const normLongDesc = normalizeDescription(pli.long_description);
+            const normLongDesc = normalizeDescription(pli.long_description || undefined);
             if (normLongDesc) {
                 const arr = plDescMap.get(normLongDesc) || [];
                 arr.push(pli._id as Types.ObjectId);
                 plDescMap.set(normLongDesc, arr);
             }
         }
-
-        // Expose maps for the loop below
-        (baselineItemsMap as any).plCodeMap = plCodeMap;
-        (baselineItemsMap as any).plDescMap = plDescMap;
     }
 
-    const offerItemsDocs = rawItems.map((item: any, index: number) => {
+    const offerItemsDocs = rawItems.map((item) => {
         const progressive = item.progressive ?? item.order;
         const rawCode = (item.code ?? item.codice ?? '').toString().trim();
         const code = rawCode.length ? rawCode : undefined;
@@ -422,7 +536,9 @@ export async function persistOffer(payload: PythonImportResult, projectId: strin
         let candidatePriceListItemIds: Types.ObjectId[] | undefined;
 
         if (importMode === 'detailed') {
-            const match = (baselineItemsMap as Map<number, DetailedBaseline>).get(progressive);
+            const match = progressive !== undefined && detailedBaselineMap
+                ? detailedBaselineMap.get(progressive)
+                : undefined;
             if (match) {
                 estimateItemId = match.id;
                 // Fallback to baseline unit price/measure if missing from import
@@ -440,11 +556,9 @@ export async function persistOffer(payload: PythonImportResult, projectId: strin
             }
         } else {
             // Aggregated Mode
-            const maps = baselineItemsMap as any;
-
-            const codeMatches: Types.ObjectId[] = code ? (maps.plCodeMap?.get(code) || []) : [];
-            const longDescMatches: Types.ObjectId[] = normLongDesc ? (maps.plDescMap?.get(normLongDesc) || []) : [];
-            const shortDescMatches: Types.ObjectId[] = normDesc ? (maps.plDescMap?.get(normDesc) || []) : [];
+            const codeMatches: Types.ObjectId[] = code && plCodeMap ? (plCodeMap.get(code) || []) : [];
+            const longDescMatches: Types.ObjectId[] = normLongDesc && plDescMap ? (plDescMap.get(normLongDesc) || []) : [];
+            const shortDescMatches: Types.ObjectId[] = normDesc && plDescMap ? (plDescMap.get(normDesc) || []) : [];
 
             const pickUnique = (arr: Types.ObjectId[]) => (arr.length === 1 ? arr[0] : undefined);
 
@@ -479,7 +593,7 @@ export async function persistOffer(payload: PythonImportResult, projectId: strin
         const quantity = item.quantity ?? 0;
         const unitPrice = item.unit_price ?? item.prezzo_unitario ?? 0;
 
-        const baseDoc: any = {
+        const baseDoc: OfferItemInsert = {
             offer_id: offerId,
             project_id: projectObjectId,
             source,
@@ -510,7 +624,7 @@ export async function persistOffer(payload: PythonImportResult, projectId: strin
             // Detailed baseline: derive linkage only
             baseDoc.estimate_item_id = estimateItemId;
             // Progressive derived from baseline (if available)
-            const match = (baselineItemsMap as Map<number, DetailedBaseline>).get(progressive);
+            const match = progressive !== undefined && detailedBaselineMap ? detailedBaselineMap.get(progressive) : undefined;
             baseDoc.progressive = match?.progressive ?? undefined;
             // No code/description/unit_measure to force inheritance from Estimate/PLI
         }

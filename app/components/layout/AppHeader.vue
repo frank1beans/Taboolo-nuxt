@@ -41,8 +41,8 @@ const toggleTheme = () => {
 </script>
 
 <template>
-  <header class="app-topbar sticky top-0 z-40 h-[76px] px-4">
-    <div class="flex h-full items-center justify-between gap-4">
+  <header class="app-topbar page-header-bar sticky top-0 z-40 px-4">
+    <div class="flex h-full w-full items-center justify-between gap-4">
       <!-- Left -->
       <div class="flex min-w-0 items-center gap-3">
         <button

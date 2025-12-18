@@ -1,5 +1,5 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-type Json = Record<string, any>;
+
+type Json = Record<string, unknown>;
 
 const COMPUTO_TYPE_MAP: Record<string, string> = {
   progetto: 'project',
@@ -127,7 +127,7 @@ export function mapSixPreview(data: Json) {
 export function mapBatchSingleFileResult(data: Json) {
   if (!data || typeof data !== 'object') return data;
   const computi = data.computi ?? {};
-  const estimates: Record<string, any> = {};
+  const estimates: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(computi)) {
     estimates[key] = mapComputoToEstimate(value as Json);
   }
@@ -147,31 +147,40 @@ export function mapBatchSingleFileResult(data: Json) {
   };
 }
 
-export function mapRawPreview(result: any) {
+const toJsonArray = (value: unknown): Json[] => (Array.isArray(value) ? (value as Json[]) : []);
+const toRecord = (value: unknown): Record<string, unknown> =>
+  value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+
+export function mapRawPreview(result: unknown) {
+  const data = toRecord(result);
   return {
-    preventivi: result?.preventivi ?? [],
-    priceLists: result?.price_lists ?? [],
-    wbsSpatial: result?.wbs_spaziali ?? [],
-    wbs6: result?.wbs6 ?? [],
-    wbs7: result?.wbs7 ?? [],
-    unitsCount: result?.units_count ?? 0,
-    productsCount: result?.products_count ?? 0,
-    priceListsCount: result?.price_lists_count ?? 0,
-    groupsCount: result?.groups_count ?? 0,
+    preventivi: toJsonArray(data.preventivi),
+    priceLists: toJsonArray(data.price_lists),
+    wbsSpatial: toJsonArray(data.wbs_spaziali),
+    wbs6: toJsonArray(data.wbs6),
+    wbs7: toJsonArray(data.wbs7),
+    unitsCount: typeof data.units_count === 'number' ? data.units_count : 0,
+    productsCount: typeof data.products_count === 'number' ? data.products_count : 0,
+    priceListsCount: typeof data.price_lists_count === 'number' ? data.price_lists_count : 0,
+    groupsCount: typeof data.groups_count === 'number' ? data.groups_count : 0,
+    wbs_structure: Array.isArray(data.wbs_structure) ? data.wbs_structure : [],
+    canonical_levels: toRecord(data.canonical_levels),
   };
 }
 
-export function mapRawImportPayload(result: any) {
+export function mapRawImportPayload(result: unknown) {
+  const data = toRecord(result);
+
   // NEW: Pass-through for LoaderService structure
-  if (result && 'estimate' in result && 'project' in result) {
+  if ('estimate' in data && 'project' in data) {
     return result;
   }
 
-  const priceLists = (result?.priceLists ?? []).map((pl: any) => ({
-    listIdRaw: pl.listIdRaw,
-    canonicalId: pl.canonicalId,
+  const priceLists = toJsonArray(data.priceLists).map((pl) => ({
+    listIdRaw: pl.listIdRaw as string | undefined,
+    canonicalId: pl.canonicalId as string | undefined,
     label: pl.label ?? null,
-    priority: pl.priority ?? 0,
+    priority: (pl.priority as number | undefined) ?? 0,
     preferred: Boolean(pl.preferred),
   }));
 
@@ -180,33 +189,37 @@ export function mapRawImportPayload(result: any) {
     if (pl.listIdRaw) priceListMap.set(pl.listIdRaw, pl.canonicalId);
   }
 
-  const groups = (result?.groups ?? []).map((g: any) => ({
-    grpId: g.grpId,
+  const groups = toJsonArray(data.groups).map((g) => ({
+    grpId: g.grpId as string | undefined,
     code: g.code ?? null,
     description: g.description ?? null,
     kind: g.kind,
     level: g.level ?? null,
   }));
 
-  const products = (result?.products ?? []).map((p: any) => ({
+  const products = toJsonArray(data.products).map((p) => ({
     prodottoId: p.prodottoId,
     code: p.code ?? null,
     short_description: p.descriptionShort ?? p.description_short ?? p.code ?? '',
     long_description: p.descriptionLong ?? p.description_long ?? null,
     unitId: p.unitId ?? null,
-    wbs6: p.wbs6,
-    wbs7: p.wbs7,
+    wbs6: p.wbs6 ?? null,
+    wbs7: p.wbs7 ?? null,
     isParentVoice: Boolean(p.isParentVoice),
     prices: Array.isArray(p.prices)
-      ? p.prices.map((entry: any) => ({
-        canonicalId: entry.canonicalId || entry[0],
-        value: entry.value || entry[1],
-        priority: (entry.priority || entry[2]) ?? 0,
-      }))
+      ? (p.prices as Json[]).map((entry) => {
+        const asArray = entry as unknown[];
+        const asJson = entry as Json;
+        return {
+          canonicalId: (asJson.canonicalId as string | undefined) ?? asArray[0],
+          value: (asJson.value as number | undefined) ?? asArray[1],
+          priority: (asJson.priority as number | undefined ?? (asArray[2] as number | undefined)) ?? 0,
+        };
+      })
       : [],
   }));
 
-  const preventivi = (result?.preventivi ?? []).map((prv: any) => {
+  const preventivi = toJsonArray(data.preventivi).map((prv) => {
     return {
       preventivoId: prv.preventivoId,
       code: prv.code ?? null,
@@ -222,17 +235,18 @@ export function mapRawImportPayload(result: any) {
     };
   });
 
-  const normalizeDecimal = (value: any): string | number | null | undefined => {
+  const normalizeDecimal = (value: unknown): string | number | null | undefined => {
     if (value === null || value === undefined) return null;
     if (typeof value === 'number') return value;
     if (typeof value === 'string') return value;
     return String(value);
   };
 
-  const rilevazioni: Record<string, any[]> = {};
-  const rilevazioniRaw = result?.rilevazioni ?? {};
+  const rilevazioni: Record<string, Json[]> = {};
+  const rilevazioniRaw = toRecord(data.rilevazioni);
   for (const key of Object.keys(rilevazioniRaw)) {
-    rilevazioni[key] = (rilevazioniRaw[key] ?? []).map((r: any) => ({
+    const rawArray = Array.isArray(rilevazioniRaw[key]) ? (rilevazioniRaw[key] as Json[]) : [];
+    rilevazioni[key] = rawArray.map((r) => ({
       preventivoId: r.preventivoId,
       idx: r.idx,
       progressivo: r.progressivo ?? null,
@@ -240,11 +254,11 @@ export function mapRawImportPayload(result: any) {
       listaQuotazioneIdRaw: r.listaQuotazioneIdRaw ?? null,
       wbsSpatial: Array.isArray(r.wbsSpatial)
         ? r.wbsSpatial
-          .filter((w: any) => w && (w.level === undefined || w.level <= 5)) // Legacy quirk or pass-through
-          .map((w: any) => ({ level: w.level, code: w.code ?? null, description: w.description ?? null }))
+          .filter((w: Json) => w && (w.level === undefined || w.level <= 5)) // Legacy quirk or pass-through
+          .map((w: Json) => ({ level: w.level, code: w.code ?? null, description: w.description ?? null }))
         : [],
       misure: Array.isArray(r.misure)
-        ? r.misure.map((m: any) => ({
+        ? (r.misure as Json[]).map((m: Json) => ({
           operation: m.operation ?? '+',
           cells: Array.isArray(m.cells)
             ? m.cells
@@ -268,7 +282,7 @@ export function mapRawImportPayload(result: any) {
   }
 
   return {
-    units: (result?.units ?? []).map((u: any) => ({ unitId: u.unitId, label: u.label })),
+    units: toJsonArray(data.units).map((u) => ({ unitId: u.unitId, label: u.label })),
     priceLists,
     groups,
     products,

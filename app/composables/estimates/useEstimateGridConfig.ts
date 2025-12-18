@@ -25,7 +25,7 @@ export interface EstimateItem {
     };
 }
 
-export const useEstimateGridConfig = (rowData: Ref<EstimateItem[]>) => {
+export const useEstimateGridConfig = (_rowData: Ref<EstimateItem[]>) => {
     const formatCurrency = (value: number) => {
         return new Intl.NumberFormat('it-IT', {
             style: 'currency',
@@ -69,7 +69,7 @@ export const useEstimateGridConfig = (rowData: Ref<EstimateItem[]>) => {
                 headerName: 'Q.tà',
                 width: 100,
                 cellClass: 'ag-right-aligned-cell',
-                valueFormatter: (params: any) => formatNumber(params.value),
+                valueFormatter: (params: { value: number }) => formatNumber(params.value),
                 filter: 'number',
             },
             {
@@ -77,7 +77,7 @@ export const useEstimateGridConfig = (rowData: Ref<EstimateItem[]>) => {
                 headerName: 'Prezzo Unitario',
                 width: 140,
                 cellClass: 'ag-right-aligned-cell',
-                valueFormatter: (params: any) => formatCurrency(params.value),
+                valueFormatter: (params: { value: number }) => formatCurrency(params.value),
                 filter: 'number',
             },
             {
@@ -85,7 +85,7 @@ export const useEstimateGridConfig = (rowData: Ref<EstimateItem[]>) => {
                 headerName: 'Importo',
                 width: 140,
                 cellClass: 'ag-right-aligned-cell font-bold',
-                valueFormatter: (params: any) => formatCurrency(params.value),
+                valueFormatter: (params: { value: number }) => formatCurrency(params.value),
                 filter: 'number',
             },
             // WBS Hierarchy Columns (wbs01-wbs07) - Moved to end

@@ -99,26 +99,22 @@ const highlightEnabled = computed(
   () => operator.value === 'contains' || operator.value === 'starts_with' || operator.value === 'equals'
 );
 
-const escapeHtml = (value: string) =>
-  value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
-
-const highlightMatch = (value: string) => {
-  const safe = escapeHtml(value);
-  if (!highlightEnabled.value) return safe;
+const getHighlightParts = (value: string) => {
+  if (!highlightEnabled.value) return { match: false, parts: [value] as [string] };
 
   const q = normalizedQuery.value.toLowerCase();
-  if (!q) return safe;
+  if (!q) return { match: false, parts: [value] as [string] };
 
   const lower = value.toLowerCase();
   const idx = operator.value === 'starts_with' ? (lower.startsWith(q) ? 0 : -1) : lower.indexOf(q);
-  if (idx === -1) return safe;
+  if (idx === -1) return { match: false, parts: [value] as [string] };
 
   const end = idx + q.length;
-  const before = escapeHtml(value.slice(0, idx));
-  const match = escapeHtml(value.slice(idx, end));
-  const after = escapeHtml(value.slice(end));
+  const before = value.slice(0, idx);
+  const match = value.slice(idx, end);
+  const after = value.slice(end);
 
-  return `${before}<mark style="background: hsl(var(--warning) / 0.2); color: hsl(var(--warning)); padding: 0 2px; border-radius: 4px;">${match}</mark>${after}`;
+  return { match: true, parts: [before, match, after] as [string, string, string] };
 };
 
 const setInitialState = (panel: FilterPanelState) => {
@@ -154,7 +150,7 @@ const applyButtonDisabled = computed(() => {
 });
 
 const focusInitial = () => {
-  if (!process.client) return;
+  if (!import.meta.client) return;
   nextTick(() => {
     if (!inputDisabled.value) inputRef.value?.focus();
     else operatorRef.value?.focus();
@@ -212,7 +208,7 @@ const handleOperatorChange = (value: ColumnFilterOperator) => {
 };
 
 const updatePosition = () => {
-  if (!process.client || !props.panel || !popoverRef.value) return;
+  if (!import.meta.client || !props.panel || !popoverRef.value) return;
 
   const trigger = props.panel.triggerEl;
   const rect = trigger?.getBoundingClientRect?.() ?? props.panel.triggerRect;
@@ -278,7 +274,7 @@ const onScroll = () => {
 };
 
 const setupListeners = () => {
-  if (!process.client) return;
+  if (!import.meta.client) return;
   window.addEventListener('resize', updatePosition);
   window.addEventListener('scroll', onScroll, true);
   window.addEventListener('mousedown', onOutsideClick, true);
@@ -286,7 +282,7 @@ const setupListeners = () => {
 };
 
 const teardownListeners = () => {
-  if (!process.client) return;
+  if (!import.meta.client) return;
   window.removeEventListener('resize', updatePosition);
   window.removeEventListener('scroll', onScroll, true);
   window.removeEventListener('mousedown', onOutsideClick, true);
@@ -299,7 +295,7 @@ const startWidth = ref(0);
 const startLeft = ref(0);
 
 const onResizeStart = (e: MouseEvent) => {
-  if (!process.client) return;
+  if (!import.meta.client) return;
   resizing.value = true;
   startX.value = e.clientX;
   startWidth.value = widthPx.value;
@@ -433,7 +429,7 @@ onBeforeUnmount(() => {
                     inputDisabled ? 'opacity-60 cursor-not-allowed' : '',
                     'pl-9 pr-3'
                   ]"
-                />
+                >
               </div>
             </div>
           </div>
@@ -481,7 +477,24 @@ onBeforeUnmount(() => {
                 name="heroicons:tag"
                 class="w-4 h-4 text-[hsl(var(--muted-foreground))]"
               />
-              <span class="flex-1 truncate" v-html="highlightMatch(String(opt))" />
+              <span class="flex-1 truncate">
+                <template v-if="getHighlightParts(String(opt)).match">
+                  <template v-for="(part, idx) in getHighlightParts(String(opt)).parts" :key="idx">
+                    <mark
+                      v-if="idx === 1"
+                      class="bg-[hsl(var(--warning)/0.2)] text-[hsl(var(--warning))] px-0.5 rounded"
+                    >
+                      {{ part }}
+                    </mark>
+                    <template v-else>
+                      {{ part }}
+                    </template>
+                  </template>
+                </template>
+                <template v-else>
+                  {{ String(opt) }}
+                </template>
+              </span>
               <Icon name="heroicons:chevron-right" class="w-4 h-4 opacity-40" />
             </button>
 
@@ -521,8 +534,8 @@ onBeforeUnmount(() => {
         <div
           class="absolute bottom-0 flex items-center justify-center w-10 h-[57px] cursor-ew-resize text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--primary))] hover:bg-[hsl(var(--muted))] transition-colors"
           :class="placement === 'right' ? 'right-0 border-l border-[hsl(var(--border))]' : 'left-0 border-r border-[hsl(var(--border))]'"
-          @mousedown.prevent="onResizeStart"
           title="Trascina per ridimensionare"
+          @mousedown.prevent="onResizeStart"
         >
           <Icon name="heroicons:bars-2" class="w-5 h-5 rotate-90" />
         </div>

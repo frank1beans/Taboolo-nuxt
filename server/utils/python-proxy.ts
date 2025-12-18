@@ -1,8 +1,9 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+ 
+import type { H3Event } from 'h3';
 import { createError, getRequestHeader, readMultipartFormData, setResponseStatus } from 'h3';
 
 type FieldMapper = (name: string) => string;
-type ValueMapper = (name: string, value: string, part: any) => string | Buffer;
+type ValueMapper = (name: string, value: string, part: Record<string, unknown>) => string | Buffer;
 
 interface ProxyOptions {
   method?: string;
@@ -10,9 +11,9 @@ interface ProxyOptions {
   mapFieldValue?: ValueMapper;
 }
 
-async function parseResponse(event: any, res: Response | any, url: string) {
+async function parseResponse(event: H3Event, res: Response, url: string) {
   const text = await res.text();
-  let payload: any = text;
+  let payload: unknown = text;
   try {
     payload = text ? JSON.parse(text) : null;
   } catch {
@@ -38,7 +39,7 @@ async function parseResponse(event: any, res: Response | any, url: string) {
 }
 
 export async function proxyMultipartToPython(
-  event: any,
+  event: H3Event,
   targetPath: string,
   options?: ProxyOptions
 ) {
@@ -69,7 +70,7 @@ export async function proxyMultipartToPython(
     }
   }
 
-  const headers: Record<string, any> = {};
+  const headers: Record<string, string> = {};
   const auth = getRequestHeader(event, 'authorization');
   if (auth) headers['authorization'] = auth;
 
@@ -79,7 +80,7 @@ export async function proxyMultipartToPython(
   const res = await fetch(url, {
     method,
     headers,
-    body: form as any,
+    body: form,
   });
 
   return parseResponse(event, res, url);

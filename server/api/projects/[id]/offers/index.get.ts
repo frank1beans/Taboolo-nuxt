@@ -13,7 +13,7 @@ export default defineEventHandler(async (event) => {
     }
 
     try {
-        const filter: any = { project_id: new Types.ObjectId(projectId) };
+        const filter: Record<string, unknown> = { project_id: new Types.ObjectId(projectId) };
 
         if (estimateId) {
             filter.estimate_id = new Types.ObjectId(estimateId);

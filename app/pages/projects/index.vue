@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount, computed } from 'vue';
 import { useRouter } from 'vue-router';
-import type { DataGridConfig } from '~/types/data-grid';
 import type { Project } from '~/types/project';
 import DataGridActions from '~/components/data-grid/DataGridActions.vue';
 import StatusBadgeRenderer from '~/components/data-grid/StatusBadgeRenderer.vue';
@@ -19,7 +18,6 @@ definePageMeta({
 // Use projects composable
 const { loading, fetchProjects } = useProjects();
 const router = useRouter();
-const colorMode = useColorMode();
 const { currentProject } = useCurrentContext();
 const lastActiveProjectId = ref<string | null>(null);
 
@@ -44,7 +42,8 @@ const { gridConfig } = useProjectGridConfig(rowData);
 
 // Add row highlighting for last active project
 gridConfig.rowClassRules = {
-  'font-bold bg-[hsl(var(--primary)/0.05)]': (params: any) => params.data && params.data.id === lastActiveProjectId.value,
+  'font-bold bg-[hsl(var(--primary)/0.05)]': (params: { data?: Project }) =>
+    !!params.data && params.data.id === lastActiveProjectId.value,
 };
 
 const loadProjects = async () => {

@@ -5,7 +5,8 @@ import type { DataGridConfig } from '~/types/data-grid';
 import { useCurrentContext } from '~/composables/useCurrentContext';
 import DataGridActions from '~/components/data-grid/DataGridActions.vue';
 import DataGridPage from '~/components/layout/DataGridPage.vue';
-import type { Project } from '~/types/project';
+import type { Estimate, Project } from '~/types/project';
+import { formatCurrency as formatCurrencyLib, formatDelta } from '~/lib/formatters';
 
 const route = useRoute();
 const projectId = route.params.id as string;
@@ -24,6 +25,25 @@ const estimates = computed(() => project.value?.estimates || []);
 const { setProjectState, currentEstimate } = useCurrentContext();
 const activeEstimateId = computed(() => currentEstimate.value?.id);
 
+interface OfferStats {
+  round_number?: number | null;
+  total_amount?: number | null;
+  company?: string | null;
+}
+
+interface EstimateStatsResponse {
+  project_total?: number | null;
+  offers?: {
+    per_company_round?: OfferStats[];
+    latest_round?: number | null;
+  };
+}
+
+type EstimateRow = Estimate & {
+  bestOffer: number | null;
+  deltaPerc: number | null;
+};
+
 // Enforce project context (clears active estimate) using direct hydration
 onMounted(() => {
     if (context.value) {
@@ -40,38 +60,28 @@ const statsMap = ref<Record<string, {
 }>>({});
 const statsLoading = ref(false);
 
-const formatCurrency = (value?: number | null) => {
-  const safe = typeof value === 'number' ? value : 0;
-  return new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(safe);
-};
-
-const formatDeltaPerc = (value?: number | null) => {
-  if (value === null || value === undefined) return '-';
-  const sign = value > 0 ? '+' : '';
-  return `${sign}${value.toFixed(1)}%`;
-};
+const formatCurrency = (value?: number | null) => formatCurrencyLib(value ?? 0);
+const formatDeltaPerc = (value?: number | null) => (value === null || value === undefined ? '-' : formatDelta(value));
 
 const fetchStatsForEstimates = async () => {
-  if (!process.client || !estimates.value.length) return;
+  if (!import.meta.client || !estimates.value.length) return;
   statsLoading.value = true;
   const entries = await Promise.all(
     estimates.value.map(async (est) => {
       try {
-        const stats = await $fetch<{ project_total: number; offers: any }>(`/api/projects/${projectId}/analytics/stats`, {
+        const stats = await $fetch<EstimateStatsResponse>(`/api/projects/${projectId}/analytics/stats`, {
           params: { estimate_id: est.id },
         });
-        const projectTotal = stats?.project_total || 0;
-        const offers = stats?.offers?.per_company_round || [];
-        const latestRound = stats?.offers?.latest_round ?? offers.reduce((max: number, o: any) => Math.max(max, o.round_number || 0), 0);
-        const latestOffers = offers.filter((o: any) => (o.round_number || 0) === latestRound);
-        const best = latestOffers.reduce(
-          (acc: any, cur: any) => {
-            if (cur.total_amount === undefined || cur.total_amount === null) return acc;
-            if (!acc || cur.total_amount < acc.total_amount) return cur;
-            return acc;
-          },
-          latestOffers[0] || null,
-        );
+        const projectTotal = stats?.project_total ?? 0;
+        const offers = stats?.offers?.per_company_round ?? [];
+        const latestRound = stats?.offers?.latest_round
+          ?? offers.reduce((max, o) => Math.max(max, o.round_number ?? 0), 0);
+        const latestOffers = offers.filter((o) => (o.round_number ?? 0) === latestRound);
+        const best = latestOffers.reduce<OfferStats | null>((acc, cur) => {
+          if (cur.total_amount === undefined || cur.total_amount === null) return acc;
+          if (!acc || cur.total_amount < (acc.total_amount ?? Number.POSITIVE_INFINITY)) return cur;
+          return acc;
+        }, latestOffers[0] ?? null);
         const bestOffer = best?.total_amount ?? null;
         const deltaAbs = bestOffer !== null ? bestOffer - projectTotal : null;
         const deltaPerc = bestOffer !== null && projectTotal ? (deltaAbs / projectTotal) * 100 : null;
@@ -125,21 +135,21 @@ const gridConfig: DataGridConfig = {
       headerName: 'Totale progetto',
       width: 150,
       cellClass: 'ag-right-aligned-cell font-bold',
-      valueFormatter: (params: any) => formatCurrency(params.value),
+      valueFormatter: (params: { value: unknown }) => formatCurrency(typeof params.value === 'number' ? params.value : Number(params.value ?? 0)),
     },
     {
       field: 'bestOffer',
       headerName: 'Migliore offerta (ultimo round)',
       width: 200,
       cellClass: 'ag-right-aligned-cell',
-      valueFormatter: (params: any) => formatCurrency(params.value),
+      valueFormatter: (params: { value: unknown }) => formatCurrency(typeof params.value === 'number' ? params.value : Number(params.value ?? 0)),
     },
     {
       field: 'deltaPerc',
       headerName: 'Delta vs progetto',
       width: 150,
       cellClass: 'ag-right-aligned-cell',
-      valueFormatter: (params: any) => formatDeltaPerc(params.value),
+      valueFormatter: (params: { value: unknown }) => formatDeltaPerc(typeof params.value === 'number' ? params.value : Number(params.value ?? 0)),
     },
     {
       field: 'actions',
@@ -162,16 +172,19 @@ const gridConfig: DataGridConfig = {
   headerHeight: 48,
   rowHeight: 44,
   rowClassRules: {
-    'font-bold bg-[hsl(var(--primary)/0.05)]': (params: any) => params.data && params.data.id === activeEstimateId.value,
+    'font-bold bg-[hsl(var(--primary)/0.05)]': (params: { data?: unknown }) => {
+      const row = params.data as Estimate | undefined;
+      return !!row && row.id === activeEstimateId.value;
+    },
   },
 };
 
-const navigateToEstimate = (estimate: any) => {
-  if (!estimate?.id) return
+const navigateToEstimate = (estimate?: Estimate) => {
+  if (!estimate?.id) return;
   navigateTo(`/projects/${projectId}/estimate/${estimate.id}`);
 };
 
-const deleteEstimate = async (estimate: any) => {
+const deleteEstimate = async (estimate?: Estimate) => {
   if (!confirm(`Sei sicuro di voler eliminare il preventivo "${estimate.name}"? Questa azione è irreversibile.`)) {
     return;
   }
@@ -188,16 +201,16 @@ const deleteEstimate = async (estimate: any) => {
   }
 };
 
-const gridRows = computed(() => {
-  return estimates.value.map((est) => {
+const gridRows = computed<EstimateRow[]>(() =>
+  estimates.value.map<EstimateRow>((est) => {
     const stats = statsMap.value[est.id] || {};
     return {
       ...est,
       bestOffer: stats.bestOffer ?? null,
       deltaPerc: stats.deltaPerc ?? null,
     };
-  });
-});
+  }),
+);
 
 const activeEstimateStats = computed(() => {
   if (!activeEstimateId.value) return null;
@@ -206,8 +219,8 @@ const activeEstimateStats = computed(() => {
 
 const gridContext = computed(() => ({
   rowActions: {
-    open: (row: any) => navigateToEstimate(row),
-    remove: (row: any) => deleteEstimate(row),
+    open: (row?: Estimate) => navigateToEstimate(row),
+    remove: (row?: Estimate) => deleteEstimate(row),
   },
 }));
 </script>
@@ -225,7 +238,7 @@ const gridContext = computed(() => ({
     empty-state-message="Non ci sono preventivi associati a questo progetto."
     :custom-components="{ actionsRenderer: DataGridActions }"
     :context-extras="gridContext"
-    @row-dblclick="(params) => navigateToEstimate(params)"
+    @row-dblclick="(params) => navigateToEstimate(params?.data as Estimate | undefined)"
   >
     <template #actions>
       <UBadge v-if="estimates.length > 0" color="neutral" variant="soft">

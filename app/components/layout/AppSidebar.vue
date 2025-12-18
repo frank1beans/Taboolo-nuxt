@@ -32,18 +32,12 @@ const sanitizeTo = (to?: string) => {
   return to
 }
 
-const visibleNodes = computed(() => {
-  // Combine logic if we want to display all, or just process contextNodes for now if that's what we want "visible".
-  // Actually, let's process both separately for rendering.
-  return [] // unused if we split rendering
-})
-
 const processNodes = (nodes: TreeNode[]) => {
   const items: Array<{ node: TreeNode; depth: number }> = []
   const traverse = (nodes: TreeNode[], depth: number) => {
     nodes.forEach((node) => {
       items.push({ node: { ...node, to: sanitizeTo(node.to) }, depth })
-      if (node.children?.length && expandedState.value[node.id] !== false) {
+      if (!props.isCollapsed && node.children?.length && expandedState.value[node.id] !== false) {
         traverse(node.children, depth + 1)
       }
     })
@@ -56,10 +50,10 @@ const visibleGlobalNodes = computed(() => processNodes(props.globalNodes || []))
 const visibleContextNodes = computed(() => processNodes(props.contextNodes || (props.nodes || []))) // Fallback to 'nodes' if contextNodes missing
 
 const toggleNode = (nodeId: string) => {
-  expandedState.value[nodeId] = expandedState.value[nodeId] === false ? true : false
+  expandedState.value[nodeId] = !isExpanded(nodeId)
 }
 
-const isExpanded = (nodeId: string) => expandedState.value[nodeId] !== false
+const isExpanded = (nodeId: string) => expandedState.value[nodeId] === true
 
 const ensurePathExpanded = (targetId?: string) => {
   if (!targetId) return
@@ -88,7 +82,7 @@ watch(
 )
 
 const startDragging = (event: MouseEvent) => {
-  if (props.isCollapsed || !process.client) return
+  if (props.isCollapsed || !import.meta.client) return
   isDragging.value = true
   dragStartX.value = event.clientX
   dragStartWidth.value = props.width
@@ -107,27 +101,13 @@ const handleDragging = (event: MouseEvent) => {
 const stopDragging = () => {
   if (!isDragging.value) return
   isDragging.value = false
-  if (process.client) {
+  if (import.meta.client) {
     document.removeEventListener('mousemove', handleDragging)
     document.removeEventListener('mouseup', stopDragging)
   }
 }
 
 onBeforeUnmount(stopDragging)
-
-const showEmptyState = computed(() => !(props.nodes || []).length && !(props.contextNodes || []).length && props.hasProject && !props.loading)
-
-const totalNodes = computed(() => {
-  let count = 0
-  const countRecursive = (nodes: TreeNode[]) => {
-    count += nodes.length
-    nodes.forEach(n => n.children && countRecursive(n.children))
-  }
-  if (props.nodes) countRecursive(props.nodes) 
-  if (props.globalNodes) countRecursive(props.globalNodes)
-  if (props.contextNodes) countRecursive(props.contextNodes)
-  return count
-})
 </script>
 
 <template>
@@ -140,8 +120,8 @@ const totalNodes = computed(() => {
     }"
   >
     <!-- Header / Branding -->
-    <div 
-      class="h-[76px] flex items-center flex-shrink-0 border-b border-[hsl(var(--sidebar-border))]"
+    <div
+      class="page-header-bar flex items-center flex-shrink-0 border-b border-[hsl(var(--sidebar-border))]"
       :class="isCollapsed ? 'justify-center px-2' : 'justify-start px-4 gap-3'"
     >
       <!-- Logo Icon -->
@@ -178,20 +158,26 @@ const totalNodes = computed(() => {
         </div>
         <ul role="tree" aria-label="Navigazione Generale" class="space-y-0.5" :class="isCollapsed ? '' : 'pt-1'">
             <template v-for="item in visibleGlobalNodes" :key="item.node.id">
-                <!-- Render Item Component (Reuse logic) -->
-                <!-- We need to extract the item rendering logic to avoid duplication, OR just copy-paste for now since template extraction in Vue requires functional components or component extraction. For speed, I will duplicate the li content. -->
                 <li role="treeitem" :aria-selected="item.node.id === activeNodeId">
-                    <NuxtLink v-if="item.node.to" :to="item.node.to" :title="isCollapsed ? item.node.label : undefined" class="tree-row group relative flex items-center gap-2 rounded-lg cursor-pointer transition-all duration-150 outline-none" :class="[isCollapsed ? 'h-11 mx-1 justify-center' : 'h-10 px-2', item.node.id === activeNodeId ? 'bg-[hsl(var(--sidebar-primary)/0.15)] font-medium' : 'hover:bg-[hsl(var(--sidebar-accent))]', 'focus-visible:ring-2 focus-visible:ring-[hsl(var(--sidebar-ring))] focus-visible:ring-offset-1']" :style="isCollapsed ? {} : { paddingLeft: `${item.depth * 16 + 24}px` }">
-                        <div v-if="item.node.id === activeNodeId" class="absolute left-0 top-1.5 bottom-1.5 w-[3px] bg-[hsl(var(--sidebar-primary))] rounded-full" />
-                        <Icon v-if="item.node.icon" :name="item.node.icon" :class="[isCollapsed ? 'w-5 h-5' : 'w-4 h-4', 'flex-shrink-0', item.node.id === activeNodeId ? 'text-[hsl(var(--sidebar-primary))]' : 'text-[hsl(var(--sidebar-foreground)/0.7)]']" />
-                        <span
-                          v-if="!isCollapsed"
-                          class="flex-1 truncate text-sm"
-                          :class="item.node.id === activeNodeId ? 'text-black dark:text-[hsl(var(--sidebar-primary-foreground))]' : 'text-[hsl(var(--sidebar-foreground))]'"
-                        >
-                          {{ item.node.label }}
-                        </span>
-                    </NuxtLink>
+                    <UTooltip 
+                      v-if="item.node.to"
+                      :text="item.node.label" 
+                      placement="right" 
+                      :prevent="!isCollapsed"
+                      :popper="{ placement: 'right', offsetDistance: 12 }"
+                    >
+                      <NuxtLink :to="item.node.to" :title="undefined" class="tree-row group relative flex items-center gap-2 rounded-lg cursor-pointer transition-all duration-150 outline-none" :class="[isCollapsed ? 'h-11 mx-1 justify-center' : 'h-10 px-2', item.node.id === activeNodeId ? 'bg-[hsl(var(--sidebar-primary)/0.15)] font-medium' : 'hover:bg-[hsl(var(--sidebar-accent))]', 'focus-visible:ring-2 focus-visible:ring-[hsl(var(--sidebar-ring))] focus-visible:ring-offset-1']" :style="isCollapsed ? {} : { paddingLeft: `${item.depth * 16 + 24}px` }">
+                          <div v-if="item.node.id === activeNodeId && !isCollapsed" class="absolute left-0 top-1.5 bottom-1.5 w-[3px] bg-[hsl(var(--sidebar-primary))] rounded-full" />
+                          <Icon v-if="item.node.icon" :name="item.node.icon" :class="[isCollapsed ? 'w-5 h-5' : 'w-4 h-4', 'flex-shrink-0', item.node.id === activeNodeId ? 'text-[hsl(var(--sidebar-primary))]' : 'text-[hsl(var(--sidebar-foreground)/0.7)]']" />
+                          <span
+                            v-if="!isCollapsed"
+                            class="flex-1 truncate text-sm"
+                            :class="item.node.id === activeNodeId ? 'text-black dark:text-[hsl(var(--sidebar-primary-foreground))]' : 'text-[hsl(var(--sidebar-foreground))]'"
+                          >
+                            {{ item.node.label }}
+                          </span>
+                      </NuxtLink>
+                    </UTooltip>
                 </li>
             </template>
         </ul>
@@ -208,7 +194,7 @@ const totalNodes = computed(() => {
 
       <div
         v-if="visibleContextNodes.length"
-        :class="['sidebar-section', isCollapsed ? 'px-1 py-2' : 'px-2 py-3', visibleGlobalNodes.length ? 'mt-3' : '']"
+        :class="['sidebar-section', isCollapsed ? 'px-1 py-2' : 'px-2 py-3', visibleGlobalNodes.length ? (isCollapsed ? 'mt-4 border-t border-[hsl(var(--sidebar-border))]' : 'mt-3') : '']"
       >
         <div v-if="!isCollapsed" class="section-label">
           <span class="section-bullet section-bullet--project" />
@@ -224,138 +210,152 @@ const totalNodes = computed(() => {
           :aria-selected="item.node.id === activeNodeId"
         >
           <!-- Link item (navigable) -->
-          <NuxtLink
+          <UTooltip 
             v-if="item.node.to"
-            :to="item.node.to"
-            :title="isCollapsed ? item.node.label : undefined"
-            class="tree-row group relative flex items-center gap-2 rounded-lg cursor-pointer transition-all duration-150 outline-none"
-            :class="[
-              isCollapsed ? 'h-11 mx-1 justify-center' : 'h-10 px-2',
-              item.node.id === activeNodeId 
-                ? 'bg-[hsl(var(--sidebar-primary)/0.15)] font-medium' 
-                : 'hover:bg-[hsl(var(--sidebar-accent))]',
-              'focus-visible:ring-2 focus-visible:ring-[hsl(var(--sidebar-ring))] focus-visible:ring-offset-1'
-            ]"
-            :style="isCollapsed ? {} : { paddingLeft: `${item.depth * 16 + 24}px` }"
+            :text="item.node.label" 
+            placement="right" 
+            :prevent="!isCollapsed"
+            :popper="{ placement: 'right', offsetDistance: 12 }"
           >
-            <!-- Selected bar -->
-            <div
-              v-if="item.node.id === activeNodeId"
-              class="absolute left-0 top-1.5 bottom-1.5 w-[3px] bg-[hsl(var(--sidebar-primary))] rounded-full"
-            />
-
-            <!-- Chevron (only when expanded) -->
-            <button
-              v-if="item.node.children?.length && !isCollapsed"
-              type="button"
-              class="w-5 h-5 flex items-center justify-center rounded transition-colors hover:bg-[hsl(var(--sidebar-accent))]"
-              @click.stop.prevent="toggleNode(item.node.id)"
-            >
-              <UIcon
-                name="i-heroicons-chevron-right-20-solid"
-                class="w-4 h-4 text-[hsl(var(--muted-foreground))] transition-transform duration-150"
-                :class="{ 'rotate-90': isExpanded(item.node.id) }"
-              />
-            </button>
-            <div v-else-if="!isCollapsed" class="w-5 h-5 flex items-center justify-center">
-              <div class="w-1 h-1 rounded-full bg-[hsl(var(--muted-foreground)/0.4)]" />
-            </div>
-
-            <!-- Icon -->
-            <Icon
-              v-if="item.node.icon"
-              :name="item.node.icon"
+            <NuxtLink
+              :to="item.node.to"
+              :title="undefined"
+              class="tree-row group relative flex items-center gap-2 rounded-lg cursor-pointer transition-all duration-150 outline-none"
               :class="[
-                isCollapsed ? 'w-5 h-5' : 'w-4 h-4',
-                'flex-shrink-0',
-                item.node.id === activeNodeId ? 'text-[hsl(var(--sidebar-primary))]' : 'text-[hsl(var(--sidebar-foreground)/0.7)]'
+                isCollapsed ? 'h-11 mx-1 justify-center' : 'h-10 px-2',
+                item.node.id === activeNodeId 
+                  ? 'bg-[hsl(var(--sidebar-primary)/0.15)] font-medium' 
+                  : 'hover:bg-[hsl(var(--sidebar-accent))]',
+                'focus-visible:ring-2 focus-visible:ring-[hsl(var(--sidebar-ring))] focus-visible:ring-offset-1'
               ]"
-            />
-
-            <!-- Label (only when expanded) -->
-            <span
-              v-if="!isCollapsed"
-              class="flex-1 truncate text-sm"
-              :class="item.node.id === activeNodeId ? 'text-black dark:text-[hsl(var(--sidebar-primary-foreground))]' : 'text-[hsl(var(--sidebar-foreground))]'"
+              :style="isCollapsed ? {} : { paddingLeft: `${item.depth * 16 + 24}px` }"
             >
-              {{ item.node.label }}
-            </span>
+              <!-- Selected bar -->
+              <div
+                v-if="item.node.id === activeNodeId"
+                class="absolute left-0 top-1.5 bottom-1.5 w-[3px] bg-[hsl(var(--sidebar-primary))] rounded-full"
+              />
 
-            <!-- Count (only when expanded) -->
-            <span
-              v-if="item.node.count !== undefined && !isCollapsed"
-              class="text-xs font-medium px-1.5 py-0.5 rounded-full flex-shrink-0 bg-[hsl(var(--sidebar-accent))] text-[hsl(var(--muted-foreground))]"
-            >
-              {{ item.node.count }}
-            </span>
-          </NuxtLink>
+              <!-- Chevron (only when expanded) -->
+              <button
+                v-if="item.node.children?.length && !isCollapsed"
+                type="button"
+                class="w-5 h-5 flex items-center justify-center rounded transition-colors hover:bg-[hsl(var(--sidebar-accent))]"
+                @click.stop.prevent="toggleNode(item.node.id)"
+              >
+                <UIcon
+                  name="i-heroicons-chevron-right-20-solid"
+                  class="w-4 h-4 text-[hsl(var(--muted-foreground))] transition-transform duration-150"
+                  :class="{ 'rotate-90': isExpanded(item.node.id) }"
+                />
+              </button>
+              <div v-else-if="!isCollapsed" class="w-5 h-5 flex items-center justify-center">
+                <div class="w-1 h-1 rounded-full bg-[hsl(var(--muted-foreground)/0.4)]" />
+              </div>
+
+              <!-- Icon -->
+              <Icon
+                v-if="item.node.icon"
+                :name="item.node.icon"
+                :class="[
+                  isCollapsed ? 'w-5 h-5' : 'w-4 h-4',
+                  'flex-shrink-0',
+                  item.node.id === activeNodeId ? 'text-[hsl(var(--sidebar-primary))]' : 'text-[hsl(var(--sidebar-foreground)/0.7)]'
+                ]"
+              />
+
+              <!-- Label (only when expanded) -->
+              <span
+                v-if="!isCollapsed"
+                class="flex-1 truncate text-sm"
+                :class="item.node.id === activeNodeId ? 'text-black dark:text-[hsl(var(--sidebar-primary-foreground))]' : 'text-[hsl(var(--sidebar-foreground))]'"
+              >
+                {{ item.node.label }}
+              </span>
+
+              <!-- Count (only when expanded) -->
+              <span
+                v-if="item.node.count !== undefined && !isCollapsed"
+                class="text-xs font-medium px-1.5 py-0.5 rounded-full flex-shrink-0 bg-[hsl(var(--sidebar-accent))] text-[hsl(var(--muted-foreground))]"
+              >
+                {{ item.node.count }}
+              </span>
+            </NuxtLink>
+          </UTooltip>
 
           <!-- Non-link item (container) -->
-          <div
+          <UTooltip 
             v-else
-            :title="isCollapsed ? item.node.label : undefined"
-            class="tree-row group relative flex items-center gap-2 rounded-lg cursor-pointer transition-all duration-150 outline-none"
-            :class="[
-              isCollapsed ? 'h-11 mx-1 justify-center' : 'h-10 px-2',
-              item.node.id === activeNodeId 
-                ? 'bg-[hsl(var(--sidebar-primary)/0.15)] font-medium' 
-                : 'hover:bg-[hsl(var(--sidebar-accent))]',
-              'focus-visible:ring-2 focus-visible:ring-[hsl(var(--sidebar-ring))] focus-visible:ring-offset-1'
-            ]"
-            :style="isCollapsed ? {} : { paddingLeft: `${item.depth * 16 + 24}px` }"
-            @click="item.node.children?.length ? toggleNode(item.node.id) : undefined"
+            :text="item.node.label" 
+            placement="right" 
+            :prevent="!isCollapsed"
+            :popper="{ placement: 'right', offsetDistance: 12 }"
           >
-            <!-- Selected bar -->
             <div
-              v-if="item.node.id === activeNodeId"
-              class="absolute left-0 top-1.5 bottom-1.5 w-[3px] bg-[hsl(var(--sidebar-primary))] rounded-full"
-            />
-
-            <!-- Chevron (only when expanded) -->
-            <button
-              v-if="item.node.children?.length && !isCollapsed"
-              type="button"
-              class="w-5 h-5 flex items-center justify-center rounded transition-colors hover:bg-[hsl(var(--sidebar-accent))]"
-              @click.stop.prevent="toggleNode(item.node.id)"
-            >
-              <UIcon
-                name="i-heroicons-chevron-right-20-solid"
-                class="w-4 h-4 text-[hsl(var(--muted-foreground))] transition-transform duration-150"
-                :class="{ 'rotate-90': isExpanded(item.node.id) }"
-              />
-            </button>
-            <div v-else-if="!isCollapsed" class="w-5 h-5 flex items-center justify-center">
-              <div class="w-1 h-1 rounded-full bg-[hsl(var(--muted-foreground)/0.4)]" />
-            </div>
-
-            <!-- Icon -->
-            <Icon
-              v-if="item.node.icon"
-              :name="item.node.icon"
+              :title="undefined"
+              class="tree-row group relative flex items-center gap-2 rounded-lg cursor-pointer transition-all duration-150 outline-none"
               :class="[
-                isCollapsed ? 'w-5 h-5' : 'w-4 h-4',
-                'flex-shrink-0',
-                item.node.id === activeNodeId ? 'text-[hsl(var(--sidebar-primary))]' : 'text-[hsl(var(--sidebar-foreground)/0.7)]'
+                isCollapsed ? 'h-11 mx-1 justify-center' : 'h-10 px-2',
+                item.node.id === activeNodeId 
+                  ? 'bg-[hsl(var(--sidebar-primary)/0.15)] font-medium' 
+                  : 'hover:bg-[hsl(var(--sidebar-accent))]',
+                'focus-visible:ring-2 focus-visible:ring-[hsl(var(--sidebar-ring))] focus-visible:ring-offset-1'
               ]"
-            />
-
-            <!-- Label (only when expanded) -->
-            <span
-              v-if="!isCollapsed"
-              class="flex-1 truncate text-sm"
-              :class="item.node.id === activeNodeId ? 'text-black dark:text-[hsl(var(--sidebar-primary-foreground))]' : 'text-[hsl(var(--sidebar-foreground))]'"
+              :style="isCollapsed ? {} : { paddingLeft: `${item.depth * 16 + 24}px` }"
+              @click="item.node.children?.length ? toggleNode(item.node.id) : undefined"
             >
-              {{ item.node.label }}
-            </span>
+              <!-- Selected bar -->
+              <div
+                v-if="item.node.id === activeNodeId"
+                class="absolute left-0 top-1.5 bottom-1.5 w-[3px] bg-[hsl(var(--sidebar-primary))] rounded-full"
+              />
 
-            <!-- Count (only when expanded) -->
-            <span
-              v-if="item.node.count !== undefined && !isCollapsed"
-              class="text-xs font-medium px-1.5 py-0.5 rounded-full flex-shrink-0 bg-[hsl(var(--sidebar-accent))] text-[hsl(var(--muted-foreground))]"
-            >
-              {{ item.node.count }}
-            </span>
-          </div>
+              <!-- Chevron (only when expanded) -->
+              <button
+                v-if="item.node.children?.length && !isCollapsed"
+                type="button"
+                class="w-5 h-5 flex items-center justify-center rounded transition-colors hover:bg-[hsl(var(--sidebar-accent))]"
+                @click.stop.prevent="toggleNode(item.node.id)"
+              >
+                <UIcon
+                  name="i-heroicons-chevron-right-20-solid"
+                  class="w-4 h-4 text-[hsl(var(--muted-foreground))] transition-transform duration-150"
+                  :class="{ 'rotate-90': isExpanded(item.node.id) }"
+                />
+              </button>
+              <div v-else-if="!isCollapsed" class="w-5 h-5 flex items-center justify-center">
+                <div class="w-1 h-1 rounded-full bg-[hsl(var(--muted-foreground)/0.4)]" />
+              </div>
+
+              <!-- Icon -->
+              <Icon
+                v-if="item.node.icon"
+                :name="item.node.icon"
+                :class="[
+                  isCollapsed ? 'w-5 h-5' : 'w-4 h-4',
+                  'flex-shrink-0',
+                  item.node.id === activeNodeId ? 'text-[hsl(var(--sidebar-primary))]' : 'text-[hsl(var(--sidebar-foreground)/0.7)]'
+                ]"
+              />
+
+              <!-- Label (only when expanded) -->
+              <span
+                v-if="!isCollapsed"
+                class="flex-1 truncate text-sm"
+                :class="item.node.id === activeNodeId ? 'text-black dark:text-[hsl(var(--sidebar-primary-foreground))]' : 'text-[hsl(var(--sidebar-foreground))]'"
+              >
+                {{ item.node.label }}
+              </span>
+
+              <!-- Count (only when expanded) -->
+              <span
+                v-if="item.node.count !== undefined && !isCollapsed"
+                class="text-xs font-medium px-1.5 py-0.5 rounded-full flex-shrink-0 bg-[hsl(var(--sidebar-accent))] text-[hsl(var(--muted-foreground))]"
+              >
+                {{ item.node.count }}
+              </span>
+            </div>
+          </UTooltip>
         </li>
       </ul>
     </div>

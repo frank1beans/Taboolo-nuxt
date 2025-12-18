@@ -8,8 +8,16 @@ import type {
   DataGridColumn
 } from '~/types/data-grid';
 
+type GridApiLike = {
+  setGridOption: (key: string, value: unknown) => void;
+  getFilterModel: () => Record<string, unknown>;
+  setFilterModel: (model: Record<string, unknown> | null) => void;
+  onFilterChanged: () => void;
+  addEventListener: (event: string, handler: () => void) => void;
+};
+
 export function useDataGridFilters(
-  gridApi: Ref<any>,
+  gridApi: Ref<GridApiLike | null>,
   columns: DataGridColumn[]
 ) {
   const quickFilterText = ref('');
@@ -106,7 +114,7 @@ export function useDataGridFilters(
     }
   };
 
-  const fromAgFilterModel = (model: any): ColumnFilter | null => {
+  const fromAgFilterModel = (model: { type?: string; filter?: unknown; filterType?: string } | null): ColumnFilter | null => {
     if (!model) return null;
     const type = model.type as string | undefined;
     const value = model.filter;
@@ -165,24 +173,27 @@ export function useDataGridFilters(
   const applyColumnFilter = (field: string, filter: ColumnFilter | null) => {
     if (!gridApi.value) return;
 
-    const model = gridApi.value.getFilterModel() || {};
+    const model = gridApi.value.getFilterModel?.() || {};
 
     // Determine if the column is numeric
     const col = columns.find((c) => c.field === field);
     const isNumericColumn = col?.filterType === 'number' || col?.filter === 'agNumberColumnFilter';
 
+    let nextModel = model;
     if (!filter) {
-      delete model[field];
+      const { [field]: _removed, ...rest } = model;
+      nextModel = rest;
     } else {
       const mapped = toAgFilterModel(filter, isNumericColumn);
       if (mapped) {
-        model[field] = mapped;
+        nextModel = { ...model, [field]: mapped };
       } else {
-        delete model[field];
+        const { [field]: _removed, ...rest } = model;
+        nextModel = rest;
       }
     }
 
-    gridApi.value.setFilterModel(model);
+    gridApi.value.setFilterModel(nextModel);
     gridApi.value.onFilterChanged();
     updateActiveFilters();
     filterPanel.value = null;
@@ -190,10 +201,10 @@ export function useDataGridFilters(
 
   const removeFilter = (field: string) => {
     if (!gridApi.value) return;
-    const model = gridApi.value.getFilterModel();
-    if (model[field]) {
-      delete model[field];
-      gridApi.value.setFilterModel(model);
+    const model = gridApi.value.getFilterModel?.() || {};
+    if (field in model) {
+      const { [field]: _removed, ...rest } = model;
+      gridApi.value.setFilterModel(rest);
       gridApi.value.onFilterChanged();
       updateActiveFilters();
     }
@@ -208,7 +219,7 @@ export function useDataGridFilters(
 
   const updateActiveFilters = () => {
     if (!gridApi.value) return;
-    const model = gridApi.value.getFilterModel() || {};
+    const model = gridApi.value.getFilterModel?.() || {};
     const filters: ActiveFilter[] = [];
 
     for (const key of Object.keys(model)) {
@@ -267,7 +278,7 @@ export function useDataGridFilters(
   // Watch gridApi and setup listener
   watch(gridApi, (api) => {
     if (api) {
-      api.addEventListener('filterChanged', updateActiveFilters);
+      api.addEventListener?.('filterChanged', updateActiveFilters);
       updateActiveFilters();
     }
   });

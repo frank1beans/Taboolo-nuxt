@@ -1,7 +1,14 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
+import type { ColDef, RowNode } from 'ag-grid-community';
 
-const props = defineProps<{ params: any }>();
+type GridInputParams = {
+  value: unknown;
+  colDef: ColDef;
+  node: RowNode;
+};
+
+const props = defineProps<{ params: GridInputParams }>();
 
 // Initial value
 const value = ref(props.params.value);
@@ -38,6 +45,6 @@ defineExpose({ refresh });
       class="w-full bg-transparent border-none outline-none text-sm text-neutral-900 dark:text-white placeholder-neutral-400"
       :placeholder="props.params.colDef?.headerName"
       @input="onInput"
-    />
+    >
   </div>
 </template>

@@ -1,5 +1,5 @@
 
-export default defineEventHandler((event) => {
+export default defineEventHandler((_event) => {
     const config = useRuntimeConfig();
     return {
         pythonApiBaseUrl: config.pythonApiBaseUrl,

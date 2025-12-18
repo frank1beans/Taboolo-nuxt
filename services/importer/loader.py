@@ -40,13 +40,16 @@ class LoaderService:
                 code=node.code,
                 description=node.name or node.code,
                 level=node.level,
-                type=node.kind, # Map parsed kind to type
+                type=node.type, # Map parsed type to type
                 parentId=node.parent_id,
                 path=None # Can be computed if needed
             ))
             
         # 3. PriceList
         pl_items = []
+        # Map for fast group lookup
+        group_map = {g.id: g for g in groups}
+
         for prod in estimate.price_list_items:
             # Map Unit ID to string label if available
             # logic: estimate.units is Dict[id, label]
@@ -57,6 +60,18 @@ class LoaderService:
             if prod.price_by_list:
                 price_val = list(prod.price_by_list.values())[0]
             
+            # Resolve denormalized WBS fields
+            _wbs6 = None
+            _wbs7 = None
+            
+            for wid in prod.wbs_ids:
+                if wid in group_map:
+                    grp = group_map[wid]
+                    if grp.level == 6:
+                        _wbs6 = grp.description or grp.code
+                    elif grp.level == 7:
+                        _wbs7 = grp.description or grp.code
+
             pl_items.append(PriceListItem(
                 _id=prod.id, # Use XML ID
                 code=prod.code,
@@ -64,7 +79,9 @@ class LoaderService:
                 extraDescription=prod.long_description,
                 unit=unit_label,
                 price=price_val,
-                groupIds=prod.wbs_ids
+                groupIds=prod.wbs_ids,
+                wbs6=_wbs6,
+                wbs7=_wbs7
             ))
             
         price_list = PriceList(

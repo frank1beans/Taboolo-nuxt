@@ -1,9 +1,9 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+ 
 
 /**
  * Normalize textual fields (short/long description, unit) from heterogeneous importer payloads.
  */
-export const normalizeTextFields = (entry: any) => {
+export const normalizeTextFields = (entry: Record<string, unknown>) => {
   const short_description =
     entry?.short_description ??
     entry?.description ??

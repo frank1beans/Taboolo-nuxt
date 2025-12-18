@@ -11,7 +11,7 @@ export default defineEventHandler(async (event) => {
 
   try {
     // Aggregation to join WBS nodes and extract Level 6 & 7
-    const query: any = { project_id: new mongoose.Types.ObjectId(projectId) };
+    const query: Record<string, unknown> = { project_id: new mongoose.Types.ObjectId(projectId) };
 
   const queryParams = getQuery(event);
   const estimateId = queryParams.estimate_id?.toString();

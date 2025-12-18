@@ -1,13 +1,14 @@
 import { defineEventHandler, readBody, createError, getHeader } from 'h3';
+import type { H3Event } from 'h3';
 import { Estimate, Project, UserContext } from '#models';
 
-const resolveUserScope = (event: any) => {
+const resolveUserScope = (event: H3Event) => {
   const userId = getHeader(event, 'x-user-id') || 'demo-user';
   const organizationId = getHeader(event, 'x-org-id') || null;
   return { userId, organizationId };
 };
 
-export default defineEventHandler(async (event) => {
+export default defineEventHandler(async (event: H3Event) => {
   const body = await readBody<{
     currentProjectId?: string | null;
     currentEstimateId?: string | null;

@@ -35,11 +35,12 @@ export default defineEventHandler(async (event) => {
             ...result,
             message: 'Estimate deleted',
         };
-    } catch (error: any) {
+    } catch (error: unknown) {
+        const err = error as Record<string, unknown>;
         throw createError({
-            statusCode: error?.statusCode || 500,
-            statusMessage: error?.statusMessage || 'Error deleting estimate',
-            data: error?.data,
+            statusCode: typeof err.statusCode === 'number' ? err.statusCode : 500,
+            statusMessage: typeof err.statusMessage === 'string' ? err.statusMessage : 'Error deleting estimate',
+            data: err.data,
         });
     }
 });

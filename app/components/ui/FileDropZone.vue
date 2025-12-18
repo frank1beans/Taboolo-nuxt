@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref } from 'vue';
 
 const props = defineProps<{
   accept?: string; // e.g. ".xml,.six" or "image/*"
@@ -114,7 +114,7 @@ const triggerSelect = () => {
       :multiple="multiple"
       :disabled="disabled"
       @change="onFileChange"
-    />
+    >
 
     <div class="flex flex-col items-center text-center space-y-3">
       <div 

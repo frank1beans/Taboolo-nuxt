@@ -1,10 +1,68 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+ 
+import type { ClientSession } from 'mongoose';
 import { Types } from 'mongoose';
-import { Estimate, EstimateItem, Offer, OfferItem } from '#models';
+import { Estimate, EstimateItem, Offer, OfferItem, PriceList, PriceListItem, WbsNode  } from '#models';
 import { normalizeTextFields } from '#utils/normalize';
-import { PriceList, PriceListItem, WbsNode } from '#models';
 
-type AnyRecord = Record<string, any>;
+type EstimateInput = {
+  _id?: string;
+  id?: string;
+  name?: string;
+  type?: string;
+  discipline?: string;
+  revision?: string;
+  is_baseline?: boolean;
+  company?: string;
+  round_number?: number;
+  total_amount?: number;
+  delta_vs_project?: number;
+  delta_percentage?: number;
+  notes?: string;
+  file_name?: string;
+  delivery_date?: string | Date;
+  price_list_id?: string;
+  source_preventivo_id?: string;
+  import_run_id?: string;
+  matching_report?: unknown;
+};
+
+type EstimateItemEntry = {
+  wbs_levels?: Array<{ level?: number; code?: string }>;
+  wbs6_code?: string;
+  wbs7_code?: string;
+  code?: string;
+  progressive?: number;
+  order?: number;
+  quantity?: number;
+  unit_price?: number;
+  amount?: number;
+  total_amount?: number;
+  notes?: string;
+  description?: string;
+  description_extended?: string;
+  unit?: string;
+};
+
+type EstimateItemDoc = {
+  project_id: Types.ObjectId;
+  wbs_ids: Types.ObjectId[];
+  code: string;
+  description?: string;
+  description_extended?: string;
+  unit?: string;
+  progressive?: number;
+  order: number;
+  import_run_id?: string;
+  source_preventivo_id?: string;
+  project: {
+    estimate_id: Types.ObjectId;
+    quantity: number;
+    unit_price: number;
+    amount: number;
+    notes?: string;
+  };
+  offers: unknown[];
+};
 
 const normalizeType = (value: string | undefined): 'project' | 'offer' => {
   return value === 'project' ? 'project' : 'offer';
@@ -14,7 +72,7 @@ const normalizeType = (value: string | undefined): 'project' | 'offer' => {
  * Upsert an estimate document in MongoDB.
  * Accepts data coming from the Python importer (already mapped by python-mappers.ts).
  */
-export async function upsertEstimate(projectId: string, data: AnyRecord) {
+export async function upsertEstimate(projectId: string, data: EstimateInput) {
   const projectObjectId = new Types.ObjectId(projectId);
   const estimateId = data._id || data.id || undefined;
 
@@ -55,9 +113,9 @@ export async function upsertEstimate(projectId: string, data: AnyRecord) {
  */
 export async function upsertEstimatesBatch(
   projectId: string,
-  estimates: AnyRecord[] = [],
+  estimates: EstimateInput[] = [],
 ) {
-  const saved: AnyRecord = {};
+  const saved: Record<string, unknown> = {};
 
   for (const estimate of estimates) {
     const doc = await upsertEstimate(projectId, estimate);
@@ -74,7 +132,7 @@ export async function upsertEstimatesBatch(
 export async function upsertEstimateItems(
   projectId: string,
   estimateId: string,
-  items: AnyRecord[] = [],
+  items: EstimateItemEntry[] = [],
   wbs6Map: Record<string, string> = {},
   wbs7Map: Record<string, string> = {},
   importRunId?: string,
@@ -87,7 +145,7 @@ export async function upsertEstimateItems(
   // Remove previous items for this estimate to avoid duplicates
   await EstimateItem.deleteMany({ 'project.estimate_id': estimateObjectId, project_id: projectObjectId });
 
-  const buildWbsCodes = (entry: AnyRecord) => {
+  const buildWbsCodes = (entry: EstimateItemEntry) => {
     let w6: string | undefined;
     let w7: string | undefined;
     const levels = Array.isArray(entry.wbs_levels) ? entry.wbs_levels : [];
@@ -101,7 +159,7 @@ export async function upsertEstimateItems(
   };
 
   const docs = items
-    .map((entry) => {
+    .map<EstimateItemDoc | null>((entry) => {
       const { w6, w7 } = buildWbsCodes(entry);
       const wbs6Id = w6 ? wbs6Map[w6] : undefined;
       // if (!wbs6Id) return null; // skip items without a mapped WBS6
@@ -133,7 +191,7 @@ export async function upsertEstimateItems(
         offers: [],
       };
     })
-    .filter(Boolean) as AnyRecord[];
+    .filter((doc): doc is EstimateItemDoc => doc !== null);
 
   if (docs.length) {
     await EstimateItem.insertMany(docs, { ordered: false });
@@ -147,7 +205,7 @@ export async function upsertEstimateItems(
 export async function deleteEstimateCascade(
   projectId: string,
   estimateId: string,
-  session?: any,
+  session?: ClientSession,
 ) {
   const projectObjectId = new Types.ObjectId(projectId);
   const estimateObjectId = new Types.ObjectId(estimateId);

@@ -5,10 +5,6 @@
  * Lists all global price lists (those without a project_id).
  */
 
-definePageMeta({
-  breadcrumb: 'Listini Generali',
-})
-
 // Use existing price list grid config or a simplified one?
 // For now, let's just use a placeholder component or simple list.
 // We might need a new API endpoint to fetch global price lists.
@@ -17,7 +13,11 @@ definePageMeta({
 
 import { ref } from 'vue'
 
-const items = ref([]) // TODO: Fetch global price lists
+definePageMeta({
+  breadcrumb: 'Listini Generali',
+})
+
+const _items = ref([]) // TODO: Fetch global price lists
 
 </script>
 

@@ -12,6 +12,7 @@ from typing import Callable, Dict, Literal, Type, Any
 # New Domain Imports
 from core.interfaces import ParserProtocol
 from parsers.six.parser import SixParser
+from parsers.xpwe.parser import PrimusXpweParser
 
 # Legacy Shared Imports
 from parsers.shared.base_types import NormalizedEstimate
@@ -28,6 +29,7 @@ from parsers.mx.parser import parse_mx_return_excel
 
 _PARSERS: Dict[str, Type[ParserProtocol]] = {
     "six": SixParser,
+    "xpwe": PrimusXpweParser,
 }
 
 def get_parser(format_hint: str) -> ParserProtocol:

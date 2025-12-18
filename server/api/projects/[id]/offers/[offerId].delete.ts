@@ -26,15 +26,15 @@ export default defineEventHandler(async (event) => {
       ...result,
       message: 'Offerta eliminata',
     };
-  } catch (error: any) {
-    if (error.statusCode) {
+  } catch (error: unknown) {
+    if (error && typeof error === 'object' && 'statusCode' in error) {
       throw error;
     }
 
     throw createError({
       statusCode: 500,
-      statusMessage: 'Errore durante l’eliminazione dell’offerta',
-      data: { message: error?.message },
+      statusMessage: "Errore durante l'eliminazione dell'offerta",
+      data: { message: error instanceof Error ? error.message : undefined },
     });
   }
 });

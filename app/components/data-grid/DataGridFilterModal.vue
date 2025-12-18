@@ -39,7 +39,7 @@
               placeholder="Cerca un valore..."
               class="w-full pl-9 pr-4 py-2.5 text-sm rounded-lg border transition-colors bg-[hsl(var(--card))] border-[hsl(var(--border))] text-[hsl(var(--foreground))] placeholder-[hsl(var(--muted-foreground))] focus:border-[hsl(var(--ring))] focus:ring-1 focus:ring-[hsl(var(--ring)/0.6)]"
               @keydown.enter="applySearchFilter"
-            />
+            >
           </div>
         </div>
 

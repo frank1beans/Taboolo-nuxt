@@ -8,7 +8,11 @@ interface Project {
   description?: string
   business_unit?: string
   status?: string
-  estimates?: any[]
+  estimates?: Array<{
+    id: string
+    name?: string
+    type?: string
+  }>
 }
 
 interface RawData {
@@ -21,11 +25,11 @@ interface RawData {
     preventivi: number
     rilevazioni: number
   }
-  units: any[]
-  priceLists: any[]
-  groups: any[]
-  products: any[]
-  preventivi: any[]
+  units: Record<string, unknown>[]
+  priceLists: Record<string, unknown>[]
+  groups: Record<string, unknown>[]
+  products: Record<string, unknown>[]
+  preventivi: Record<string, unknown>[]
 }
 
 export const useProjectStore = defineStore('project', () => {
@@ -46,8 +50,9 @@ export const useProjectStore = defineStore('project', () => {
       if (!currentProject.value && projects.value.length) {
         currentProject.value = projects.value[0]
       }
-    } catch (e: any) {
-      error.value = e?.data?.message || e?.message || 'Errore nel recupero progetti'
+    } catch (e) {
+      const err = e as { data?: { message?: string }; message?: string }
+      error.value = err?.data?.message || err?.message || 'Errore nel recupero progetti'
     } finally {
       loading.value = false
     }
@@ -60,8 +65,9 @@ export const useProjectStore = defineStore('project', () => {
     try {
       const res = await $fetch<Project>(`/api/projects/${id}`)
       currentProject.value = res
-    } catch (e: any) {
-      error.value = e?.data?.message || e?.message || 'Errore nel recupero progetto'
+    } catch (e) {
+      const err = e as { data?: { message?: string }; message?: string }
+      error.value = err?.data?.message || err?.message || 'Errore nel recupero progetto'
     } finally {
       loading.value = false
     }
@@ -75,8 +81,9 @@ export const useProjectStore = defineStore('project', () => {
         params: importId ? { importId } : undefined,
       })
       rawData.value = res
-    } catch (e: any) {
-      error.value = e?.data?.message || e?.message || 'Errore nel recupero dati raw'
+    } catch (e) {
+      const err = e as { data?: { message?: string }; message?: string }
+      error.value = err?.data?.message || err?.message || 'Errore nel recupero dati raw'
     } finally {
       loading.value = false
     }

@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useCurrentContext } from '~/composables/useCurrentContext'
 import { useColorMode } from '#imports'
 import DataGridPage from '~/components/layout/DataGridPage.vue'
+import { useWbsTree } from '~/composables/useWbsTree'
 
 definePageMeta({
   breadcrumb: 'Confronto',
@@ -13,7 +14,7 @@ const route = useRoute()
 const router = useRouter()
 const projectId = route.params.id as string
 const estimateId = route.params.estimateId as string
-const colorMode = useColorMode()
+const _colorMode = useColorMode()
 const { setCurrentEstimate } = useCurrentContext()
 
 await setCurrentEstimate(estimateId).catch((err) => console.error('Failed to set current estimate', err))
@@ -43,8 +44,31 @@ const apiUrl = computed(() => {
   return `/api/projects/${projectId}/estimate/${estimateId}/comparison${suffix}`
 })
 
+type OfferEntry = {
+  codice?: string | null;
+  descrizione?: string | null;
+  wbs6_code?: string | null;
+  wbs6_description?: string | null;
+  wbs7_code?: string | null;
+  wbs7_description?: string | null;
+  prezzo_progetto?: number | null;
+  quantita_progetto?: number | null;
+  importo_progetto?: number | null;
+  media_prezzi?: number | null;
+  minimo_prezzi?: number | null;
+  massimo_prezzi?: number | null;
+  offerte: Record<string, {
+    codice?: string | null;
+    descrizione?: string | null;
+    quantita?: number | null;
+    prezzo_unitario?: number | null;
+    importo_totale?: number | null;
+    delta_media?: number | null;
+  }>;
+};
+
 interface ComparisonResponse {
-  voci: any[]
+  voci: OfferEntry[]
   imprese: { nome: string; round_number?: number; round_label?: string }[]
   rounds: { numero: number; label: string }[]
   all_rounds: { numero: number; label: string }[]
@@ -77,95 +101,28 @@ const companyOptions = computed(() => {
 })
 
 
-// ─────────────────────────────────────────────────────────────────────────────
-// WBS Tree Types and State
-// ─────────────────────────────────────────────────────────────────────────────
-interface WbsNode {
-  id: string
-  code: string
-  name: string
-  level: number
-  children?: WbsNode[]
-}
-
-const selectedWbsNode = ref<WbsNode | null>(null)
-
-const wbsNodes = computed<WbsNode[]>(() => {
-  const wbs6Map = new Map<string, WbsNode>()
-  
-  for (const item of rows.value) {
-    // Process WBS 6
+const { wbsNodes, selectedWbsNode, filteredRowData: filteredRows, onWbsNodeSelected } = useWbsTree(rows, {
+  getLevels: (item: OfferEntry) => {
+    const levels: { code: string; name?: string; level?: number }[] = []
     if (item.wbs6_code && item.wbs6_description) {
-      if (!wbs6Map.has(item.wbs6_code)) {
-        wbs6Map.set(item.wbs6_code, {
-          id: item.wbs6_code,
-          code: item.wbs6_code,
-          name: item.wbs6_description,
-          level: 6,
-          children: [],
-        })
-      }
-      
-      // Process WBS 7 (child of WBS 6)
-      if (item.wbs7_code && item.wbs7_description) {
-        const wbs7Key = `${item.wbs6_code}/${item.wbs7_code}`
-        
-        // Add to WBS 6 children if not already present
-        const parentNode = wbs6Map.get(item.wbs6_code)!
-        if (!parentNode.children!.find(c => c.id === wbs7Key)) {
-          const wbs7Node: WbsNode = {
-            id: wbs7Key,
-            code: item.wbs7_code,
-            name: item.wbs7_description,
-            level: 7,
-            children: [],
-          }
-          parentNode.children!.push(wbs7Node)
-        }
-      }
+      levels.push({ code: item.wbs6_code, name: item.wbs6_description, level: 6 })
     }
-  }
-  
-  // Sort WBS 6
-  const rootNodes = Array.from(wbs6Map.values()).sort((a, b) => a.code.localeCompare(b.code))
-  
-  // Sort WBS 7 children
-  for (const node of rootNodes) {
-    if (node.children) {
-      node.children.sort((a, b) => a.code.localeCompare(b.code))
+    if (item.wbs7_code && item.wbs7_description) {
+      levels.push({ code: item.wbs7_code, name: item.wbs7_description, level: 7 })
     }
-  }
-  
-  return rootNodes
+    return levels
+  },
 })
 
-// Apply WBS filter client-side
-const filteredRows = computed(() => {
-  if (!selectedWbsNode.value) return rows.value
-  
-  const selectedNode = selectedWbsNode.value
-  
-  return rows.value.filter(item => {
-    if (selectedNode.level === 6) {
-      return item.wbs6_code === selectedNode.code
-    } else if (selectedNode.level === 7) {
-      const [parentCode, myCode] = selectedNode.id.split('/')
-      return item.wbs6_code === parentCode && item.wbs7_code === myCode
-    }
-    return false
-  })
-})
-
-// Stats
 const totalItems = computed(() => filteredRows.value.length)
 
 // ─────────────────────────────────────────────────────────────────────────────
 // FORMATTERS
 // ─────────────────────────────────────────────────────────────────────────────
-const fmtNumber = (v: any) =>
+const fmtNumber = (v: number | string | null | undefined) =>
   new Intl.NumberFormat('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(v) || 0)
 
-const fmtCurrency = (v: any) =>
+const fmtCurrency = (v: number | string | null | undefined) =>
   new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(Number(v) || 0)
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -203,14 +160,14 @@ const baseColumns = [
         headerName: 'Q.tà',
         width: 100,
         type: 'numericColumn',
-        valueFormatter: ({ value }: any) => fmtNumber(value),
+        valueFormatter: ({ value }: { value: number | null }) => fmtNumber(value),
       },
       {
         field: 'prezzo_unitario_progetto',
         headerName: 'P.U.',
         width: 110,
         type: 'numericColumn',
-        valueFormatter: ({ value }: any) => fmtCurrency(value),
+        valueFormatter: ({ value }: { value: number | null }) => fmtCurrency(value),
         cellStyle: { fontWeight: '600' },
       },
       {
@@ -218,7 +175,7 @@ const baseColumns = [
         headerName: 'Importo',
         width: 130,
         type: 'numericColumn',
-        valueFormatter: ({ value }: any) => fmtCurrency(value),
+        valueFormatter: ({ value }: { value: number | null }) => fmtCurrency(value),
         cellStyle: { fontWeight: '600' },
       },
     ]
@@ -232,7 +189,7 @@ const baseColumns = [
         headerName: 'Media',
         width: 110,
         type: 'numericColumn',
-        valueFormatter: ({ value }: any) => (value != null ? fmtCurrency(value) : '-'),
+        valueFormatter: ({ value }: { value: number | null }) => (value != null ? fmtCurrency(value) : '-'),
         cellStyle: { fontStyle: 'italic', backgroundColor: 'rgba(0,0,0,0.02)' },
       },
       {
@@ -240,7 +197,7 @@ const baseColumns = [
         headerName: 'Min',
         width: 100,
         type: 'numericColumn',
-        valueFormatter: ({ value }: any) => (value != null ? fmtCurrency(value) : '-'),
+        valueFormatter: ({ value }: { value: number | null }) => (value != null ? fmtCurrency(value) : '-'),
         cellStyle: { color: '#22c55e', fontWeight: '500' },
       },
       {
@@ -248,7 +205,7 @@ const baseColumns = [
         headerName: 'Max',
         width: 100,
         type: 'numericColumn',
-        valueFormatter: ({ value }: any) => (value != null ? fmtCurrency(value) : '-'),
+        valueFormatter: ({ value }: { value: number | null }) => (value != null ? fmtCurrency(value) : '-'),
         cellStyle: { color: '#ef4444', fontWeight: '500' },
       },
     ]
@@ -275,9 +232,9 @@ const companyColumns = computed(() => {
           width: 90,
           type: 'numericColumn',
           filter: 'number',
-          valueFormatter: ({ value }: any) => (value != null ? fmtNumber(value) : '-'),
-          cellStyle: { backgroundColor: color?.bg },
-        },
+        valueFormatter: ({ value }: { value: number | null }) => (value != null ? fmtNumber(value) : '-'),
+        cellStyle: { backgroundColor: color?.bg },
+      },
         // NEW/FIX: Add Delta Quantity Column
         {
           field: `offerte.${key}.delta_quantita`,
@@ -285,12 +242,12 @@ const companyColumns = computed(() => {
           width: 90,
           type: 'numericColumn',
           filter: 'number',
-          valueFormatter: ({ value }: any) =>
+          valueFormatter: ({ value }: { value: number | null }) =>
             value != null && Math.abs(value) >= 0.01 ? `${value > 0 ? '+' : ''}${fmtNumber(value)}` : '-',
-          cellStyle: (params: any) => ({
+          cellStyle: (params: { value: number | null }) => ({
             backgroundColor: color?.bg,
             // Reuse delta style logic which applies red/green based on value
-            ...getDeltaStyle(params.value),
+            ...getDeltaStyle(params.value ?? 0),
           }),
         },
         {
@@ -299,7 +256,7 @@ const companyColumns = computed(() => {
           width: 110,
           type: 'numericColumn',
           filter: 'number',
-          valueFormatter: ({ value }: any) => (value != null ? fmtCurrency(value) : '-'),
+          valueFormatter: ({ value }: { value: number | null }) => (value != null ? fmtCurrency(value) : '-'),
           cellStyle: { backgroundColor: color?.bg },
         },
         // NEW: Delta Unit Price vs Mean
@@ -309,7 +266,7 @@ const companyColumns = computed(() => {
           width: 100,
           type: 'numericColumn',
           filter: 'number',
-          valueGetter: (params: any) => {
+          valueGetter: (params: { data?: OfferEntry }) => {
              try {
                 const data = params.data;
                 const price = data.offerte?.[key]?.prezzo_unitario;
@@ -318,13 +275,13 @@ const companyColumns = computed(() => {
                   return price - mean;
                 }
                 return null;
-             } catch(e) { return null }
+             } catch { return null }
           },
-          valueFormatter: ({ value }: any) =>
+          valueFormatter: ({ value }: { value: number | null }) =>
             value != null && Math.abs(value) >= 0.01 ? `${value > 0 ? '+' : ''}${fmtCurrency(value)}` : '-',
-          cellStyle: (params: any) => ({
+          cellStyle: (params: { value: number | null }) => ({
             backgroundColor: color?.bg,
-            ...getDeltaStyle(params.value),
+            ...getDeltaStyle(params.value ?? 0),
           }),
         },
         // NEW: Delta Unit Price vs Project
@@ -334,7 +291,7 @@ const companyColumns = computed(() => {
           width: 100,
           type: 'numericColumn',
           filter: 'number',
-          valueGetter: (params: any) => {
+          valueGetter: (params: { data?: OfferEntry }) => {
             const data = params.data;
             const price = data.offerte?.[key]?.prezzo_unitario;
             const projPrice = data.prezzo_unitario_progetto;
@@ -343,11 +300,11 @@ const companyColumns = computed(() => {
             }
             return null;
           },
-          valueFormatter: ({ value }: any) =>
+          valueFormatter: ({ value }: { value: number | null }) =>
             value != null && Math.abs(value) >= 0.01 ? `${value > 0 ? '+' : ''}${fmtCurrency(value)}` : '-',
-          cellStyle: (params: any) => ({
+          cellStyle: (params: { value: number | null }) => ({
             backgroundColor: color?.bg,
-            ...getDeltaStyle(params.value),
+            ...getDeltaStyle(params.value ?? 0),
           }),
         },
         {
@@ -356,7 +313,7 @@ const companyColumns = computed(() => {
           width: 120,
           type: 'numericColumn',
           filter: 'number',
-          valueFormatter: ({ value }: any) => (value != null ? fmtCurrency(value) : '-'),
+          valueFormatter: ({ value }: { value: number | null }) => (value != null ? fmtCurrency(value) : '-'),
           cellStyle: { backgroundColor: color?.bg },
         },
         // NEW: Delta Total Amount vs Project
@@ -366,7 +323,7 @@ const companyColumns = computed(() => {
           width: 120,
           type: 'numericColumn',
           filter: 'number',
-          valueGetter: (params: any) => {
+          valueGetter: (params: { data?: OfferEntry }) => {
             const data = params.data;
             const amount = data.offerte?.[key]?.importo_totale;
             const projAmount = data.importo_totale_progetto;
@@ -375,12 +332,12 @@ const companyColumns = computed(() => {
             }
             return null;
           },
-          valueFormatter: ({ value }: any) =>
+          valueFormatter: ({ value }: { value: number | null }) =>
             value != null && Math.abs(value) >= 0.01 ? `${value > 0 ? '+' : ''}${fmtCurrency(value)}` : '-',
-          cellStyle: (params: any) => ({
+          cellStyle: (params: { value: number | null }) => ({
             backgroundColor: color?.bg,
             borderRight: `2px solid ${color?.border}`,
-            ...getDeltaStyle(params.value),
+            ...getDeltaStyle(params.value ?? 0),
           }),
         },
       ],
@@ -405,9 +362,6 @@ const gridConfig = computed(() => ({
 // ─────────────────────────────────────────────────────────────────────────────
 // EVENT HANDLERS
 // ─────────────────────────────────────────────────────────────────────────────
-const onWbsSelect = (node: WbsNode | null) => {
-  selectedWbsNode.value = node
-}
 </script>
 
 <template>
@@ -544,11 +498,11 @@ const onWbsSelect = (node: WbsNode | null) => {
 
     <!-- Sidebar -->
     <template #sidebar>
-       <WbsSidebar
+      <WbsSidebar
         v-if="wbsNodes.length > 0"
         :nodes="wbsNodes"
         :visible="true"
-        @node-selected="onWbsSelect"
+        @node-selected="onWbsNodeSelected"
       />
     </template>
   </DataGridPage>

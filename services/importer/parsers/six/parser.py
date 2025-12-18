@@ -176,8 +176,23 @@ class SixParser(ParserProtocol):
         # self._reconstruct_hierarchy(estimate) 
         self._link_products_to_wbs(estimate)
         
+        # FILTER: Keep only WBS nodes used in Measurements or Products
+        used_wbs_ids = set()
+        
+        # 1. From Measurements
+        for p in estimate.preventivi:
+            for m in p.measurements:
+                used_wbs_ids.update(m.wbs_node_ids)
+                
+        # 2. From Products
+        for prod in self._price_list_items.values():
+            used_wbs_ids.update(prod.wbs_ids)
+            
+        filtered_wbs_nodes = [n for n in self._wbs_nodes.values() if n.id in used_wbs_ids]
+        print(f"[Parser] WBS Filtering: {len(self._wbs_nodes)} -> {len(filtered_wbs_nodes)} (Used nodes)", flush=True)
+
         estimate.price_lists = list(self._price_lists.values())
-        estimate.wbs_nodes = list(self._wbs_nodes.values())
+        estimate.wbs_nodes = filtered_wbs_nodes
         estimate.price_list_items = list(self._price_list_items.values())
         
         return estimate
@@ -235,7 +250,7 @@ class SixParser(ParserProtocol):
                     code=code,
                     name=desc,
                     level=level,
-                    kind=kind
+                    type=kind
                 )
                 self._wbs_nodes[grp_id] = node
                 self._group_ref_map[grp_id] = node

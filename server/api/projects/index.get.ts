@@ -16,7 +16,7 @@ export default defineEventHandler(async (event) => {
     const sortOrder = query.order === 'asc' ? 1 : -1;
 
     // Build filter query
-    const filter: any = {};
+    const filter: Record<string, unknown> = {};
 
     // Quick search (searches across multiple fields)
     if (query.search) {
@@ -32,21 +32,23 @@ export default defineEventHandler(async (event) => {
     // Column filters (from DataGrid filterModel)
     if (query.filters) {
       try {
-        const filters = typeof query.filters === 'string'
+        const parsedFilters = typeof query.filters === 'string'
           ? JSON.parse(query.filters)
           : query.filters;
 
-        for (const [field, filterConfig] of Object.entries(filters as Record<string, any>)) {
-          if (filterConfig.filter !== undefined) {
-            if (filterConfig.type === 'equals') {
-              filter[field] = filterConfig.filter;
-            } else if (filterConfig.type === 'contains') {
-              filter[field] = new RegExp(filterConfig.filter, 'i');
-            } else if (filterConfig.type === 'notBlank') {
+        Object.entries(parsedFilters as Record<string, unknown>).forEach(([field, rawConfig]) => {
+          if (!rawConfig || typeof rawConfig !== 'object') return;
+          const config = rawConfig as { filter?: unknown; type?: string };
+          if (config.filter !== undefined) {
+            if (config.type === 'equals') {
+              filter[field] = config.filter;
+            } else if (config.type === 'contains') {
+              filter[field] = new RegExp(String(config.filter), 'i');
+            } else if (config.type === 'notBlank') {
               filter[field] = { $nin: [null, ''] };
             }
           }
-        }
+        });
       } catch (err) {
         console.error('Error parsing filters:', err);
       }

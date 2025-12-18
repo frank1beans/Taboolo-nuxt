@@ -24,15 +24,16 @@ export default defineEventHandler(async (event) => {
     }
 
     return { success: true, offer };
-  } catch (error: any) {
-    if (error.statusCode) {
+  } catch (error: unknown) {
+    if (error && typeof error === 'object' && 'statusCode' in error) {
       throw error;
     }
 
+    const message = error instanceof Error ? error.message : "Errore durante l'aggiornamento dell'offerta";
     throw createError({
       statusCode: 400,
-      statusMessage: error?.message || 'Errore durante l’aggiornamento dell’offerta',
-      data: { message: error?.message },
+      statusMessage: message,
+      data: { message },
     });
   }
 });

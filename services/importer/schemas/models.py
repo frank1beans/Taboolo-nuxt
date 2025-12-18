@@ -39,6 +39,10 @@ class PriceListItem(BaseModel):
     unit: str # Direct value, e.g. "mq"
     price: float
     group_ids: List[str] = Field(default_factory=list, alias="groupIds")
+    
+    # Denormalized WBS fields for frontend Grid
+    wbs6: Optional[str] = None
+    wbs7: Optional[str] = None
 
 class PriceList(MongoModel):
     project_id: str = Field(..., alias="projectId")

@@ -35,6 +35,16 @@ export interface ApiEstimate {
   matching_report?: Record<string, unknown> | null;
 }
 
+export interface ApiOfferSummary {
+  id: string;
+  name?: string | null;
+  company_name?: string | null;
+  round_number?: number | null;
+  status?: string;
+  total_amount?: number | null;
+  is_baseline?: boolean;
+}
+
 export type ProjectStatus = "setup" | "in_progress" | "closed";
 
 export interface ApiProject {
@@ -191,6 +201,8 @@ export interface ApiSixImportReport {
   };
 }
 
+export type ApiXpweImportReport = ApiSixImportReport;
+
 export interface ApiSixEstimateOption {
   internal_id: string;
   code?: string | null;
@@ -212,7 +224,7 @@ export interface ApiRawPreventivo {
   date?: string | null;
   priceListIdRaw?: string | null;
   priceListId?: string | null;
-  stats?: Record<string, any>;
+  stats?: Record<string, unknown>;
 }
 
 export interface ApiSixEstimatesPreview {
@@ -222,6 +234,11 @@ export interface ApiSixEstimatesPreview {
   products_count?: number;
   price_lists_count?: number;
   groups_count?: number;
+}
+
+export interface ApiXpweEstimatesPreview extends ApiSixEstimatesPreview {
+  wbs_structure?: { kind: string; count: number }[];
+  canonical_levels?: Record<string, { code: string; description: string }>;
 }
 
 export interface ApiSixInspectionPriceList {
@@ -708,7 +725,7 @@ export interface ApiAuthResponse {
   user: ApiUser;
 }
 
-export interface PaginatedResponse<T = any> {
+export interface PaginatedResponse<T = unknown> {
   data: T[];
   total: number;
   page: number;
@@ -727,6 +744,6 @@ export interface QueryParams {
   pageSize?: number;
   sort?: string;
   order?: 'asc' | 'desc';
-  filters?: Record<string, any>;
+  filters?: Record<string, unknown>;
   search?: string;
 }

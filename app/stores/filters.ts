@@ -80,14 +80,16 @@ export const useFiltersStore = defineStore('filters', () => {
 
   const setCustomFilter = (key: string, value: unknown) => {
     if (value === null || value === undefined) {
-      delete customFilters.value[key]
+      const { [key]: _removed, ...rest } = customFilters.value
+      customFilters.value = rest
     } else {
-      customFilters.value[key] = value
+      customFilters.value = { ...customFilters.value, [key]: value }
     }
   }
 
   const removeCustomFilter = (key: string) => {
-    delete customFilters.value[key]
+    const { [key]: _removed, ...rest } = customFilters.value
+    customFilters.value = rest
   }
 
   const clearAllFilters = () => {

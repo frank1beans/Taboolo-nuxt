@@ -13,10 +13,7 @@ const props = defineProps<{
   };
 }>();
 
-const emit = defineEmits<{
-  (e: 'reset'): void;
-  (e: 'view-details'): void;
-}>();
+defineEmits<(e: 'reset' | 'view-details') => void>();
 
 const statusConfig = computed(() => {
   switch (props.status) {
@@ -63,7 +60,7 @@ const statusConfig = computed(() => {
           <div 
             class="bg-[hsl(var(--primary))] h-1.5 rounded-full transition-all duration-300" 
             :style="{ width: `${progress || 0}%` }"
-          ></div>
+          />
         </div>
 
         <!-- Success Details -->

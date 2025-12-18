@@ -22,6 +22,8 @@ import type {
   ApiSettingsResponse,
   ApiSixImportReport,
   ApiSixEstimatesPreview,
+  ApiXpweEstimatesPreview,
+  ApiXpweImportReport,
   ApiTrendEvolution,
   ApiUser,
   ApiUserProfile,
@@ -559,6 +561,58 @@ export const api = {
     const suffix = query.toString() ? `?${query.toString()}` : '';
 
     return apiFetch<ApiEstimate>(`/projects/${projectId}/offers${suffix}`, {
+      method: "POST",
+      body: formData,
+    });
+  },
+
+  async previewXpweEstimates(
+    projectId: number | string,
+    file: File,
+    options?: { raw?: boolean }
+  ): Promise<ApiXpweEstimatesPreview> {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const query = new URLSearchParams();
+    if (options?.raw) {
+      query.set("mode", "raw");
+    }
+    const suffix = query.toString() ? `?${query.toString()}` : "";
+
+    return apiFetch<ApiXpweEstimatesPreview>(
+      `/projects/${projectId}/import-xpwe/preview${suffix}`,
+      {
+        method: "POST",
+        body: formData,
+      },
+    );
+  },
+
+  async importXpweFile(
+    projectId: number | string,
+    file: File,
+    estimateId?: string | null,
+    options?: {
+      raw?: boolean;
+      wbsMapping?: Record<string, string>;
+    },
+  ): Promise<ApiXpweImportReport> {
+    const formData = new FormData();
+    formData.append("file", file);
+    if (estimateId) {
+      formData.append("estimate_id", estimateId);
+    }
+    if (options?.wbsMapping) {
+      formData.append("wbs_mapping", JSON.stringify(options.wbsMapping));
+    }
+    const query = new URLSearchParams();
+    if (options?.raw) {
+      query.set("mode", "raw");
+    }
+    const suffix = query.toString() ? `?${query.toString()}` : "";
+
+    return apiFetch<ApiXpweImportReport>(`/projects/${projectId}/import-xpwe${suffix}`, {
       method: "POST",
       body: formData,
     });

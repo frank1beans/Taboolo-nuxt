@@ -12,7 +12,9 @@
     }"
   >
     <!-- Header -->
-    <div class="h-[72px] px-4 border-b border-[hsl(var(--border))] flex items-center justify-between flex-shrink-0 bg-[hsl(var(--card))]">
+    <div
+      class="page-header-bar px-4 border-b border-[hsl(var(--border))] flex items-center justify-between flex-shrink-0 bg-[hsl(var(--card))]"
+    >
       <div class="flex items-center gap-2">
         <UIcon name="i-heroicons-list-bullet" class="w-5 h-5 text-[hsl(var(--primary))]" />
         <span class="text-sm font-bold text-[hsl(var(--foreground))] tracking-wide">WBS</span>

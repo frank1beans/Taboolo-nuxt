@@ -1,18 +1,72 @@
 import { defineEventHandler, createError, getRouterParam, getQuery } from 'h3';
 import { Types } from 'mongoose';
 import { EstimateItem, Offer, OfferItem, PriceListItem, WbsNode } from '#models';
-import { serializeDocs } from '#utils/serialize';
 
-// Utility: normalize description (case/accents) for matching consistency if needed later
-const normalizeDescription = (desc: string | undefined): string => {
-  if (!desc) return '';
-  return desc
-    .replace(/_x00[0-9]D_/gi, ' ')
-    .replace(/\r\n|\r|\n/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .toLowerCase()
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+type OfferDoc = {
+  _id: Types.ObjectId | string;
+  company_name?: string | null;
+  round_number?: number | null;
+};
+
+type OfferItemDoc = {
+  offer_id?: Types.ObjectId | string | null;
+  estimate_item_id?: Types.ObjectId | string | null;
+  price_list_item_id?: Types.ObjectId | string | null;
+  quantity?: number | null;
+  unit_price?: number | null;
+};
+
+type PriceListItemDoc = {
+  _id: Types.ObjectId | string;
+  code?: string | null;
+  description?: string | null;
+  unit?: string | null;
+  price?: number | null;
+  wbs_ids?: Array<Types.ObjectId | string> | null;
+};
+
+type BaselineItem = {
+  _id?: Types.ObjectId | string;
+  code?: string | null;
+  description?: string | null;
+  description_extended?: string | null;
+  unit_measure?: string | null;
+  project?: {
+    estimate_id?: Types.ObjectId | string;
+    quantity?: number | null;
+    unit_price?: number | null;
+    amount?: number | null;
+  };
+  wbs_ids?: Array<Types.ObjectId | string> | null;
+  price_list_item_id?: Types.ObjectId | string | null;
+};
+
+type OfferAggregation = {
+  quantita: number;
+  importo_totale: number;
+  prezzo_unitario: number;
+  delta_quantita: number;
+  delta_perc: number;
+  delta_media: number;
+};
+
+type ComparisonRow = {
+  progressivo: number | null;
+  codice: string;
+  descrizione: string;
+  descrizione_estesa: string;
+  um: string;
+  quantita: number;
+  prezzo_unitario_progetto: number;
+  importo_totale_progetto: number;
+  wbs6_code?: string;
+  wbs6_description?: string;
+  wbs7_code?: string;
+  wbs7_description?: string;
+  offerte: Record<string, OfferAggregation>;
+  media_prezzi?: number | null;
+  minimo_prezzi?: number | null;
+  massimo_prezzi?: number | null;
 };
 
 export default defineEventHandler(async (event) => {
@@ -41,11 +95,11 @@ export default defineEventHandler(async (event) => {
   const estimateObjectId = new Types.ObjectId(estimateId);
 
   // 1. Fetch offers matching filters
-  const offerMatch: any = { project_id: projectObjectId, estimate_id: estimateObjectId };
+  const offerMatch: Record<string, unknown> = { project_id: projectObjectId, estimate_id: estimateObjectId };
   if (round !== undefined) offerMatch.round_number = round;
   if (company) offerMatch.company_name = company;
 
-  const offers = await Offer.find(offerMatch).lean();
+  const offers = await Offer.find(offerMatch).lean<OfferDoc[]>();
   if (!offers.length) {
     return { voci: [], imprese: [], rounds: [] };
   }
@@ -62,7 +116,7 @@ export default defineEventHandler(async (event) => {
   }));
 
   // Fetch ALL offers (unfiltered) for complete dropdown options
-  const allOffers = await Offer.find({ project_id: projectObjectId, estimate_id: estimateObjectId }).lean();
+  const allOffers = await Offer.find({ project_id: projectObjectId, estimate_id: estimateObjectId }).lean<OfferDoc[]>();
   const allImprese = Array.from(new Set(allOffers.map(o => o.company_name))).filter(Boolean).map(nome => ({ nome }));
   const allRoundsMap = new Map<number, { numero: number; label: string }>();
   allOffers.forEach((o) => {
@@ -85,34 +139,34 @@ export default defineEventHandler(async (event) => {
   // 2. Fetch baseline items and price list info
   const baselineItems = await EstimateItem.find({ project_id: projectObjectId, 'project.estimate_id': estimateObjectId })
     .select('progressive code description description_extended unit_measure project wbs_ids price_list_item_id')
-    .lean();
+    .lean<BaselineItem[]>();
 
   // Collect price list ids from baseline and offer items
   const offerItemsPriceIds = await OfferItem.find({ offer_id: { $in: offerIds } })
     .select('price_list_item_id')
-    .lean();
+    .lean<OfferItemDoc[]>();
   const pliIdsFromOffers = offerItemsPriceIds
     .map(oi => oi.price_list_item_id)
     .filter(Boolean)
-    .map(id => new Types.ObjectId(id as any));
+    .map(id => new Types.ObjectId(String(id)));
 
   const pliIds = Array.from(new Set([
-    ...baselineItems.map(i => i.price_list_item_id).filter(Boolean).map(id => new Types.ObjectId(id as any)),
+    ...baselineItems.map(i => i.price_list_item_id).filter(Boolean).map(id => new Types.ObjectId(String(id))),
     ...pliIdsFromOffers
   ]));
 
   const priceItems = pliIds.length
     ? await PriceListItem.find({ _id: { $in: pliIds } })
       .select('code description unit price wbs_ids')
-      .lean()
+      .lean<PriceListItemDoc[]>()
     : [];
-  const pliMap = new Map<string, any>();
+  const pliMap = new Map<string, PriceListItemDoc>();
   priceItems.forEach(p => pliMap.set(String(p._id), p));
 
   // WBS metadata: Fetch all WBS nodes for the estimate and build lookup by PLI
   const allWbsIds = new Set<string>();
   priceItems.forEach(p => {
-    (p.wbs_ids || []).forEach((id: any) => allWbsIds.add(String(id)));
+    (p.wbs_ids || []).forEach((id) => allWbsIds.add(String(id)));
   });
 
   const wbsNodes = allWbsIds.size > 0
@@ -128,7 +182,7 @@ export default defineEventHandler(async (event) => {
   const wbsLookup = new Map<string, { wbs6_code?: string; wbs6_description?: string; wbs7_code?: string; wbs7_description?: string }>();
   priceItems.forEach(p => {
     const wbsData: { wbs6_code?: string; wbs6_description?: string; wbs7_code?: string; wbs7_description?: string } = {};
-    (p.wbs_ids || []).forEach((id: any) => {
+    (p.wbs_ids || []).forEach((id) => {
       const node = wbsNodeMap.get(String(id));
       if (node) {
         if (node.level === 6) {
@@ -146,7 +200,7 @@ export default defineEventHandler(async (event) => {
   // 3. Fetch offer items
   const offerItems = await OfferItem.find({ offer_id: { $in: offerIds } })
     .select('offer_id estimate_item_id price_list_item_id quantity unit_price')
-    .lean();
+    .lean<OfferItemDoc[]>();
 
   // Map offers by id -> company name
   const offerCompanyMap = new Map<string, string>();
@@ -169,7 +223,7 @@ export default defineEventHandler(async (event) => {
   });
 
   // Build rows aggregated by PriceListItem (and alias by estimate_item_id to match detailed offers)
-  const rowsMap = new Map<string, any>();
+  const rowsMap = new Map<string, ComparisonRow>();
   baselineItems.forEach((item) => {
     const pliId = item.price_list_item_id;
     if (!pliId) return;
@@ -193,7 +247,7 @@ export default defineEventHandler(async (event) => {
         wbs6_description: wbsData.wbs6_description,
         wbs7_code: wbsData.wbs7_code,
         wbs7_description: wbsData.wbs7_description,
-        offerte: {},
+        offerte: {} as Record<string, OfferAggregation>,
       };
       rowsMap.set(key, row);
     } else {
@@ -249,7 +303,7 @@ export default defineEventHandler(async (event) => {
           wbs6_description: wbsData.wbs6_description,
           wbs7_code: wbsData.wbs7_code,
           wbs7_description: wbsData.wbs7_description,
-          offerte: {},
+          offerte: {} as Record<string, OfferAggregation>,
         };
         rowsMap.set(pliKey, row);
       }
@@ -289,13 +343,13 @@ export default defineEventHandler(async (event) => {
 
   // Post-process offers to compute deltas
   // Deduplicate rows (Set logic)
-  const uniqueRows = Array.from(new Set(rowsMap.values()));
+  const uniqueRows: ComparisonRow[] = Array.from(new Set(rowsMap.values()));
 
   uniqueRows.forEach((row) => {
-    Object.entries(row.offerte).forEach(([compName, off]: [string, any]) => {
-      off.delta_quantita = off.quantita - (row.quantita || 0);
+    Object.values(row.offerte).forEach((offerteEntry) => {
+      offerteEntry.delta_quantita = offerteEntry.quantita - (row.quantita || 0);
       if (row.prezzo_unitario_progetto) {
-        off.delta_perc = ((off.prezzo_unitario - row.prezzo_unitario_progetto) / row.prezzo_unitario_progetto) * 100;
+        offerteEntry.delta_perc = ((offerteEntry.prezzo_unitario - row.prezzo_unitario_progetto) / row.prezzo_unitario_progetto) * 100;
       }
     });
   });
@@ -303,7 +357,7 @@ export default defineEventHandler(async (event) => {
   // Compute min/max/media and delta media per impresa
   uniqueRows.forEach((row) => {
     const prezzi: number[] = [];
-    Object.values(row.offerte || {}).forEach((off: any) => {
+    Object.values(row.offerte || {}).forEach((off) => {
       if (typeof off.prezzo_unitario === 'number') prezzi.push(off.prezzo_unitario);
     });
 
@@ -313,7 +367,7 @@ export default defineEventHandler(async (event) => {
       row.media_prezzi = media;
       row.minimo_prezzi = Math.min(...prezzi);
       row.massimo_prezzi = Math.max(...prezzi);
-      Object.entries(row.offerte || {}).forEach(([imp, off]: any) => {
+      Object.entries(row.offerte || {}).forEach(([, off]) => {
         if (off.prezzo_unitario != null && Math.abs(media) > 1e-9) {
           off.delta_media = ((off.prezzo_unitario - media) / media) * 100;
         }

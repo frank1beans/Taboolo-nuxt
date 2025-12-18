@@ -1,7 +1,14 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
+import type { ColDef, RowNode } from 'ag-grid-community';
 
-const props = defineProps<{ params: any }>();
+type GridNumberParams = {
+  value: unknown;
+  colDef: ColDef;
+  node: RowNode;
+};
+
+const props = defineProps<{ params: GridNumberParams }>();
 
 // Initial value
 const value = ref(props.params.value);
@@ -18,7 +25,7 @@ const onInput = () => {
     const val = value.value === '' ? null : Number(value.value);
     
     if (props.params.colDef.field) {
-        props.params.data[props.params.colDef.field] = val;
+        props.params.node.setDataValue(props.params.colDef.field, val);
     }
 };
 </script>
@@ -32,7 +39,7 @@ const onInput = () => {
       :placeholder="props.params.colDef?.headerName"
       @input="onInput"
       @click.stop 
-    />
+    >
   </div>
 </template>
 

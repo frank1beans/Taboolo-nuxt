@@ -22,7 +22,7 @@ export default defineEventHandler(async (event) => {
   const estimateObjectId = new Types.ObjectId(estimateId);
 
   // Find offers matching filters
-  const offerMatch: any = {
+  const offerMatch: Record<string, unknown> = {
     project_id: projectObjectId,
     estimate_id: estimateObjectId,
   };

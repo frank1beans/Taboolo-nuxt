@@ -75,7 +75,7 @@ export interface RawImportPayload {
     estimate: RawEstimate;
 
     // Legacy / Preview fields
-    preventivi?: any[];
-    estimates?: any[];
+    preventivi?: unknown[];
+    estimates?: unknown[];
     message?: string;
 }

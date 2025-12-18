@@ -6,17 +6,18 @@ export interface DataGridColumn {
   width?: number;
   minWidth?: number;
   maxWidth?: number;
-  filter?: boolean | string;
+  filter?: boolean | 'agTextColumnFilter' | 'agNumberColumnFilter' | string;
   floatingFilter?: boolean;
   sortable?: boolean;
-  valueFormatter?: (params: any) => string;
-  cellRenderer?: string | any;
+  valueFormatter?: (params: { value: unknown; data?: unknown }) => string;
+  cellRenderer?: string | Record<string, unknown>;
   cellClass?: string;
   headerClass?: string;
-  headerComponent?: string | any;
+  headerComponent?: string | Record<string, unknown>;
+  headerComponentParams?: Record<string, unknown>;
   hide?: boolean;
-  valueGetter?: (params: any) => any; // AG Grid Standard
-  valuesGetter?: () => string[];
+  valueGetter?: (params: { data?: unknown }) => unknown;
+  valuesGetter?: () => Array<string | number>;
   pinned?: 'left' | 'right' | boolean | null;
   lockPosition?: boolean | 'left' | 'right';
   suppressHeaderMenuButton?: boolean;
@@ -25,9 +26,7 @@ export interface DataGridColumn {
   suppressSizeToFit?: boolean;
   suppressMovable?: boolean;
   suppressMovableColumns?: boolean;
-  /**
-   * Hint for the grid/filter UI to treat the column as numeric.
-  cellStyle?: any;
+  cellStyle?: Record<string, unknown> | ((params: { value: unknown; data?: unknown }) => Record<string, unknown>);
   /**
    * Column Group Children
    */
@@ -61,7 +60,7 @@ export interface ColumnFilter {
 
 export interface DataGridConfig {
   columns: DataGridColumn[];
-  defaultColDef?: any;
+  defaultColDef?: Partial<DataGridColumn>;
   rowHeight?: number;
   headerHeight?: number;
   groupHeaderHeight?: number;
@@ -71,8 +70,10 @@ export interface DataGridConfig {
   enableQuickFilter?: boolean;
   enableExport?: boolean;
   enableColumnToggle?: boolean;
-  rowClassRules?: Record<string, (params: any) => boolean> | { [cssClassName: string]: string | ((params: any) => boolean) };
-  getRowClass?: (params: any) => string | string[];
+  rowClassRules?: Record<string, (params: { data?: unknown }) => boolean> | {
+    [cssClassName: string]: string | ((params: { data?: unknown }) => boolean);
+  };
+  getRowClass?: (params: { data?: unknown }) => string | string[];
 }
 
 export interface PaginationConfig {
@@ -84,12 +85,12 @@ export interface PaginationConfig {
 export interface DataGridFetchParams {
   page: number;
   pageSize: number;
-  sortModel?: any[];
-  filterModel?: any;
+  sortModel?: unknown[];
+  filterModel?: Record<string, unknown>;
   quickFilter?: string;
 }
 
-export interface DataGridFetchResponse<T = any> {
+export interface DataGridFetchResponse<T = unknown> {
   data: T[];
   total: number;
   page: number;

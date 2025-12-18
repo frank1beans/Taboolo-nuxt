@@ -1,9 +1,11 @@
 export type UnifiedStatus = 'setup' | 'in_progress' | 'completed' | 'archived' | 'warning' | 'unknown';
 
+export type BadgeColor = "warning" | "error" | "primary" | "secondary" | "success" | "info" | "neutral" | undefined;
+
 export interface StatusConfig {
     label: string;
     color: string; // Tailwind classes for raw HTML usage
-    badgeColor: string; // UBadge color prop values
+    badgeColor: BadgeColor; // UBadge color prop values
     icon?: string;
 }
 
@@ -11,37 +13,37 @@ export const UNIFIED_STATUSES: Record<UnifiedStatus, StatusConfig> = {
     setup: {
         label: 'Setup',
         color: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
-        badgeColor: 'gray',
+        badgeColor: 'neutral',
         icon: 'i-heroicons-wrench-screwdriver',
     },
     in_progress: {
         label: 'In Corso',
         color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300',
-        badgeColor: 'yellow',
+        badgeColor: 'warning',
         icon: 'i-heroicons-play',
     },
     completed: {
         label: 'Completo',
         color: 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300',
-        badgeColor: 'green',
+        badgeColor: 'success',
         icon: 'i-heroicons-check-circle',
     },
     archived: {
         label: 'Archiviato',
         color: 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-400',
-        badgeColor: 'slate',
+        badgeColor: 'neutral',
         icon: 'i-heroicons-archive-box',
     },
     warning: {
         label: 'Attenzione',
         color: 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300',
-        badgeColor: 'red',
+        badgeColor: 'error',
         icon: 'i-heroicons-exclamation-triangle',
     },
     unknown: {
         label: '-',
         color: 'bg-gray-50 text-gray-500 dark:bg-gray-800 dark:text-gray-500',
-        badgeColor: 'gray',
+        badgeColor: 'neutral',
     }
 };
 

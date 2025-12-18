@@ -7,6 +7,8 @@ interface ColumnState {
   visible: boolean;
 }
 
+type ColumnGroup = ColumnState & { ids: string[] };
+
 const props = defineProps<{
   open: boolean;
   trigger: HTMLElement | null;
@@ -23,14 +25,13 @@ const popoverRef = ref<HTMLElement | null>(null);
 const searchQuery = ref('');
 
 // Positioning State
-const placement = ref<'left' | 'right'>('right');
 const pos = ref({ top: 0, left: 0 });
 const widthPx = ref(300);
 
 // Filtering & Grouping
-const filteredColumns = computed(() => {
+const filteredColumns = computed<ColumnGroup[]>(() => {
   // Group by headerName
-  const grouped = new Map<string, ColumnState & { ids: string[] }>();
+  const grouped = new Map<string, ColumnGroup>();
   
   props.columns.forEach(col => {
     if (!grouped.has(col.headerName)) {
@@ -50,7 +51,7 @@ const filteredColumns = computed(() => {
   return result;
 });
 
-const toggleGroup = (group: any, visible: boolean) => {
+const toggleGroup = (group: ColumnGroup, visible: boolean) => {
   group.ids.forEach((id: string) => {
     emit('toggle', id, visible);
   });
@@ -58,7 +59,7 @@ const toggleGroup = (group: any, visible: boolean) => {
 
 // Positioning Logic (Adapted from ColumnFilterPopover)
 const updatePosition = () => {
-  if (!process.client || !props.open || !props.trigger || !popoverRef.value) return;
+  if (!import.meta.client || !props.open || !props.trigger || !popoverRef.value) return;
 
   const rect = props.trigger.getBoundingClientRect();
   const margin = 8;
@@ -113,14 +114,14 @@ const onResize = () => {
 };
 
 const setupListeners = () => {
-  if (!process.client) return;
+  if (!import.meta.client) return;
   window.addEventListener('resize', onResize);
   window.addEventListener('scroll', onResize, true);
   window.addEventListener('mousedown', onOutsideClick, true);
 };
 
 const teardownListeners = () => {
-  if (!process.client) return;
+  if (!import.meta.client) return;
   window.removeEventListener('resize', onResize);
   window.removeEventListener('scroll', onResize, true);
   window.removeEventListener('mousedown', onOutsideClick, true);
@@ -160,7 +161,7 @@ onBeforeUnmount(() => {
           <p class="text-[11px] uppercase tracking-wider font-semibold text-[hsl(var(--muted-foreground))]">
             Configura Colonne
           </p>
-          <UButton color="neutral" variant="ghost" icon="i-heroicons-x-mark-20-solid" size="xs" :padded="false" @click="$emit('close')" />
+          <UButton color="neutral" variant="ghost" icon="i-heroicons-x-mark-20-solid" size="xs" :padded="false" @click="emit('close')" />
         </div>
 
         <!-- Search -->
@@ -200,7 +201,7 @@ onBeforeUnmount(() => {
           >
             <span class="text-sm text-[hsl(var(--foreground))] select-none">{{ col.headerName }}</span>
              <div class="relative flex items-center" @click.stop>
-               <UCheckbox :model-value="col.visible" size="sm" @update:model-value="(val: any) => toggleGroup(col, !!val)" />
+               <UCheckbox :model-value="col.visible" size="sm" @update:model-value="(val: boolean) => toggleGroup(col, val)" />
             </div>
           </div>
         </div>
@@ -210,7 +211,7 @@ onBeforeUnmount(() => {
             <button
                type="button"
                class="text-xs text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--primary))] transition-colors"
-               @click="$emit('reset')"
+               @click="emit('reset')"
             >
               Ripristina default
             </button>

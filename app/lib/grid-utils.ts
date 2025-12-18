@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+ 
 import type {
   ColDef,
   ValueFormatterParams,
@@ -458,11 +458,11 @@ export const DEFAULT_GRID_OPTIONS: GridOptions = {
 export interface ExcelExportColumn {
   header: string;
   field: string;
-  valueFormatter?: (row: any) => any;
+  valueFormatter?: (row: Record<string, unknown>) => unknown;
 }
 
 export const exportToExcel = (
-  data: any[],
+  data: Record<string, unknown>[],
   columns: ExcelExportColumn[],
   fileName: string
 ): void => {
@@ -514,11 +514,11 @@ export const getGridThemeClass = (isDarkMode: boolean): string => {
 
 // ============= UTILITY FUNCTIONS =============
 
-export const getRowId = (params: { data: any }): string => {
+export const getRowId = (params: { data: Record<string, unknown> }): string => {
   return params.data.id || params.data.codice || String(Math.random());
 };
 
-const shortenDescription = (text: string | null | undefined, maxLength: number = 80): string => {
+export const shortenDescription = (text: string | null | undefined, maxLength: number = 80): string => {
   if (!text) return "-";
   if (text.length <= maxLength) return text;
   return text.slice(0, maxLength) + "...";
@@ -553,15 +553,15 @@ export interface ExcelJSColumnConfig {
   header: string;
   field: string;
   width?: number;
-  valueFormatter?: (row: any) => any;
+  valueFormatter?: (row: Record<string, unknown>) => unknown;
   // Formula support: return a formula string like "=SUM(A2:A10)"
-  formula?: (row: any, rowIndex: number) => string | null;
+  formula?: (row: Record<string, unknown>, rowIndex: number) => string | null;
   // Styling
   style?: Partial<ExcelJSTypes.Style>;
   // Header styling (applied only to header cells)
   headerStyle?: Partial<ExcelJSTypes.Style>;
   // Cell-specific styling function (takes row data and returns style)
-  cellStyle?: (row: any, rowIndex: number) => Partial<ExcelJSTypes.Style> | null;
+  cellStyle?: (row: Record<string, unknown>, rowIndex: number) => Partial<ExcelJSTypes.Style> | null;
   // Conditional formatting rules
   conditionalFormatting?: ConditionalFormattingRule[];
 }
@@ -571,8 +571,8 @@ export interface ConditionalFormattingRule {
   priority?: number;
   // For cellIs type
   operator?: "lessThan" | "greaterThan" | "equal" | "between" | "containsText";
-  value?: any;
-  value2?: any; // For "between" operator
+  value?: string | number | boolean | null;
+  value2?: string | number | boolean | null; // For "between" operator
   // For expression type
   formula?: string;
   // Styling to apply when condition is met
@@ -596,8 +596,8 @@ export interface GlobalConditionalFormatting {
     type: "expression" | "cellIs" | "colorScale" | "dataBar";
     formula?: string;
     operator?: "lessThan" | "greaterThan" | "equal" | "between" | "containsText";
-    value?: any;
-    value2?: any;
+    value?: string | number | boolean | null;
+    value2?: string | number | boolean | null;
     style?: Partial<ExcelJSTypes.Style>;
     colorScale?: {
       min?: { color: { argb: string } };
@@ -611,7 +611,7 @@ export interface ExcelJSExportOptions {
   fileName: string;
   sheetName?: string;
   columns: ExcelJSColumnConfig[];
-  data: any[];
+  data: Array<Record<string, unknown>>;
   // Global styles
   headerStyle?: Partial<ExcelJSTypes.Style>;
   dataStyle?: Partial<ExcelJSTypes.Style>;
@@ -681,7 +681,7 @@ export const exportToExcelJS = async (options: ExcelJSExportOptions): Promise<vo
 
   // Add data rows
   data.forEach((row, rowIndex) => {
-    const excelRow: any = {};
+    const excelRow: Record<string, unknown> = {};
 
     columns.forEach((col) => {
       // Check if there's a formula in column config
@@ -765,7 +765,7 @@ export const exportToExcelJS = async (options: ExcelJSExportOptions): Promise<vo
               formulae: [String(rule.value), rule.value2 ? String(rule.value2) : undefined].filter(
                 Boolean
               ) as string[],
-              style: rule.style as any,
+              style: rule.style,
               priority: rule.priority ?? 1,
             },
           ],
@@ -777,7 +777,7 @@ export const exportToExcelJS = async (options: ExcelJSExportOptions): Promise<vo
             {
               type: "expression",
               formulae: [rule.formula],
-              style: rule.style as any,
+              style: rule.style,
               priority: rule.priority ?? 1,
             },
           ],
@@ -799,7 +799,7 @@ export const exportToExcelJS = async (options: ExcelJSExportOptions): Promise<vo
                   ? [{ argb: rule.colorScale.mid.color.replace("#", "FF") }]
                   : []),
                 rule.colorScale.max ? { argb: rule.colorScale.max.color.replace("#", "FF") } : undefined,
-              ].filter(Boolean) as any[],
+              ].filter(Boolean) as { argb: string }[],
               priority: rule.priority ?? 1,
             },
           ],
@@ -814,7 +814,7 @@ export const exportToExcelJS = async (options: ExcelJSExportOptions): Promise<vo
               color: rule.dataBar.color.replace("#", ""),
               showValue: rule.dataBar.showValue ?? true,
               priority: rule.priority ?? 1,
-            } as any,
+            },
           ],
         });
       }
@@ -832,7 +832,7 @@ export const exportToExcelJS = async (options: ExcelJSExportOptions): Promise<vo
               {
                 type: "expression",
                 formulae: [rule.formula],
-                style: rule.style as any,
+                style: rule.style,
                 priority: 1,
               },
             ],
@@ -847,7 +847,7 @@ export const exportToExcelJS = async (options: ExcelJSExportOptions): Promise<vo
                 formulae: [String(rule.value), rule.value2 ? String(rule.value2) : undefined].filter(
                   Boolean
                 ) as string[],
-                style: rule.style as any,
+                style: rule.style,
                 priority: 1,
               },
             ],
@@ -867,7 +867,7 @@ export const exportToExcelJS = async (options: ExcelJSExportOptions): Promise<vo
                   rule.colorScale.min,
                   ...(rule.colorScale.mid ? [rule.colorScale.mid] : []),
                   rule.colorScale.max,
-                ].filter(Boolean) as any[],
+                ].filter((c): c is { color: { argb: string } } => Boolean(c)),
                 priority: 1,
               },
             ],

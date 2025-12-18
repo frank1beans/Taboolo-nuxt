@@ -26,7 +26,7 @@ export default defineEventHandler(async (event) => {
             // ---------------------------------------------------------
 
             // A. Find matching Offers
-            const offerMatch: any = {
+            const offerMatch: Record<string, unknown> = {
                 project_id: validProjectId,
                 estimate_id: validEstimateId
             };

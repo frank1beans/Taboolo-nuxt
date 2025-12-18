@@ -1,15 +1,18 @@
-import { type Ref } from 'vue';
+import type { Ref } from 'vue';
+import type { GridApi, RowNode } from 'ag-grid-community';
 import * as XLSX from 'xlsx';
 
-export function useDataGridExport(gridApi: Ref<any>) {
+type RowData = Record<string, unknown>;
+
+export function useDataGridExport(gridApi: Ref<GridApi | null>) {
   const exportToXlsx = (filename: string = 'export.xlsx') => {
     if (!gridApi.value) return;
 
-    const rowData: any[] = [];
+    const rowData: RowData[] = [];
 
     // Export solo righe visibili dopo filtri
-    gridApi.value.forEachNodeAfterFilter((node: any) => {
-      rowData.push(node.data);
+    gridApi.value.forEachNodeAfterFilter((node: RowNode<RowData>) => {
+      if (node.data) rowData.push(node.data);
     });
 
     if (rowData.length === 0) {
@@ -31,10 +34,10 @@ export function useDataGridExport(gridApi: Ref<any>) {
   const exportToCsv = (filename: string = 'export.csv') => {
     if (!gridApi.value) return;
 
-    const rowData: any[] = [];
+    const rowData: RowData[] = [];
 
-    gridApi.value.forEachNodeAfterFilter((node: any) => {
-      rowData.push(node.data);
+    gridApi.value.forEachNodeAfterFilter((node: RowNode<RowData>) => {
+      if (node.data) rowData.push(node.data);
     });
 
     if (rowData.length === 0) {

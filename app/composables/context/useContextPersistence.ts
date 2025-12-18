@@ -1,7 +1,7 @@
 const STORAGE_KEY = 'taboolo:current-context'
 
 export const persistClient = (currentProjectId: string | null, currentEstimateId: string | null) => {
-    if (!process.client) return
+    if (!import.meta.client) return
     try {
         localStorage.setItem(
             STORAGE_KEY,
@@ -16,7 +16,7 @@ export const persistClient = (currentProjectId: string | null, currentEstimateId
 }
 
 export const restoreFromClient = (): { currentProjectId: string | null; currentEstimateId: string | null } | null => {
-    if (!process.client) return null
+    if (!import.meta.client) return null
     try {
         const raw = localStorage.getItem(STORAGE_KEY)
         if (!raw) return null

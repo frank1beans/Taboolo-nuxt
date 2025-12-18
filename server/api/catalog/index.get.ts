@@ -4,7 +4,7 @@ import { serializeDocs } from '#utils/serialize';
 
 export default defineEventHandler(async (event) => {
   const queryParams = getQuery(event);
-  const filters: any = {};
+  const filters: Record<string, unknown> = {};
 
   if (queryParams.search) {
     const regex = new RegExp(String(queryParams.search), 'i');

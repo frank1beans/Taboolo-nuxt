@@ -3,7 +3,9 @@ import { computed } from 'vue';
 import { getStatusConfig } from '~/utils/status-mappings';
 
 const props = defineProps<{
-  params: any;
+  params: {
+    value?: string | null;
+  };
 }>();
 
 const rawStatus = computed(() => props.params.value);

@@ -39,7 +39,8 @@ const loadProjectContext = async (projectId: string | null) => {
       currentEstimateId.value = null
     }
   } catch (error) {
-    const status = (error as any)?.statusCode ?? (error as any)?.response?.status
+    const status = (error as { statusCode?: number; response?: { status?: number } } | undefined)?.statusCode
+      ?? (error as { statusCode?: number; response?: { status?: number } } | undefined)?.response?.status
     if (status === 404) {
       // Project no longer exists: clear context gracefully
       currentProjectId.value = null
@@ -137,7 +138,7 @@ const hydrateFromApi = async () => {
 watch(
   [currentProjectId, currentEstimateId],
   () => {
-    if (process.client) persistClient()
+    if (import.meta.client) persistClient()
   },
   { deep: true },
 )

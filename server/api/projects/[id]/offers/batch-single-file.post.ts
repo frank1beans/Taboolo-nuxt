@@ -52,7 +52,7 @@ export default defineEventHandler(async (event) => {
         mode: est.mode || result?.mode || 'aggregated',
       },
     };
-    await persistOffer(payload as any, projectId);
+    await persistOffer(payload, projectId);
   }
 
   return mapped;

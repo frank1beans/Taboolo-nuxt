@@ -1,16 +1,16 @@
 <script setup lang="ts">
 import { ref, computed, watch, triggerRef } from 'vue';
 import { AgGridVue } from 'ag-grid-vue3';
-import { AllCommunityModule, ModuleRegistry } from 'ag-grid-community';
+import { AllCommunityModule, ModuleRegistry, type ColDef, type ValueGetterParams, type ICellRendererParams, type ValueSetterParams } from 'ag-grid-community';
 import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-quartz.css';
-import type { ColDef } from 'ag-grid-community';
 import { useExcelReader } from '~/composables/useExcelReader';
 import { api } from '~/lib/api-client';
 import GridInputCell from './import-wizard/GridInputCell.vue';
 import GridSelectCell from './import-wizard/GridSelectCell.vue';
 import GridNumberCell from './import-wizard/GridNumberCell.vue';
 import { toast } from 'vue-sonner';
+import type { ApiEstimate, ApiProjectDetail } from '~/types/api';
 
 ModuleRegistry.registerModules([AllCommunityModule]);
 
@@ -70,29 +70,24 @@ const submissionMessage = ref<string>('');
 const submissionDetails = ref<string>('');
 
 onMounted(async () => {
-    try {
-        const project = await api.getProject(props.projectId);
-        if (project.estimates) {
-            // Filter only valid baselines (exclude other offers? or include all?)
-            // Usually we link to a Project Estimate, not another Offer.
-            // Let's filter by type='project' if possible, or assume all are candidates.
-            // Api type might not have 'type', check runtime or assume all.
-            // Ideally filter out type='offer'.
-            estimateOptions.value = project.estimates
-                .filter((e: any) => e.type !== 'offer')
-                .map((e: any) => ({
-                    id: e.id || e._id,
-                    label: e.description || e.name || 'Senza nome'
-                }));
-                
-            // Auto-select if only one
-            if (estimateOptions.value.length === 1) {
-                selectedEstimateId.value = estimateOptions.value[0].id;
-            }
-        }
-    } catch (e) {
-        console.error("Failed to load project estimates", e);
+  try {
+    const project = await api.getProject(props.projectId) as ApiProjectDetail;
+    if (project.estimates) {
+      estimateOptions.value = project.estimates
+        .filter((e: ApiEstimate) => e.type !== 'offer')
+        .map((e: ApiEstimate) => ({
+          id: e.id || (e as unknown as { _id?: string })._id || '',
+          label: e.description || e.name || 'Senza nome',
+        }))
+        .filter(opt => !!opt.id);
+
+      if (estimateOptions.value.length === 1) {
+        selectedEstimateId.value = estimateOptions.value[0].id;
+      }
     }
+  } catch (e) {
+    console.error("Failed to load project estimates", e);
+  }
 });
 
 const { readHeadersFromFile, autoDetectColumns } = useExcelReader();
@@ -172,9 +167,9 @@ const fileColDefs = computed<ColDef[]>(() => {
       editable: false,
       flex: 1,
       cellRenderer: GridSelectCell,
-      cellRendererParams: (params: any) => ({
+      cellRendererParams: (params: ICellRendererParams<FileEntry>) => ({
         values: params.data?.sheets || [],
-        onValueChange: (val: string) => onSheetChanged(params.data.id, val),
+        onValueChange: (val: string) => params.data && onSheetChanged(params.data.id, val),
       }),
       cellClass: 'cell-no-padding',
     },
@@ -183,7 +178,7 @@ const fileColDefs = computed<ColDef[]>(() => {
       headerName: 'Colonne',
       editable: false,
       width: 100,
-      valueGetter: (p: any) => p.data?.headers?.length || 0,
+      valueGetter: (p: ValueGetterParams<FileEntry, number>) => p.data?.headers?.length || 0,
       cellClass: 'cell-muted text-center',
     },
   );
@@ -195,7 +190,7 @@ const fileColDefs = computed<ColDef[]>(() => {
       editable: true,
       width: 90,
       cellEditor: 'agNumberCellEditor',
-      valueSetter: (params) => {
+      valueSetter: (params: ValueSetterParams<FileEntry>) => {
         const parsed = Number(params.newValue);
         params.data.round = Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
         return true;
@@ -209,7 +204,7 @@ const fileColDefs = computed<ColDef[]>(() => {
     width: 60,
     editable: false,
     cellRenderer: () => '<button class="grid-remove" aria-label="Rimuovi">X</button>',
-    onCellClicked: (params: any) => removeFile(params.data?.id),
+    onCellClicked: (params: ICellRendererParams<FileEntry>) => params.data && removeFile(params.data.id),
   });
 
   return cols;
@@ -278,7 +273,7 @@ const multiCompanyColDefs = computed<ColDef[]>(() => [
     editable: false,
     cellRenderer: () =>
       multiCompanyRows.value.length > 1 ? '<button class="grid-remove" aria-label="Rimuovi">X</button>' : '',
-    onCellClicked: (p: any) => removeMultiRow(p.data?.id),
+    onCellClicked: (p: ICellRendererParams<MultiCompanyRow>) => p.data && removeMultiRow(p.data.id),
   },
 ]);
 
@@ -289,7 +284,7 @@ const defaultColDef: ColDef = {
 };
 
 const fileRowClassRules = computed(() => ({
-  'row-missing': (params: any) => uploadType.value !== 'multi' && !params.data?.impresa?.trim(),
+  'row-missing': (params: ValueGetterParams<FileEntry>) => uploadType.value !== 'multi' && !params.data?.impresa?.trim(),
 }));
 
 // ==================== WATCH ====================
@@ -437,11 +432,11 @@ const submit = async () => {
           const roundNum = entry.round;
           await uploadSingle(entry, company, roundNum);
           successes.push({ file: entry.fileName, company });
-        } catch (err: any) {
+        } catch (err) {
           failures.push({
             file: entry.fileName,
             company: entry.impresa,
-            error: err?.message || 'Errore sconosciuto',
+            error: err instanceof Error ? err.message : 'Errore sconosciuto',
           });
         }
       }
@@ -539,7 +534,7 @@ const forceUpdateMulti = () => triggerRef(multiCompanyRows);
         :color="submissionState === 'error' ? 'red' : submissionState === 'success' ? 'green' : 'blue'"
         variant="soft"
       >
-        <template #actions v-if="submissionState === 'loading'">
+        <template v-if="submissionState === 'loading'" #actions>
           <UProgress :value="undefined" color="primary" size="xs" class="w-36" />
         </template>
       </UAlert>
@@ -587,7 +582,7 @@ const forceUpdateMulti = () => triggerRef(multiCompanyRows);
               class="flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-all"
               :class="uploadType === t.id ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20' : 'border-neutral-200 dark:border-neutral-700'"
             >
-              <input v-model="uploadType" :value="t.id" type="radio" class="mt-1" />
+              <input v-model="uploadType" :value="t.id" type="radio" class="mt-1" >
               <UIcon :name="t.icon" class="mt-0.5 h-5 w-5 text-neutral-500" />
               <div class="flex-1">
                 <div class="text-sm font-medium">{{ t.title }}</div>
@@ -658,16 +653,16 @@ const forceUpdateMulti = () => triggerRef(multiCompanyRows);
           <AgGridVue
             :class="[themeClass, 'w-full rounded border border-neutral-200 dark:border-neutral-700']"
             :style="{ height: Math.max(120, 52 + files.length * 44) + 'px' }"
-            :columnDefs="fileColDefs"
-            :rowData="files"
-            :defaultColDef="defaultColDef"
-            :getRowId="(params) => params.data?.id"
-            :headerHeight="36"
-            :rowHeight="42"
-            :rowClassRules="fileRowClassRules"
+            :column-defs="fileColDefs"
+            :row-data="files"
+            :default-col-def="defaultColDef"
+            :get-row-id="(params) => params.data?.id"
+            :header-height="36"
+            :row-height="42"
+            :row-class-rules="fileRowClassRules"
             theme="legacy"
-            :singleClickEdit="true"
-            :stopEditingWhenCellsLoseFocus="true"
+            :single-click-edit="true"
+            :stop-editing-when-cells-lose-focus="true"
             @cell-value-changed="forceUpdateFiles"
           />
         </ClientOnly>
@@ -696,15 +691,15 @@ const forceUpdateMulti = () => triggerRef(multiCompanyRows);
           <AgGridVue
             :class="[themeClass, 'w-full rounded border border-neutral-200 dark:border-neutral-700']"
             :style="{ height: Math.max(120, 52 + mappingRows.length * 44) + 'px' }"
-            :columnDefs="mappingColDefs"
-            :rowData="mappingRows"
-            :defaultColDef="defaultColDef"
-            :getRowId="(params) => params.data?.id"
-            :headerHeight="36"
-            :rowHeight="42"
+            :column-defs="mappingColDefs"
+            :row-data="mappingRows"
+            :default-col-def="defaultColDef"
+            :get-row-id="(params) => params.data?.id"
+            :header-height="36"
+            :row-height="42"
             theme="legacy"
-            :singleClickEdit="true"
-            :stopEditingWhenCellsLoseFocus="true"
+            :single-click-edit="true"
+            :stop-editing-when-cells-lose-focus="true"
             @cell-value-changed="forceUpdateMappings"
           />
         </ClientOnly>
@@ -721,15 +716,15 @@ const forceUpdateMulti = () => triggerRef(multiCompanyRows);
             <AgGridVue
               :class="[themeClass, 'w-full rounded border border-neutral-200 dark:border-neutral-700']"
               :style="{ height: Math.max(120, 52 + multiCompanyRows.length * 44) + 'px' }"
-              :columnDefs="multiCompanyColDefs"
-              :rowData="multiCompanyRows"
-              :defaultColDef="defaultColDef"
-              :getRowId="(params) => params.data?.id"
-              :headerHeight="36"
-              :rowHeight="42"
+              :column-defs="multiCompanyColDefs"
+              :row-data="multiCompanyRows"
+              :default-col-def="defaultColDef"
+              :get-row-id="(params) => params.data?.id"
+              :header-height="36"
+              :row-height="42"
               theme="legacy"
-              :singleClickEdit="true"
-              :stopEditingWhenCellsLoseFocus="true"
+              :single-click-edit="true"
+              :stop-editing-when-cells-lose-focus="true"
               @cell-value-changed="forceUpdateMulti"
             />
           </ClientOnly>

@@ -8,6 +8,12 @@ export interface WbsNode {
   children?: WbsNode[]
 }
 
+export interface WbsLevel {
+  code: string
+  name?: string
+  level?: number
+}
+
 export interface WithWbsHierarchy {
   wbs_hierarchy?: {
     [key: string]: string | undefined
@@ -21,32 +27,82 @@ export interface WithWbsHierarchy {
   }
 }
 
-export function useWbsTree<T extends WithWbsHierarchy>(rowData: Ref<T[]>) {
+export function useWbsTree<T extends WithWbsHierarchy>(
+  rowData: Ref<T[]>,
+  options?: {
+    getLevels?: (item: T) => WbsLevel[]
+  }
+) {
   const selectedWbsNode = ref<WbsNode | null>(null)
   const wbsSidebarVisible = ref(true)
+
+  const extractLevels = (item: T): WbsLevel[] => {
+    if (options?.getLevels) {
+      return (options.getLevels(item) || []).filter((lvl) => Boolean(lvl?.code))
+    }
+
+    const hierarchy = (item as WithWbsHierarchy).wbs_hierarchy || {}
+    const levels: WbsLevel[] = []
+
+    // GAP FILLING LOGIC (Specific User Request)
+    // If wbs01 is missing but ANY other level (wbs02..wbs07) exists, inject a "(Nessuno)" Level 1
+    // This groups orphaned items (starting at L2, L3, etc.) under a common "None" parent.
+    const hasL1 = !!hierarchy['wbs01']
+    let hasAnyOther = false
+
+    if (!hasL1) {
+      for (let i = 2; i <= 7; i++) {
+        if (hierarchy[`wbs0${i}`]) {
+          hasAnyOther = true
+          break
+        }
+      }
+    }
+
+    if (!hasL1 && hasAnyOther) {
+      levels.push({
+        code: '(Nessuno)',
+        name: '(Nessuno)',
+        level: 1
+      })
+    }
+
+    for (let level = 1; level <= 7; level++) {
+      const key = `wbs0${level}`
+      const value = hierarchy[key]
+
+      if (value) {
+        levels.push({
+          code: value,
+          name: value,
+          level,
+        })
+      }
+    }
+
+    return levels
+  }
 
   const wbsNodes = computed<WbsNode[]>(() => {
     const nodeMap = new Map<string, WbsNode>()
 
     for (const item of rowData.value as T[]) {
-      const hierarchy = item.wbs_hierarchy || {}
-      let pathParts: string[] = []
+      const levels = extractLevels(item)
+      const pathParts: string[] = []
 
-      for (let level = 1; level <= 7; level++) {
-        const key = `wbs0${level}`
-        const value = hierarchy[key]
+      levels.forEach((lvl, index) => {
+        if (!lvl.code) return
 
-        if (!value) continue
-
-        pathParts.push(value)
+        pathParts.push(lvl.code)
         const fullPath = pathParts.join('/')
+        const levelNumber = lvl.level ?? index + 1
 
         if (!nodeMap.has(fullPath)) {
           nodeMap.set(fullPath, {
             id: fullPath,
-            code: value.length > 25 ? value.substring(0, 25) + '...' : value,
-            name: value,
-            level: level,
+            code: lvl.code.length > 25 ? lvl.code.substring(0, 25) + '...' : lvl.code,
+            name: lvl.name || lvl.code,
+            level: levelNumber,
             children: [],
           })
         }
@@ -61,7 +117,7 @@ export function useWbsTree<T extends WithWbsHierarchy>(rowData: Ref<T[]>) {
             parentNode.children.push(currentNode)
           }
         }
-      }
+      })
     }
 
     const rootNodes: WbsNode[] = []
@@ -97,16 +153,7 @@ export function useWbsTree<T extends WithWbsHierarchy>(rowData: Ref<T[]>) {
     const pathSegments = selectedPath.split('/')
 
     return (rowData.value as T[]).filter(item => {
-      const hierarchy = item.wbs_hierarchy || {}
-      const itemPath: string[] = []
-
-      for (let level = 1; level <= 7; level++) {
-        const key = `wbs0${level}`
-        const value = hierarchy[key]
-        if (value) {
-          itemPath.push(value)
-        }
-      }
+      const itemPath = extractLevels(item).map((lvl) => lvl.code)
 
       if (pathSegments.length > itemPath.length) {
         return false

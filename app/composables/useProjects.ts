@@ -17,7 +17,7 @@ export function useProjects() {
 
     try {
       // Build query params
-      const queryParams: Record<string, any> = {
+      const queryParams: Record<string, string | number | undefined> = {
         page: params.page,
         pageSize: params.pageSize,
       };
@@ -29,7 +29,7 @@ export function useProjects() {
 
       // Add sorting
       if (params.sortModel && params.sortModel.length > 0) {
-        const sortModel = params.sortModel[0];
+        const sortModel = params.sortModel[0] as { colId?: string; sort?: string };
         queryParams.sort = sortModel.colId;
         queryParams.order = sortModel.sort;
       }

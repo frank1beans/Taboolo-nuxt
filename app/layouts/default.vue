@@ -34,7 +34,7 @@ const activeNodeId = computed(() => {
       // Add dummy base to parse relative URLs
       const url = new URL(urlString, 'http://dummy') 
       return Object.fromEntries(url.searchParams.entries())
-    } catch (e) {
+    } catch {
       return {}
     }
   }
@@ -42,7 +42,7 @@ const activeNodeId = computed(() => {
   // Find all potential matches
   const candidates: { id: string; score: number }[] = []
 
-  const traverse = (nodes: any[]) => {
+  const traverse = (nodes: Array<{ id: string; to?: string; children?: unknown[] }>) => {
     for (const node of nodes) {
       if (node.to) {
         // Split path and query
