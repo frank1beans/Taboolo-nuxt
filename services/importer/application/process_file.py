@@ -1,6 +1,13 @@
-from typing import Any, Dict, Optional
+"""
+Process File Use Case - Main entry point for file processing.
+
+This module orchestrates file parsing using the appropriate parser.
+"""
+
+from typing import Optional
 from registry import get_parser
-from schemas.domain import NormalizedEstimate
+from domain import NormalizedEstimate
+
 
 def process_file_content(
     file_content: bytes, 
@@ -21,6 +28,7 @@ def process_file_content(
     parser = get_parser(format_hint)
     estimate = parser.parse(file_content, filename=filename)
     return estimate
+
 
 def process_file_path(file_path: str, format_hint: str) -> NormalizedEstimate:
     """

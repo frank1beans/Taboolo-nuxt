@@ -27,9 +27,9 @@ export interface IEstimateItem {
   price_list_item_id: string; // Foreign Key
 
   // Identification (Overrides only)
+  // Identification (Overrides only)
   code?: string;
-  description?: string;
-  description_extended?: string;
+  // description/extended removed - sourced from PL
   unit_measure?: string;
 
   // Ordering/Grouping
@@ -56,8 +56,7 @@ const EstimateItemSchema = new Schema<IEstimateItem>({
   price_list_item_id: { type: String, required: true, index: true },
 
   code: { type: String }, // Optional
-  description: { type: String }, // Optional
-  description_extended: { type: String },
+  // description fields removed
   unit_measure: { type: String }, // Optional
 
   progressive: { type: Number },

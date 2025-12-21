@@ -26,7 +26,7 @@ export async function previewSixImport(event: H3Event, projectId?: string) {
     `/commesse/${id}/import-six/preview`,
     { method: 'POST' }
   );
-  return mapSixPreview(result);
+  return mapSixPreview(result as any);
 }
 
 export async function runSixImport(event: H3Event, projectId?: string) {
@@ -36,27 +36,27 @@ export async function runSixImport(event: H3Event, projectId?: string) {
     `/commesse/${id}/import-six`,
     { method: 'POST', mapFieldName: sixFieldMap }
   );
-  return mapSixImportReport(result);
+  return mapSixImportReport(result as any);
 }
 
 export async function previewSixImportRaw(event: H3Event, projectId?: string) {
   const id = assertProjectId(projectId);
   const result = await proxyMultipartToPython(
     event,
-    `/commesse/${id}/import-six/raw/preview`,
+    `/commesse/${id}/import-six/preview`,
     { method: 'POST' }
   );
   console.log('[Nitro DEBUG] Raw Preview Result from Python:', JSON.stringify(result, null, 2));
-  return mapRawPreview(result);
+  return mapRawPreview(result as any);
 }
 
 export async function runSixImportRaw(event: H3Event, projectId?: string): Promise<RawImportPayload> {
   const id = assertProjectId(projectId);
   const result = await proxyMultipartToPython(
     event,
-    `/commesse/${id}/import-six/raw`,
+    `/commesse/${id}/import-six`,
     { method: 'POST', mapFieldName: sixFieldMap }
   );
-  return mapRawImportPayload(result);
+  return mapRawImportPayload(result as any) as RawImportPayload;
 }
 

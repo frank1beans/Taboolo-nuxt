@@ -10,10 +10,12 @@ const props = defineProps<{
     totalItems?: number;
     wbsNodes?: number;
     message?: string;
+    estimateId?: string;
   };
+  actionLabel?: string;
 }>();
 
-defineEmits<(e: 'reset' | 'view-details') => void>();
+defineEmits<(e: 'reset' | 'action') => void>();
 
 const statusConfig = computed(() => {
   switch (props.status) {
@@ -84,6 +86,14 @@ const statusConfig = computed(() => {
 
       <!-- Actions -->
       <div class="flex-shrink-0 flex items-center gap-2">
+         <UButton 
+          v-if="status === 'success' && actionLabel"
+          color="primary" 
+          variant="soft" 
+          :label="actionLabel"
+          size="xs"
+          @click="$emit('action')"
+        />
          <UButton 
           v-if="status === 'success' || status === 'error'"
           color="neutral" 

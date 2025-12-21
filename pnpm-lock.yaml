@@ -32,6 +32,9 @@ importers:
       '@tanstack/vue-query':
         specifier: ^5.92.1
         version: 5.92.1(vue@3.5.25(typescript@5.9.3))
+      '@types/plotly.js-dist-min':
+        specifier: ^2.3.4
+        version: 2.3.4
       ag-grid-community:
         specifier: ^34.3.1
         version: 34.3.1
@@ -62,6 +65,12 @@ importers:
       pinia:
         specifier: ^3.0.4
         version: 3.0.4(typescript@5.9.3)(vue@3.5.25(typescript@5.9.3))
+      plotly:
+        specifier: ^1.0.6
+        version: 1.0.6
+      plotly.js-dist-min:
+        specifier: ^3.3.1
+        version: 3.3.1
       tailwind-merge:
         specifier: ^3.4.0
         version: 3.4.0
@@ -1986,6 +1995,12 @@ packages:
   '@types/parse-path@7.1.0':
     resolution: {integrity: sha512-EULJ8LApcVEPbrfND0cRQqutIOdiIgJ1Mgrhpy755r14xMohPTEpkV/k28SJvuOs9bHRFW8x+KeDAEPiGQPB9Q==}
     deprecated: This is a stub types definition. parse-path provides its own type definitions, so you do not need this installed.
+
+  '@types/plotly.js-dist-min@2.3.4':
+    resolution: {integrity: sha512-ISwLFV6Zs/v3DkaRFLyk2rvYAfVdnYP2VVVy7h+fBDWw52sn7sMUzytkWiN4M75uxr1uz1uiBioePTDpAfoFIg==}
+
+  '@types/plotly.js@3.0.8':
+    resolution: {integrity: sha512-FjmSFaLmHVgBIBL6H0yX5k/AB3a7FQzjKBlRUF8YT6HiXMArE+hbXYIZXZ/42SBrdL05LWEog0zPqEaIDNsAiw==}
 
   '@types/resolve@1.20.2':
     resolution: {integrity: sha512-60BCwRFOZCQhDncwQdxxeOEEkbc5dIMccYLwbxsS4TUNeVECQ/pBJ0j09mrHOl/JJvpRPGwO9SvE4nR2Nb/a4Q==}
@@ -4585,6 +4600,12 @@ packages:
 
   pkg-types@2.3.0:
     resolution: {integrity: sha512-SIqCzDRg0s9npO5XQ3tNZioRY1uK06lA41ynBC1YmFTmnY6FjUjVt6s4LoADmwoig1qqD0oK8h1p/8mlMx8Oig==}
+
+  plotly.js-dist-min@3.3.1:
+    resolution: {integrity: sha512-ZxKM9DlEoEF3wBzGRPGHt6gWTJrm5N81J9AgX9UBX/Qjc9L4lRxtPBPq+RmBJWoA71j1X5Z1ouuguLkdoo88tg==}
+
+  plotly@1.0.6:
+    resolution: {integrity: sha512-9DoPWfLJWxqXg6omu1Oj7qkvyOce0Nv+X+2SOoI9lG9mbvA7S/qGVHypwrGMV3r53ruW1Fl1A9a7ZIPt22FrpA==}
 
   pluralize@8.0.0:
     resolution: {integrity: sha512-Nc3IT5yHzflTfbjgqWcCPpo7DaKy4FnpB0l/zCAW0Tc7jxAiuqSxHasntB3D7887LSrA93kDJ9IXovxJYxyLCA==}
@@ -7942,6 +7963,12 @@ snapshots:
     dependencies:
       parse-path: 7.1.0
 
+  '@types/plotly.js-dist-min@2.3.4':
+    dependencies:
+      '@types/plotly.js': 3.0.8
+
+  '@types/plotly.js@3.0.8': {}
+
   '@types/resolve@1.20.2': {}
 
   '@types/web-bluetooth@0.0.20': {}
@@ -10907,6 +10934,12 @@ snapshots:
       confbox: 0.2.2
       exsolve: 1.0.8
       pathe: 2.0.3
+
+  plotly.js-dist-min@3.3.1: {}
+
+  plotly@1.0.6:
+    dependencies:
+      mkdirp: 0.5.6
 
   pluralize@8.0.0: {}
 

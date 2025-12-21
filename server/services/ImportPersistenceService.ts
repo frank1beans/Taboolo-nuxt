@@ -27,6 +27,7 @@ type PythonPriceListItem = {
     unit?: string;
     price?: number;
     priceListId?: string;
+    embedding?: number[];
 };
 
 type PythonEstimateItem = {
@@ -37,6 +38,8 @@ type PythonEstimateItem = {
     groupIds?: string[];
     quantity?: number;
     total_quantity?: number;
+    unitPrice?: number;     // Correct price from measurement's price list (camelCase)
+    unit_price?: number;    // Correct price from measurement's price list (snake_case)
     measurements?: unknown[];
     progressive?: number;
     order?: number;
@@ -144,206 +147,228 @@ async function persistProjectEstimate(payload: PythonImportResult, projectId: st
     console.log(`[Persistence] Processing Project/Baseline import for project ${projectId}...`);
     const projectObjectId = new Types.ObjectId(projectId);
 
-        // Ensure estimate id is known up-front (per-estimate namespace)
-        const estData = payload.estimate;
-        const existingEst = await Estimate.findOne({ project_id: projectObjectId, name: estData.name });
-        const estimateId: Types.ObjectId = existingEst?._id ?? new Types.ObjectId();
+    // Ensure estimate id is known up-front (per-estimate namespace)
+    const estData = payload.estimate;
+    const existingEst = await Estimate.findOne({ project_id: projectObjectId, name: estData.name });
+    const estimateId: Types.ObjectId = existingEst?._id ?? new Types.ObjectId();
 
-        // 1. Groups (WBS) per estimate
-        const groupMap = new Map<string, Types.ObjectId>();
-        const debugGroupIds: string[] = [];
+    // 1. Groups (WBS) per estimate
+    const groupMap = new Map<string, Types.ObjectId>();
+    const debugGroupIds: string[] = [];
 
-        for (const g of payload.groups) {
-            const newId = new Types.ObjectId();
-            const sourceId = g._id || g.id;
-            groupMap.set(sourceId, newId);
-            if (debugGroupIds.length < 20) debugGroupIds.push(sourceId);
+    for (const g of payload.groups) {
+        const newId = new Types.ObjectId();
+        const sourceId = g._id || g.id;
+        groupMap.set(sourceId, newId);
+        if (debugGroupIds.length < 20) debugGroupIds.push(sourceId);
+    }
+
+    const wbsDocs = payload.groups.map(g => {
+        const mappedId = groupMap.get(g._id || g.id);
+        const mappedParent = g.parentId ? groupMap.get(g.parentId) : undefined;
+
+        return {
+            _id: mappedId,
+            project_id: projectObjectId,
+            estimate_id: estimateId,
+            parent_id: mappedParent,
+            type: g.type || (g.level > 0 ? 'spatial' : 'commodity'),
+            level: g.level,
+            code: g.code,
+            description: g.description,
+            ancestors: mappedParent ? [mappedParent] : []
+        };
+    });
+
+    if (wbsDocs.length) {
+        await WbsNode.bulkWrite(
+            wbsDocs.map((doc) => ({
+                updateOne: {
+                    filter: { _id: doc._id },
+                    update: { $set: doc },
+                    upsert: true,
+                },
+            })),
+            { ordered: false },
+        );
+    }
+
+    // 2. Price List per estimate
+    const plData = payload.price_list;
+    let priceListIdStr = 'default';
+    if (plData) {
+        const { PriceList } = await import('../models/price-list.schema');
+        const priceList = await PriceList.findOneAndUpdate(
+            { project_id: projectObjectId, estimate_id: estimateId },
+            {
+                $set: {
+                    project_id: projectObjectId,
+                    estimate_id: estimateId,
+                    name: plData.name || 'Listino Importato',
+                    currency: plData.currency || 'EUR',
+                    is_default: true,
+                },
+            },
+            { upsert: true, new: true, setDefaultsOnInsert: true },
+        );
+        priceListIdStr = priceList._id.toString();
+    }
+
+    // 2b. Price List Items per estimate
+    // Filter only items actually used in the estimate
+    // Filter only items actually used in the estimate
+    const sourceEstItems = (payload.estimate?.items as PythonEstimateItem[] | undefined) || [];
+    const usedPliIds = new Set<string>();
+
+    for (const item of sourceEstItems) {
+        const rawPliId = item.priceListItemId || item.price_list_item_id;
+        if (rawPliId) usedPliIds.add(rawPliId);
+    }
+
+    const allPriceListItems: PythonPriceListItem[] = payload.price_list?.items || [];
+    const priceListItems = allPriceListItems.filter((item) => {
+        const itemId = item._id || item.id;
+        return !!itemId && usedPliIds.has(itemId);
+    });
+
+    console.log(`[Persistence] Processing ${priceListItems.length} price list items (filtered from ${allPriceListItems.length})`);
+
+    const priceItemMap = new Map<string, Types.ObjectId>();
+
+    for (const item of priceListItems) {
+        const sourceId = item._id || item.id;
+        if (sourceId) {
+            priceItemMap.set(sourceId, new Types.ObjectId());
         }
+    }
 
-        const wbsDocs = payload.groups.map(g => {
-            const mappedId = groupMap.get(g._id || g.id);
-            const mappedParent = g.parentId ? groupMap.get(g.parentId) : undefined;
+    if (priceListItems.length) {
+        // Clear previous price list items for this estimate to avoid duplicates across imports
+        await PriceListItem.deleteMany({ project_id: projectObjectId, estimate_id: estimateId });
 
-            return {
-                _id: mappedId,
-                project_id: projectObjectId,
-                estimate_id: estimateId,
-                parent_id: mappedParent,
-                type: g.type || (g.level > 0 ? 'spatial' : 'commodity'),
-                level: g.level,
-                code: g.code,
-                description: g.description,
-                ancestors: mappedParent ? [mappedParent] : []
-            };
-        });
+        await PriceListItem.bulkWrite(
+            priceListItems.map((item, idx) => {
+                const mappedId = priceItemMap.get(item._id || item.id);
+                const rawGroups = item.wbsIds || item.wbs_ids || item.groupIds || [];
+                const mappedGroups = rawGroups.map((gid) => groupMap.get(gid)).filter(Boolean);
 
-        if (wbsDocs.length) {
-            await WbsNode.bulkWrite(
-                wbsDocs.map((doc) => ({
+                // DEBUG: Log first 3 items to see what's coming from Python
+                if (idx < 3) {
+                    console.log(`[DEBUG] Raw PLI #${idx}:`, {
+                        code: item.code,
+                        description: item.description?.substring(0, 50),
+                        long_description: item.long_description?.substring(0, 50),
+                        longDescription: (item as any).longDescription?.substring(0, 50),
+                    });
+                }
+
+                const { short_description, long_description, unit } = normalizeTextFields(item);
+
+                if (idx < 3) {
+                    console.log(`[DEBUG] After normalize #${idx}:`, {
+                        short_description: short_description?.substring(0, 50),
+                        long_description: long_description?.substring(0, 50),
+                    });
+                }
+
+                return {
                     updateOne: {
-                        filter: { _id: doc._id },
-                        update: { $set: doc },
+                        filter: { _id: mappedId },
+                        update: {
+                            $set: {
+                                _id: mappedId,
+                                project_id: projectObjectId,
+                                estimate_id: estimateId,
+                                code: item.code,
+                                description: short_description,
+                                long_description: long_description,
+                                unit: unit,
+                                price: item.price,
+                                price_list_id: priceListIdStr,
+                                wbs_ids: mappedGroups,
+                                embedding: item.embedding,
+                            },
+                        },
                         upsert: true,
                     },
-                })),
-                { ordered: false },
-            );
+                };
+            }),
+            { ordered: false },
+        );
+    }
+
+    // 3. Estimate document (create/update with price list link)
+    if (existingEst) {
+        await Estimate.findByIdAndUpdate(existingEst._id, { $set: { price_list_id: priceListIdStr } });
+    } else {
+        await Estimate.create([{
+            _id: estimateId,
+            project_id: projectObjectId,
+            name: estData.name,
+            type: 'project',
+            is_baseline: true,
+            price_list_id: priceListIdStr,
+            total_amount: 0
+        }]);
+    }
+
+    // 4. Estimate Items per estimate
+    const estItems: PythonEstimateItem[] = (estData.items as PythonEstimateItem[] | undefined) || [];
+    console.log(`[Persistence] Processing ${estItems.length} estimate items`);
+
+    await EstimateItem.deleteMany({ project_id: projectObjectId, 'project.estimate_id': estimateId });
+
+    const priceValueMap = new Map<string, number>();
+    for (const pli of priceListItems) {
+        const id = pli._id || pli.id;
+        if (id) {
+            priceValueMap.set(id, pli.price ?? 0);
         }
+    }
 
-        // 2. Price List per estimate
-        const plData = payload.price_list;
-        let priceListIdStr = 'default';
-        if (plData) {
-            const { PriceList } = await import('../models/price-list.schema');
-            const priceList = await PriceList.findOneAndUpdate(
-                { project_id: projectObjectId, estimate_id: estimateId },
-                {
-                    $set: {
-                        project_id: projectObjectId,
-                        estimate_id: estimateId,
-                        name: plData.name || 'Listino Importato',
-                        currency: plData.currency || 'EUR',
-                        is_default: true,
-                    },
-                },
-                { upsert: true, new: true, setDefaultsOnInsert: true },
-            );
-            priceListIdStr = priceList._id.toString();
-        }
+    const itemDocs = estItems.map((item) => {
+        const rawGroups = item.wbsIds || item.wbs_ids || item.groupIds || [];
+        const mappedGroups = rawGroups.map((gid) => groupMap.get(gid)).filter(Boolean);
 
-        // 2b. Price List Items per estimate
-        // Filter only items actually used in the estimate
-        // Filter only items actually used in the estimate
-        const sourceEstItems = (payload.estimate?.items as PythonEstimateItem[] | undefined) || [];
-        const usedPliIds = new Set<string>();
+        const rawPliId = item.priceListItemId || item.price_list_item_id;
+        const mappedPliId = rawPliId ? priceItemMap.get(rawPliId) : undefined;
+        const finalPliId = mappedPliId ? mappedPliId.toString() : rawPliId;
 
-        for (const item of sourceEstItems) {
-            const rawPliId = item.priceListItemId || item.price_list_item_id;
-            if (rawPliId) usedPliIds.add(rawPliId);
-        }
+        const quantity = item.quantity ?? item.total_quantity ?? 0;
+        // PREFER Python's unit_price (correct price from measurement's price list)
+        // Fallback to PriceListItem.price if not provided
+        const itemPrice = item.unitPrice ?? item.unit_price ?? (rawPliId && priceValueMap.get(rawPliId)) || 0;
+        const { short_description, long_description, unit } = normalizeTextFields(item);
 
-        const allPriceListItems: PythonPriceListItem[] = payload.price_list?.items || [];
-        const priceListItems = allPriceListItems.filter((item) => {
-            const itemId = item._id || item.id;
-            return !!itemId && usedPliIds.has(itemId);
-        });
+        return {
+            project_id: projectObjectId,
+            price_list_item_id: finalPliId,
+            related_item_id: item.relatedItemId || item.related_item_id,
+            wbs_ids: mappedGroups,
+            code: item.code,
+            description: short_description,
+            description_extended: long_description,
+            unit: unit,
+            progressive: item.progressive,
+            project: {
+                estimate_id: estimateId,
+                quantity,
+                unit_price: itemPrice,
+                amount: quantity * itemPrice,
+                // amount/unit_price can be recomputed; left as-is if provided
+                measurements: item.measurements || []
+            },
+            offers: [],
+        };
+    }).filter(Boolean);
 
-        console.log(`[Persistence] Processing ${priceListItems.length} price list items (filtered from ${allPriceListItems.length})`);
-
-        const priceItemMap = new Map<string, Types.ObjectId>();
-
-        for (const item of priceListItems) {
-            const sourceId = item._id || item.id;
-            if (sourceId) {
-                priceItemMap.set(sourceId, new Types.ObjectId());
-            }
-        }
-
-        if (priceListItems.length) {
-            // Clear previous price list items for this estimate to avoid duplicates across imports
-            await PriceListItem.deleteMany({ project_id: projectObjectId, estimate_id: estimateId });
-
-            await PriceListItem.bulkWrite(
-                priceListItems.map((item) => {
-                    const mappedId = priceItemMap.get(item._id || item.id);
-                    const rawGroups = item.wbsIds || item.wbs_ids || item.groupIds || [];
-                    const mappedGroups = rawGroups.map((gid) => groupMap.get(gid)).filter(Boolean);
-                    const { short_description, long_description, unit } = normalizeTextFields(item);
-
-                    return {
-                        updateOne: {
-                            filter: { _id: mappedId },
-                            update: {
-                                $set: {
-                                    _id: mappedId,
-                                    project_id: projectObjectId,
-                                    estimate_id: estimateId,
-                                    code: item.code,
-                                    description: short_description,
-                                    long_description: long_description,
-                                    unit: unit,
-                                    price: item.price,
-                                    price_list_id: priceListIdStr,
-                                    wbs_ids: mappedGroups,
-                                },
-                            },
-                            upsert: true,
-                        },
-                    };
-                }),
-                { ordered: false },
-            );
-        }
-
-        // 3. Estimate document (create/update with price list link)
-        if (existingEst) {
-            await Estimate.findByIdAndUpdate(existingEst._id, { $set: { price_list_id: priceListIdStr } });
-        } else {
-            await Estimate.create([{
-                _id: estimateId,
-                project_id: projectObjectId,
-                name: estData.name,
-                type: 'project',
-                is_baseline: true,
-                price_list_id: priceListIdStr,
-                total_amount: 0
-            }]);
-        }
-
-        // 4. Estimate Items per estimate
-        const estItems: PythonEstimateItem[] = (estData.items as PythonEstimateItem[] | undefined) || [];
-        console.log(`[Persistence] Processing ${estItems.length} estimate items`);
-
-        await EstimateItem.deleteMany({ project_id: projectObjectId, 'project.estimate_id': estimateId });
-
-        const priceValueMap = new Map<string, number>();
-        for (const pli of priceListItems) {
-            const id = pli._id || pli.id;
-            if (id) {
-                priceValueMap.set(id, pli.price ?? 0);
-            }
-        }
-
-        const itemDocs = estItems.map((item) => {
-            const rawGroups = item.wbsIds || item.wbs_ids || item.groupIds || [];
-            const mappedGroups = rawGroups.map((gid) => groupMap.get(gid)).filter(Boolean);
-
-            const rawPliId = item.priceListItemId || item.price_list_item_id;
-            const mappedPliId = rawPliId ? priceItemMap.get(rawPliId) : undefined;
-            const finalPliId = mappedPliId ? mappedPliId.toString() : rawPliId;
-
-            const quantity = item.quantity ?? item.total_quantity ?? 0;
-            const itemPrice = (rawPliId && priceValueMap.get(rawPliId)) || 0;
-            const { short_description, long_description, unit } = normalizeTextFields(item);
-
-            return {
-                project_id: projectObjectId,
-                price_list_item_id: finalPliId,
-                related_item_id: item.relatedItemId || item.related_item_id,
-                wbs_ids: mappedGroups,
-                code: item.code,
-                description: short_description,
-                description_extended: long_description,
-                unit: unit,
-                progressive: item.progressive,
-                project: {
-                    estimate_id: estimateId,
-                    quantity,
-                    unit_price: itemPrice,
-                    amount: quantity * itemPrice,
-                    // amount/unit_price can be recomputed; left as-is if provided
-                    measurements: item.measurements || []
-                },
-                offers: [],
-            };
-        }).filter(Boolean);
-
-        if (itemDocs.length) {
-            await EstimateItem.insertMany(itemDocs);
-        }
+    if (itemDocs.length) {
+        await EstimateItem.insertMany(itemDocs);
+    }
 
     return {
         success: true,
+        estimateId: estimateId.toString(),
         summary: {
             groups: wbsDocs.length,
             products: priceListItems.length,

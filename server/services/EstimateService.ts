@@ -1,7 +1,7 @@
- 
+
 import type { ClientSession } from 'mongoose';
 import { Types } from 'mongoose';
-import { Estimate, EstimateItem, Offer, OfferItem, PriceList, PriceListItem, WbsNode  } from '#models';
+import { Estimate, EstimateItem, Offer, OfferItem, PriceList, PriceListItem, WbsNode } from '#models';
 import { normalizeTextFields } from '#utils/normalize';
 
 type EstimateInput = {
@@ -37,9 +37,9 @@ type EstimateItemEntry = {
   unit_price?: number;
   amount?: number;
   total_amount?: number;
+  total_amount?: number;
   notes?: string;
-  description?: string;
-  description_extended?: string;
+  // description/extended removed - sourced from PL
   unit?: string;
 };
 
@@ -47,8 +47,7 @@ type EstimateItemDoc = {
   project_id: Types.ObjectId;
   wbs_ids: Types.ObjectId[];
   code: string;
-  description?: string;
-  description_extended?: string;
+  // description/extended removed
   unit?: string;
   progressive?: number;
   order: number;
@@ -168,15 +167,14 @@ export async function upsertEstimateItems(
       if (wbs6Id) ids.push(new Types.ObjectId(wbs6Id));
       if (w7) { const id7 = wbs7Map[w7]; if (id7) ids.push(new Types.ObjectId(id7)); }
 
-      const { short_description, long_description, unit } = normalizeTextFields(entry);
+      const { unit } = normalizeTextFields(entry);
 
       return {
         project_id: projectObjectId,
         wbs_ids: ids,
         code: entry.code ?? '',
-        description: short_description,
-        description_extended: long_description,
-        unit: unit,
+        // description fields removed - rely on PL
+        unit: (unit as string) || undefined,
         progressive: entry.progressive ?? entry.order,
         order: entry.order ?? 0,
         import_run_id: importRunId,

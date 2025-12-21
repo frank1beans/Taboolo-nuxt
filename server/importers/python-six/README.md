@@ -28,10 +28,10 @@ uvicorn main:app --reload --port 8000
 
 Con prefix API di default `/api/v1`, il servizio deve esporre:
 
-- `POST /api/v1/commesse/{projectId}/import-six/raw/preview`
-- `POST /api/v1/commesse/{projectId}/import-six/raw`
+- `POST /api/v1/commesse/{projectId}/import-six/preview`
+- `POST /api/v1/commesse/{projectId}/import-six`
 
-Nota: nel client esistono anche chiamate "non raw" per compatibilità/legacy, ma il flusso stabile per SIX in questa repo è raw.
+Nota: nel client esistono anche chiamate "non raw" per compatibilità/legacy, ma il flusso stabile per SIX in questa repo è raw (ora endpoint standard).
 
 ## Configurazione Nuxt/Nitro
 

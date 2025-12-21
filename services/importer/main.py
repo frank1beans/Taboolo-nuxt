@@ -13,7 +13,7 @@ from core.logging import configure_logging
 logger = logging.getLogger(__name__)
 
 # Carica variabili .env una sola volta all'import del modulo
-load_dotenv(Path(__file__).parent.parent / ".env")
+load_dotenv(Path(__file__).parent.parent.parent / ".env")
 
 
 def _build_cors_origins() -> list[str]:
@@ -35,6 +35,8 @@ def _build_cors_origins() -> list[str]:
             "http://127.0.0.1:5173",
             "http://localhost:8081",
             "http://127.0.0.1:8081",
+            "http://localhost:3000",
+            "http://127.0.0.1:3000",
         ]
 
     return allowed_origins
@@ -82,7 +84,7 @@ def create_app() -> FastAPI:
     allowed_origins = _build_cors_origins()
     application.add_middleware(
         CORSMiddleware,
-        allow_origins=allowed_origins,
+        allow_origins=["*"], # FORCE WILDCARD FOR DEBUGGING
         allow_credentials=settings.cors_allow_credentials,
         allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],  # SECURITY: metodi espliciti
         allow_headers=["Content-Type", "Authorization"],            # SECURITY: header espliciti

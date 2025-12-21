@@ -19,6 +19,13 @@ export interface IPriceListItem {
   // Semantic Search
   embedding?: number[];
 
+  // UMAP Visualization
+  map2d?: { x: number; y: number };
+  map3d?: { x: number; y: number; z: number };
+  cluster?: number;
+  map_version?: string;
+  map_updated_at?: Date;
+
   created_at: Date;
   updated_at: Date;
 }
@@ -38,7 +45,20 @@ const PriceListItemSchema = new Schema<IPriceListItem>({
   source_preventivo_id: { type: String },
   price_lists: { type: Map, of: Number },
 
-  embedding: { type: [Number], select: false }
+  embedding: { type: [Number], select: false },
+
+  map2d: {
+    x: { type: Number },
+    y: { type: Number }
+  },
+  map3d: {
+    x: { type: Number },
+    y: { type: Number },
+    z: { type: Number }
+  },
+  cluster: { type: Number },
+  map_version: { type: String },
+  map_updated_at: { type: Date }
 }, {
   timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' }
 });

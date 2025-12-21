@@ -8,7 +8,7 @@ from decimal import Decimal, ROUND_HALF_UP
 from typing import Dict, List, Optional, Tuple, Set, Any
 
 from core.interfaces import ParserProtocol
-from schemas.domain import (
+from domain import (
     NormalizedEstimate,
     PriceList,
     WbsNode,

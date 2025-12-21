@@ -1,5 +1,5 @@
 from typing import Protocol, BinaryIO
-from schemas.domain import NormalizedEstimate
+from domain import NormalizedEstimate
 
 class ParserProtocol(Protocol):
     def parse(self, file_content: bytes, filename: str | None = None) -> NormalizedEstimate:

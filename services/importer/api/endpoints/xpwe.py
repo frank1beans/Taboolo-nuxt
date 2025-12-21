@@ -3,9 +3,9 @@ from fastapi import APIRouter, File, UploadFile, HTTPException, Form
 from typing import List, Dict, Optional
 from pydantic import BaseModel
 
-from domain import process_file_content
+from application.process_file import process_file_content
 from loader import LoaderService
-from schemas.models import Project, WbsNode, PriceList, Estimate
+from infrastructure.dto import Project, WbsNode, PriceList, Estimate
 from parsers.shared.wbs_constants import CANONICAL_WBS_LEVELS
 
 router = APIRouter()
@@ -22,6 +22,7 @@ async def import_xpwe_raw(
     file: UploadFile = File(...),
     preventivo_id: str = Form(None),
     wbs_mapping: str = Form(None), # JSON string: {"SuperCategorie": "01", ...}
+    compute_embeddings: bool = Form(False),
 ):
     """
     Parses a XPWE file and transforms it into the new Database Scheme.
@@ -80,6 +81,34 @@ async def import_xpwe_raw(
             project_id=commessa_id,
             preventivo_id=preventivo_id
         )
+
+        # 4. Compute Embeddings (if requested)
+        if compute_embeddings and price_list.items:
+            try:
+                from logic.embedding import get_embedder
+                embedder = get_embedder()
+                
+                texts = []
+                for item in price_list.items:
+                    # Construct rich text for embedding
+                    text_parts = [item.description]
+                    if item.long_description:
+                        text_parts.append(item.long_description)
+                    texts.append(" ".join(text_parts))
+
+                print(f"Computing embeddings for {len(texts)} items (XPWE)...")
+                vectors = embedder.compute_embeddings(texts)
+                
+                if len(vectors) == len(price_list.items):
+                    for i, vector in enumerate(vectors):
+                        price_list.items[i].embedding = vector
+                    print("Embeddings calculated.")
+                else:
+                    print(f"Warning: Embedding mismatch {len(vectors)} vs {len(price_list.items)}")
+
+            except Exception as e:
+                print(f"Embedding generation failed: {e}")
+                # Log but do not fail import
         
         return ImportResult(
             project=project,

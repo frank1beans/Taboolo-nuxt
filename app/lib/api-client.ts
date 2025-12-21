@@ -596,6 +596,7 @@ export const api = {
     options?: {
       raw?: boolean;
       wbsMapping?: Record<string, string>;
+      enableEmbeddings?: boolean;
     },
   ): Promise<ApiXpweImportReport> {
     const formData = new FormData();
@@ -605,6 +606,9 @@ export const api = {
     }
     if (options?.wbsMapping) {
       formData.append("wbs_mapping", JSON.stringify(options.wbsMapping));
+    }
+    if (options?.enableEmbeddings) {
+      formData.append("compute_embeddings", "true");
     }
     const query = new URLSearchParams();
     if (options?.raw) {

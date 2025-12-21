@@ -18,7 +18,7 @@ export function mapComputoToEstimate(data: Json) {
       progressive: item.progressivo ?? item.progressive,
       code: item.codice ?? item.code,
       short_description: shortDescription,
-      long_description: longDescription || shortDescription,
+      long_description: longDescription,
       unit: item.unita_misura ?? item.unit,
       quantity: item.quantita ?? item.quantity,
       unit_price: item.prezzo_unitario ?? item.unit_price,

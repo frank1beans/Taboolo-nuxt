@@ -116,6 +116,8 @@ const handleSixFileSelect = async (file: File) => {
 };
 
 
+const enableEmbeddings = ref(false);
+
 const confirmSixImport = async () => {
   if (!sixFile.value) return;
 
@@ -133,7 +135,7 @@ const confirmSixImport = async () => {
       sixFile.value,
       selectedEstimateId.value,
       {
-      enableEmbeddings: false, // Default false for speed
+      enableEmbeddings: enableEmbeddings.value,
       enablePropertyExtraction: false,
       raw: useRawParser.value
     });
@@ -161,16 +163,21 @@ const confirmSixImport = async () => {
       const values = isRecord(detections) ? Object.values(detections) : [];
       totalItems = values.reduce((acc: number, value) => (Array.isArray(value) ? acc + value.length : acc), 0);
       wbsNodes = Array.isArray((result as any).groups) ? (result as any).groups.length : 0;
+      wbsNodes = Array.isArray((result as any).groups) ? (result as any).groups.length : 0;
     } else {
       // Legacy Report
       totalItems = 0;
       wbsNodes = 0;
     }
     
+    // Extract estimateId if available (added in recent backend update)
+    const estimateId = (result as any).estimateId;
+    
     sixImportResult.value = {
       totalItems: totalItems,
       wbsNodes: wbsNodes,
-      message: 'Computo importato con successo.'
+      message: 'Computo importato con successo.',
+      estimateId: estimateId
     };
     sixStatus.value = 'success';
   } catch (err: unknown) {
@@ -187,6 +194,7 @@ const resetSix = () => {
   sixPreview.value = null;
   selectedEstimateId.value = undefined;
   sixImportResult.value = null;
+  enableEmbeddings.value = false;
 };
 
 // --- PROCESSO XPWE ---
@@ -297,7 +305,8 @@ const confirmXpweImport = async () => {
       selectedXpweEstimateId.value,
       {
         raw: xpweUseRawParser.value,
-        wbsMapping: xpweWbsMapping.value
+        wbsMapping: xpweWbsMapping.value,
+        enableEmbeddings: enableEmbeddings.value
       }
     );
 
@@ -337,6 +346,7 @@ const resetXpwe = () => {
   xpwePreview.value = null;
   selectedXpweEstimateId.value = undefined;
   xpweImportResult.value = null;
+  enableEmbeddings.value = false;
 };
 
 // --- GENERIC HELPERS ---
@@ -471,19 +481,28 @@ const navigateToProject = () => {
                      </div>
                     
                     <!-- RAW MODE MESSAGE -->
-                    <div v-else-if="useRawParser" class="space-y-4">
+                     <div v-else-if="useRawParser" class="space-y-4">
                         <UAlert
                           icon="i-heroicons-beaker"
                           color="primary"
                           variant="soft"
                           title="Modalità Nuova Importazione"
-                          description="Verranno importati i dati grezzi (Formule, Dimensioni dettagliate) per l'analisi avanzata con Nitro. La selezione del preventivo è automatica (primo disponibile)."
+                          description="Verranno importati i dati grezzi. La selezione del preventivo è automatica."
                         />
-                    </div>
+                     </div>
 
-                    <div v-else-if="!useRawParser" class="text-center py-4 text-orange-500">
-                       Nessun preventivo trovato nel file.
-                    </div>
+                     <div v-else class="text-center py-4 text-orange-500">
+                        Nessun preventivo trovato nel file.
+                     </div>
+
+                     <!-- Embedding Toggle (Always visible if Raw Parser is on and we have data) -->
+                     <div v-if="useRawParser && sixPreview" class="flex items-center justify-between p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 mt-4 shadow-sm">
+                        <div class="flex flex-col gap-1">
+                          <span class="text-sm font-medium">Genera Embedding AI (Jina)</span>
+                          <span class="text-xs text-gray-500">Arricchisce i dati per ricerca semantica. Richiede più tempo.</span>
+                        </div>
+                        <UCheckbox v-model="enableEmbeddings" color="primary" />
+                     </div>
 
                     <div v-if="selectedEstimateId || (useRawParser && previewEstimates.length > 0)" class="flex justify-end pt-4">
                        <UButton 
@@ -505,6 +524,8 @@ const navigateToProject = () => {
                    :progress="sixProgress"
                    :error-message="sixError"
                    :result="sixImportResult || undefined"
+                   :action-label="sixImportResult?.estimateId ? 'Vedi Preventivo' : undefined"
+                   @action="() => { if(sixImportResult?.estimateId) router.push(`/projects/${projectId}/estimate/${sixImportResult.estimateId}`) }"
                    @reset="resetSix"
                  />
 
@@ -628,6 +649,14 @@ const navigateToProject = () => {
                           title="Modalità Importazione XPWE"
                           description="Verranno importati i dati e strutturati automaticamente."
                         />
+
+                        <div class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                           <div class="flex flex-col gap-1">
+                             <span class="text-sm font-medium">Genera Embedding AI (Jina)</span>
+                             <span class="text-xs text-gray-500">Arricchisce i dati per ricerca semantica. Richiede più tempo.</span>
+                           </div>
+                           <UToggle v-model="enableEmbeddings" />
+                         </div>
                     </div>
 
                     <div v-else class="text-center py-4 text-orange-500">

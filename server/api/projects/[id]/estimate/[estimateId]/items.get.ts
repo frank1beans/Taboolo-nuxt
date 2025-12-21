@@ -169,200 +169,13 @@ export default defineEventHandler(async (event) => {
 
                         // Content
                         description: {
-                            $cond: {
-                                if: { $eq: ['$source', 'aggregated'] },
-                                then: {
-                                    $ifNull: [
-                                        '$price_item.description',
-                                        '$price_item.long_description',
-                                        '$price_item.code'
-                                    ]
-                                },
-                                else: {
-                                    $switch: {
-                                        branches: [
-                                            // Priority 1: Estimate Item Description (if not null AND not empty)
-                                            {
-                                                case: {
-                                                    $and: [
-                                                        { $ne: ['$estimate_item.description', null] },
-                                                        { $ne: ['$estimate_item.description', ''] }
-                                                    ]
-                                                },
-                                                then: '$estimate_item.description'
-                                            },
-                                            // Priority 2: Estimate Item Description Extended (if not null AND not empty)
-                                            {
-                                                case: {
-                                                    $and: [
-                                                        { $ne: ['$estimate_item.description_extended', null] },
-                                                        { $ne: ['$estimate_item.description_extended', ''] }
-                                                    ]
-                                                },
-                                                then: '$estimate_item.description_extended'
-                                            },
-                                            // Priority 3: Price List Item Description (if not null AND not empty)
-                                            {
-                                                case: {
-                                                    $and: [
-                                                        { $ne: ['$price_item.description', null] },
-                                                        { $ne: ['$price_item.description', ''] }
-                                                    ]
-                                                },
-                                                then: '$price_item.description'
-                                            }
-                                        ],
-                                        // Default: Price List Item Code or PLI Long Description
-                                        default: {
-                                            $ifNull: [
-                                                '$price_item.long_description',
-                                                '$price_item.code'
-                                            ]
-                                        }
-                                    }
-                                }
-                            }
+                            $ifNull: [
+                                '$price_item.description',
+                                '$price_item.long_description',
+                                '$price_item.code'
+                            ]
                         },
-                        unit_measure: {
-                            $cond: {
-                                if: { $eq: ['$source', 'aggregated'] },
-                                then: { $ifNull: ['$price_item.unit', null] },
-                                else: { $ifNull: ['$estimate_item.unit_measure', { $ifNull: ['$price_item.unit', null] }] }
-                            }
-                        },
-
-                        // Hierarchy
-                        wbs_hierarchy: {
-                            $arrayToObject: {
-                                $map: {
-                                    input: '$wbs_nodes',
-                                    as: 'node',
-                                    in: {
-                                        k: { $concat: ['wbs0', { $toString: '$$node.level' }] },
-                                        v: {
-                                            $ifNull: ['$$node.description', '$$node.code']
-                                        }
-                                    }
-                                }
-                            }
-                        },
-
-                        // Values -> mapped to 'project' for Grid compatibility
-                        project: {
-                            quantity: '$quantity',
-                            unit_price: '$unit_price',
-                            amount: {
-                                $cond: {
-                                    if: { $gt: ['$amount', 0] },
-                                    then: { $toDouble: '$amount' },
-                                    else: { $multiply: [{ $toDouble: '$quantity' }, { $toDouble: '$unit_price' }] }
-                                }
-                            }
-                        }
-                    }
-                },
-                { $sort: { progressive: 1, code: 1 } },
-                {
-                    $project: {
-                        description: 1,
-                        code: 1,
-                        progressive: 1,
-                        unit_measure: 1,
-                        wbs_hierarchy: 1,
-                        wbs_nodes: {
-                            _id: 1,
-                            level: 1,
-                            code: 1,
-                            description: 1
-                        },
-                        project: 1
-                    }
-                }
-            ]);
-
-            return serializeDocs(items);
-
-        } else {
-            // ---------------------------------------------------------
-            // 2. BASELINE MODE (Existing Logic)
-            // ---------------------------------------------------------
-            const items = await EstimateItem.aggregate([
-                {
-                    $match: {
-                        project_id: validProjectId,
-                        'project.estimate_id': validEstimateId
-                    }
-                },
-                { $sort: { order: 1 } },
-                {
-                    $addFields: {
-                        // Convert stored string ID to ObjectId for lookup
-                        pli_oid: { $toObjectId: "$price_list_item_id" }
-                    }
-                },
-                {
-                    $lookup: {
-                        from: 'pricelistitems',
-                        localField: 'pli_oid',
-                        foreignField: '_id',
-                        as: 'price_item'
-                    }
-                },
-                { $unwind: { path: '$price_item', preserveNullAndEmptyArrays: true } },
-                // Lookup WBS nodes for estimate item (wbs01-wbs05)
-                {
-                    $lookup: {
-                        from: 'wbsnodes',
-                        let: { wbs_ids: '$wbs_ids' },
-                        pipeline: [
-                            {
-                                $match: {
-                                    $expr: { $in: ['$_id', { $ifNull: ['$$wbs_ids', []] }] },
-                                    project_id: validProjectId,
-                                    estimate_id: validEstimateId,
-                                }
-                            }
-                        ],
-                        as: 'item_wbs_nodes'
-                    }
-                },
-                // Lookup WBS nodes for price list item (wbs06-wbs07)
-                {
-                    $lookup: {
-                        from: 'wbsnodes',
-                        let: { pli_group_ids: '$price_item.wbs_ids' },
-                        pipeline: [
-                            {
-                                $match: {
-                                    $expr: {
-                                        $and: [
-                                            { $in: ['$_id', { $ifNull: ['$$pli_group_ids', []] }] },
-                                            { $in: ['$level', [6, 7]] }
-                                        ]
-                                    },
-                                    project_id: validProjectId,
-                                    estimate_id: validEstimateId,
-                                }
-                            }
-                        ],
-                        as: 'pli_wbs_nodes'
-                    }
-                },
-                {
-                    $addFields: {
-                        code: { $ifNull: ['$code', '$price_item.code'] },
-                        description: {
-                            $cond: {
-                                if: { $in: ['$description', [null, '']] },
-                                then: '$price_item.description',
-                                else: '$description'
-                            }
-                        },
-                        unit_measure: { $ifNull: ['$unit_measure', '$price_item.unit'] },
-                        // Map wbs_ids to group_ids for frontend
-                        group_ids: '$wbs_ids',
-                        // Combine all WBS nodes
-                        all_wbs_nodes: { $concatArrays: ['$item_wbs_nodes', '$pli_wbs_nodes'] },
+                        unit_measure: { $ifNull: ['$price_item.unit', null] }
                     }
                 },
                 {
@@ -407,6 +220,79 @@ export default defineEventHandler(async (event) => {
                     $project: {
                         pli_oid: 0,
                         price_item: 0
+                    }
+                }
+            ]);
+
+            return serializeDocs(items);
+        } else {
+            // ---------------------------------------------------------
+            // 2. PROJECT MODE (Baseline)
+            // ---------------------------------------------------------
+            // Fetch EstimateItems directly
+            const items = await EstimateItem.aggregate([
+                {
+                    $match: {
+                        project_id: validProjectId,
+                        'project.estimate_id': validEstimateId
+                    }
+                },
+                {
+                    $lookup: {
+                        from: 'pricelistitems',
+                        let: { pli_id: { $toObjectId: '$price_list_item_id' } }, // stored as string
+                        pipeline: [
+                            { $match: { $expr: { $eq: ['$_id', '$$pli_id'] } } }
+                        ],
+                        as: 'price_item'
+                    }
+                },
+                { $unwind: { path: '$price_item', preserveNullAndEmptyArrays: true } },
+
+                // Lookup WBS Nodes
+                {
+                    $addFields: {
+                        wbs_ids_oid: {
+                            $map: {
+                                input: { $ifNull: ['$wbs_ids', []] },
+                                as: 'wid',
+                                in: { $toObjectId: '$$wid' }
+                            }
+                        }
+                    }
+                },
+                {
+                    $lookup: {
+                        from: 'wbsnodes',
+                        localField: 'wbs_ids_oid',
+                        foreignField: '_id',
+                        as: 'wbs_nodes'
+                    }
+                },
+
+                // Reshape
+                {
+                    $addFields: {
+                        // Inherit description from PLI if not override
+                        description: {
+                            $ifNull: [
+                                '$description',
+                                '$price_item.description',
+                                '$price_item.long_description'
+                            ]
+                        },
+                        wbs_hierarchy: {
+                            $arrayToObject: {
+                                $map: {
+                                    input: '$wbs_nodes',
+                                    as: 'node',
+                                    in: {
+                                        k: { $concat: ['wbs0', { $toString: '$$node.level' }] },
+                                        v: '$$node.description'
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             ]);

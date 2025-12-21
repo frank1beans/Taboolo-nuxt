@@ -21,15 +21,13 @@ _REFERENCE_PATTERN = re.compile(
 from typing import Dict, List, Optional, Tuple, Any, Set
 
 from core.interfaces import ParserProtocol
-from schemas.domain import (
+from domain import (
     NormalizedEstimate,
     PriceList,
-    WbsNode,
     WbsNode,
     PriceListItem,
     Measurement,
     MeasurementDetail,
-    EntityType,
     PreventivoModel
 )
 
@@ -273,6 +271,7 @@ class SixParser(ParserProtocol):
         return tipo.strip(), level
 
     def _parse_products_definitions(self, root: ET.Element):
+        debug_count = 0
         for prodotto in root.findall(f".//{self.ns}prodotto"):
             prod_id = prodotto.attrib.get("prodottoId")
             if not prod_id: continue
@@ -285,7 +284,26 @@ class SixParser(ParserProtocol):
             desc_ext = ""
             if desc_node is not None:
                 desc = desc_node.attrib.get("breve") or ""
-                desc_ext = desc_node.attrib.get("estesa") or ""
+                
+                # Robust extraction for estesa (case-insensitive + text fallback)
+                desc_ext = desc_node.attrib.get("estesa")
+                if not desc_ext:
+                    # Try case-insensitive lookup
+                    for k, v in desc_node.attrib.items():
+                        if k.lower().endswith("estesa"):
+                            desc_ext = v
+                            break
+                            
+                # Fallback to text if still empty (rare but possible)
+                if not desc_ext and desc_node.text:
+                    desc_ext = desc_node.text
+                    
+                desc_ext = desc_ext or ""
+                
+                # DEBUG: Log first 5 products that HAVE estesa attribute 
+                if debug_count < 5 and desc_ext:
+                    print(f"[DEBUG Parser] Product {code}: breve='{desc[:50]}...', estesa='{desc_ext[:80]}...'", flush=True)
+                    debug_count += 1
                 
             desc = desc.strip() or code
             
@@ -310,6 +328,10 @@ class SixParser(ParserProtocol):
                 price_by_list=prices
             )
             self._price_list_items[prod_id] = prod
+        
+        # Final debug summary
+        items_with_long_desc = sum(1 for p in self._price_list_items.values() if p.long_description)
+        print(f"[DEBUG Parser] Parsed {len(self._price_list_items)} products, {items_with_long_desc} have long_description", flush=True)
 
     def _parse_rilevazione(self, node: ET.Element, index: int) -> Tuple[Measurement, Optional[int], List[Tuple[int, int]]] | None:
         prod_id = node.attrib.get("prodottoId")

@@ -3,10 +3,12 @@ from typing import List, Tuple, Optional
 from datetime import datetime
 import uuid
 
-# Logic imports
-# We assume these exist or will be imported correctly in the final file context
-from schemas.domain import NormalizedEstimate, PriceListItem as DomainPriceItem
-from schemas.models import (
+# Domain entities and services
+from domain import NormalizedEstimate, PriceListItem as DomainPriceItem
+from domain.services.amount_calculator import AmountCalculator
+
+# DTOs for API output
+from infrastructure.dto import (
     Project, WbsNode, PriceList, PriceListItem, 
     Estimate, EstimateItem, MeasurementDetail
 )
@@ -76,7 +78,7 @@ class LoaderService:
                 _id=prod.id, # Use XML ID
                 code=prod.code,
                 description=prod.description,
-                extraDescription=prod.long_description,
+                long_description=prod.long_description,
                 unit=unit_label,
                 price=price_val,
                 groupIds=prod.wbs_ids,
@@ -141,14 +143,7 @@ class LoaderService:
 
                 # Calculate explicit amount with legacy rounding logic
                 try:
-                    from decimal import Decimal, ROUND_HALF_UP
-                    
-                    # Helper for rounding
-                    def _legacy_round(val: float) -> float:
-                        if val is None: return 0.0
-                        return float(Decimal(f"{val:.10f}").quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
-                    
-                    final_qty = meas.total_quantity
+                    from domain.services.amount_calculator import AmountCalculator
                     
                     unit_price = 0.0
                     
@@ -167,12 +162,12 @@ class LoaderService:
                              if prod and meas.price_list_id in prod.price_by_list:
                                  unit_price = prod.price_by_list[meas.price_list_id]
                     
-                    # CRITICAL FIX: Round quantity BEFORE multiplying by price
-                    # Legacy system rounds quantity to 2 decimals first.
-                    # Example: 74.185 -> 74.19
-                    final_qty = _legacy_round(final_qty)
-                    
-                    calc_amount = _legacy_round(final_qty * unit_price)
+                    # Use AmountCalculator for consistent rounding
+                    final_qty, calc_amount = AmountCalculator.calculate(
+                        meas.total_quantity, 
+                        unit_price,
+                        round_quantity_first=True
+                    )
                 except Exception as e:
                     print(f"[Loader Error] Failed to calc legacy amount for {meas.id}: {e}", flush=True)
                     calc_amount = 0.0
@@ -186,6 +181,7 @@ class LoaderService:
                     groupIds=meas.wbs_node_ids,
                     quantity=final_qty,
                     amount=calc_amount,
+                    unitPrice=unit_price,  # Pass correct price from measurement's price list
                     measurements=[
                         MeasurementDetail(formula=d.formula, value=d.quantity) 
                         for d in meas.details

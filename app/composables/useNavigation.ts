@@ -22,6 +22,12 @@ export const useNavigation = (
                 to: '/projects',
             },
             {
+                id: 'analytics',
+                label: 'Analytics',
+                icon: 'heroicons:chart-bar-square',
+                to: '/analytics',
+            },
+            {
                 id: 'catalogs',
                 label: 'Listini Generali',
                 icon: 'heroicons:book-open',
@@ -139,7 +145,6 @@ export const useNavigation = (
                 icon: 'heroicons:folder-open',
                 to: `/projects/${project.id}`,
                 children: [
-                    // Removed top-level Work List node as requested
                     ...estimateNodes,
                 ],
             },
