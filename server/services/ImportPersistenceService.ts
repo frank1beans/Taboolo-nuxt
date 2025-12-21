@@ -337,7 +337,7 @@ async function persistProjectEstimate(payload: PythonImportResult, projectId: st
         const quantity = item.quantity ?? item.total_quantity ?? 0;
         // PREFER Python's unit_price (correct price from measurement's price list)
         // Fallback to PriceListItem.price if not provided
-        const itemPrice = item.unitPrice ?? item.unit_price ?? (rawPliId && priceValueMap.get(rawPliId)) || 0;
+        const itemPrice = item.unitPrice ?? item.unit_price ?? ((rawPliId && priceValueMap.get(rawPliId)) || 0);
         const { short_description, long_description, unit } = normalizeTextFields(item);
 
         return {
