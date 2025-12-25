@@ -477,7 +477,7 @@ const submit = async () => {
 
       submissionState.value = 'success';
       submissionMessage.value = 'Import completato';
-      submissionDetails.value = result?.name ? `${result.name} - Round ${roundNum}` : `Round ${roundNum}`;
+      submissionDetails.value = `${company} - Round ${roundNum}`;
       toast.success('Import offerta completato', {
         description: submissionDetails.value || 'File importato correttamente',
       });

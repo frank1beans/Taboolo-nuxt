@@ -18,6 +18,7 @@ const emit = defineEmits(['click', 'hover', 'unhover', 'selected', 'deselect']);
 
 const plotContainer = ref<HTMLElement | null>(null);
 let isInitialized = false;
+let resizeObserver: ResizeObserver | null = null;
 
 const drawPlot = async () => {
   if (!Plotly) {
@@ -62,6 +63,13 @@ const drawPlot = async () => {
   }
 };
 
+// Resize Plotly when container size changes
+const resizePlot = () => {
+  if (plotContainer.value && Plotly) {
+    Plotly.Plots.resize(plotContainer.value);
+  }
+};
+
 watch(
   () => [props.data, props.layout, props.config], 
   () => {
@@ -72,11 +80,22 @@ watch(
 
 onMounted(() => {
   drawPlot();
+  
+  // Set up ResizeObserver to handle container resizing
+  if (plotContainer.value) {
+    resizeObserver = new ResizeObserver(() => {
+      resizePlot();
+    });
+    resizeObserver.observe(plotContainer.value);
+  }
 });
 
 onBeforeUnmount(() => {
   if (plotContainer.value && Plotly) {
     Plotly.purge(plotContainer.value);
+  }
+  if (resizeObserver) {
+    resizeObserver.disconnect();
   }
 });
 </script>

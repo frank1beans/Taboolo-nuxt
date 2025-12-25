@@ -24,10 +24,15 @@ type PythonPriceListItem = {
     code?: string;
     description?: string;
     long_description?: string;
+    longDescription?: string;  // Pydantic alias
+    extended_description?: string;
+    extendedDescription?: string;  // Pydantic alias
     unit?: string;
     price?: number;
     priceListId?: string;
     embedding?: number[];
+    extracted_properties?: Record<string, unknown>;
+    extractedProperties?: Record<string, unknown>;
 };
 
 type PythonEstimateItem = {
@@ -101,7 +106,9 @@ interface PythonImportResult {
 type BaselineItemLean = {
     _id: Types.ObjectId;
     progressive?: number | null;
-    project?: { unit_price?: number | null };
+    code?: string | null;
+    price_list_item_id?: string | null;
+    project?: { unit_price?: number | null; quantity?: number | null };
     unit_measure?: string | null;
 };
 
@@ -110,6 +117,7 @@ type PriceListItemLean = {
     code?: string | null;
     description?: string | null;
     long_description?: string | null;
+    price?: number | null;
 };
 
 type OfferItemInsert = {
@@ -129,6 +137,31 @@ type OfferItemInsert = {
     estimate_item_id?: Types.ObjectId;
     progressive?: number;
 };
+
+type BaselineAggregate = {
+    totalQuantity: number;
+    totalAmount: number;
+};
+
+type OfferAlertInsert = {
+    project_id: Types.ObjectId;
+    offer_id: Types.ObjectId;
+    offer_item_id?: Types.ObjectId;
+    estimate_item_id?: Types.ObjectId;
+    price_list_item_id?: Types.ObjectId;
+    source?: 'detailed' | 'aggregated';
+    origin?: 'baseline' | 'addendum';
+    type: 'price_mismatch' | 'quantity_mismatch' | 'code_mismatch' | 'missing_baseline' | 'ambiguous_match' | 'addendum';
+    severity: 'info' | 'warning' | 'error';
+    message?: string;
+    actual?: number | string | null;
+    expected?: number | string | null;
+    delta?: number | null;
+    code?: string | null;
+    baseline_code?: string | null;
+};
+
+type PendingAlert = OfferAlertInsert & { itemIndex: number };
 
 export async function persistImportResult(payload: PythonImportResult, projectId: string) {
     // Branch based on estimate type
@@ -158,13 +191,14 @@ async function persistProjectEstimate(payload: PythonImportResult, projectId: st
 
     for (const g of payload.groups) {
         const newId = new Types.ObjectId();
-        const sourceId = g._id || g.id;
-        groupMap.set(sourceId, newId);
-        if (debugGroupIds.length < 20) debugGroupIds.push(sourceId);
+        const sourceId = g._id || g.id || '';
+        if (sourceId) groupMap.set(sourceId, newId);
+        if (debugGroupIds.length < 20 && sourceId) debugGroupIds.push(sourceId);
     }
 
     const wbsDocs = payload.groups.map(g => {
-        const mappedId = groupMap.get(g._id || g.id);
+        const sourceId = g._id || g.id || '';
+        const mappedId = groupMap.get(sourceId);
         const mappedParent = g.parentId ? groupMap.get(g.parentId) : undefined;
 
         return {
@@ -172,8 +206,8 @@ async function persistProjectEstimate(payload: PythonImportResult, projectId: st
             project_id: projectObjectId,
             estimate_id: estimateId,
             parent_id: mappedParent,
-            type: g.type || (g.level > 0 ? 'spatial' : 'commodity'),
-            level: g.level,
+            type: g.type || ((g.level || 0) > 0 ? 'spatial' : 'commodity'),
+            level: g.level || 0,
             code: g.code,
             description: g.description,
             ancestors: mappedParent ? [mappedParent] : []
@@ -188,7 +222,7 @@ async function persistProjectEstimate(payload: PythonImportResult, projectId: st
                     update: { $set: doc },
                     upsert: true,
                 },
-            })),
+            })) as any,
             { ordered: false },
         );
     }
@@ -250,7 +284,9 @@ async function persistProjectEstimate(payload: PythonImportResult, projectId: st
             priceListItems.map((item, idx) => {
                 const mappedId = priceItemMap.get(item._id || item.id);
                 const rawGroups = item.wbsIds || item.wbs_ids || item.groupIds || [];
-                const mappedGroups = rawGroups.map((gid) => groupMap.get(gid)).filter(Boolean);
+                const mappedGroups = rawGroups
+                    .map((gid) => groupMap.get(gid))
+                    .filter((g): g is Types.ObjectId => g !== undefined);
 
                 // DEBUG: Log first 3 items to see what's coming from Python
                 if (idx < 3) {
@@ -259,6 +295,8 @@ async function persistProjectEstimate(payload: PythonImportResult, projectId: st
                         description: item.description?.substring(0, 50),
                         long_description: item.long_description?.substring(0, 50),
                         longDescription: (item as any).longDescription?.substring(0, 50),
+                        extended_description: item.extended_description?.substring(0, 80),
+                        extendedDescription: item.extendedDescription?.substring(0, 80),
                     });
                 }
 
@@ -266,8 +304,8 @@ async function persistProjectEstimate(payload: PythonImportResult, projectId: st
 
                 if (idx < 3) {
                     console.log(`[DEBUG] After normalize #${idx}:`, {
-                        short_description: short_description?.substring(0, 50),
-                        long_description: long_description?.substring(0, 50),
+                        short_description: (short_description as string)?.substring(0, 50),
+                        long_description: (long_description as string)?.substring(0, 50),
                     });
                 }
 
@@ -282,17 +320,19 @@ async function persistProjectEstimate(payload: PythonImportResult, projectId: st
                                 code: item.code,
                                 description: short_description,
                                 long_description: long_description,
+                                extended_description: item.extended_description || item.extendedDescription,
                                 unit: unit,
                                 price: item.price,
                                 price_list_id: priceListIdStr,
                                 wbs_ids: mappedGroups,
                                 embedding: item.embedding,
+                                extracted_properties: item.extracted_properties || (item as any).extractedProperties,
                             },
                         },
                         upsert: true,
                     },
                 };
-            }),
+            }) as any,
             { ordered: false },
         );
     }
@@ -326,9 +366,11 @@ async function persistProjectEstimate(payload: PythonImportResult, projectId: st
         }
     }
 
-    const itemDocs = estItems.map((item) => {
+    const itemDocs = estItems.map((item, idx) => {
         const rawGroups = item.wbsIds || item.wbs_ids || item.groupIds || [];
-        const mappedGroups = rawGroups.map((gid) => groupMap.get(gid)).filter(Boolean);
+        const mappedGroups = rawGroups
+            .map((gid) => groupMap.get(gid))
+            .filter((g): g is Types.ObjectId => g !== undefined);
 
         const rawPliId = item.priceListItemId || item.price_list_item_id;
         const mappedPliId = rawPliId ? priceItemMap.get(rawPliId) : undefined;
@@ -338,6 +380,11 @@ async function persistProjectEstimate(payload: PythonImportResult, projectId: st
         // PREFER Python's unit_price (correct price from measurement's price list)
         // Fallback to PriceListItem.price if not provided
         const itemPrice = item.unitPrice ?? item.unit_price ?? ((rawPliId && priceValueMap.get(rawPliId)) || 0);
+
+        // Debug: log first 10 items to verify prices
+        if (idx < 10) {
+            console.log(`[Server Debug] EstItem #${idx}: unitPrice=${item.unitPrice}, unit_price=${item.unit_price}, fallback=${priceValueMap.get(rawPliId!)}, FINAL=${itemPrice}`);
+        }
         const { short_description, long_description, unit } = normalizeTextFields(item);
 
         return {
@@ -378,7 +425,7 @@ async function persistProjectEstimate(payload: PythonImportResult, projectId: st
 }
 
 export async function persistOffer(payload: PythonImportResult, projectId: string) {
-    const { Offer, OfferItem } = await import('../models');
+    const { Offer, OfferItem, OfferAlert } = await import('../models');
 
     console.log(`[Persistence] Processing Offer import for project ${projectId}...`);
     const projectObjectId = new Types.ObjectId(projectId);
@@ -406,6 +453,12 @@ export async function persistOffer(payload: PythonImportResult, projectId: strin
             .toLowerCase()
             .normalize('NFD').replace(/[\u0300-\u036f]/g, ''); // strip accents
     };
+    const normalizeCode = (value: string | undefined): string =>
+        (value ?? '').toString().trim().toLowerCase();
+    const asNumber = (value: unknown): number | null =>
+        typeof value === 'number' && !Number.isNaN(value) ? value : null;
+    const hasDelta = (actual: number | null, expected: number | null, tolerance = 1e-6) =>
+        actual !== null && expected !== null && Math.abs(actual - expected) > tolerance;
 
     // Resolve Baseline Estimate ID (Must be provided or inferred)
     // 3. Resolve Baseline Estimate (Project Estimate)
@@ -462,6 +515,7 @@ export async function persistOffer(payload: PythonImportResult, projectId: strin
 
     // Clean old items for this offer
     await OfferItem.deleteMany({ offer_id: offerId });
+    await OfferAlert.deleteMany({ offer_id: offerId });
 
     // Prepare Lookups
     // We need to map:
@@ -479,18 +533,24 @@ export async function persistOffer(payload: PythonImportResult, projectId: strin
         progressive?: number | null;
         unit_price?: number | null;
         unit_measure?: string | null;
+        quantity?: number | null;
+        code?: string | null;
+        price_list_item_id?: string | null;
     };
     const warnings: string[] = [];
+    const pendingAlerts: PendingAlert[] = [];
     let detailedBaselineMap: Map<number, DetailedBaseline> | null = null;
     let plCodeMap: Map<string, Types.ObjectId[]> | null = null;
     let plDescMap: Map<string, Types.ObjectId[]> | null = null;
+    let priceListMetaMap: Map<string, { code?: string | null; price?: number | null }> | null = null;
+    let baselineByPriceListId: Map<string, BaselineAggregate> | null = null;
 
     if (importMode === 'detailed') {
         detailedBaselineMap = new Map();
         const blItems = await EstimateItem.find({
             project_id: projectObjectId,
             'project.estimate_id': baselineEstId
-        }).select('progressive _id project.unit_price unit_measure').lean<BaselineItemLean[]>();
+        }).select('progressive _id project.unit_price project.quantity unit_measure code price_list_item_id').lean<BaselineItemLean[]>();
         for (const bli of blItems) {
             // Fix: explicit check for undefined/null because progressive can be 0
             if (bli.progressive !== undefined && bli.progressive !== null) {
@@ -498,7 +558,10 @@ export async function persistOffer(payload: PythonImportResult, projectId: strin
                     id: bli._id as Types.ObjectId,
                     progressive: bli.progressive,
                     unit_price: bli.project?.unit_price ?? null,
-                    unit_measure: bli.unit_measure ?? null
+                    unit_measure: bli.unit_measure ?? null,
+                    quantity: bli.project?.quantity ?? null,
+                    code: bli.code ?? null,
+                    price_list_item_id: bli.price_list_item_id ?? null
                 });
             }
         }
@@ -508,13 +571,15 @@ export async function persistOffer(payload: PythonImportResult, projectId: strin
         const plItems = await PriceListItem.find({
             project_id: projectObjectId,
             estimate_id: baselineEstId
-        }).select('code description long_description _id').lean<PriceListItemLean[]>();
+        }).select('code description long_description price _id').lean<PriceListItemLean[]>();
 
         // Build Lookups
         plCodeMap = new Map<string, Types.ObjectId[]>();
         plDescMap = new Map<string, Types.ObjectId[]>();
+        priceListMetaMap = new Map<string, { code?: string | null; price?: number | null }>();
 
         for (const pli of plItems) {
+            priceListMetaMap.set(String(pli._id), { code: pli.code ?? null, price: pli.price ?? null });
             if (pli.code) {
                 const arr = plCodeMap.get(pli.code) || [];
                 arr.push(pli._id as Types.ObjectId);
@@ -537,9 +602,28 @@ export async function persistOffer(payload: PythonImportResult, projectId: strin
                 plDescMap.set(normLongDesc, arr);
             }
         }
+
+        baselineByPriceListId = new Map<string, BaselineAggregate>();
+        const baselineItems = await EstimateItem.find({
+            project_id: projectObjectId,
+            'project.estimate_id': baselineEstId
+        }).select('price_list_item_id project.quantity project.unit_price').lean<BaselineItemLean[]>();
+
+        for (const item of baselineItems) {
+            const key = item.price_list_item_id ? String(item.price_list_item_id) : '';
+            if (!key) continue;
+            const quantity = asNumber(item.project?.quantity) ?? 0;
+            const unitPrice = asNumber(item.project?.unit_price);
+            const entry = baselineByPriceListId.get(key) || { totalQuantity: 0, totalAmount: 0 };
+            entry.totalQuantity += quantity;
+            if (unitPrice !== null) {
+                entry.totalAmount += unitPrice * quantity;
+            }
+            baselineByPriceListId.set(key, entry);
+        }
     }
 
-    const offerItemsDocs = rawItems.map((item) => {
+    const offerItemsDocs = rawItems.map((item, itemIndex) => {
         const progressive = item.progressive ?? item.order;
         const rawCode = (item.code ?? item.codice ?? '').toString().trim();
         const code = rawCode.length ? rawCode : undefined;
@@ -560,18 +644,19 @@ export async function persistOffer(payload: PythonImportResult, projectId: strin
         let resolutionStatus: 'resolved' | 'pending' = 'resolved';
         let candidatePriceListItemIds: Types.ObjectId[] | undefined;
 
+        let baselineMatch: DetailedBaseline | undefined;
         if (importMode === 'detailed') {
-            const match = progressive !== undefined && detailedBaselineMap
+            baselineMatch = progressive !== undefined && detailedBaselineMap
                 ? detailedBaselineMap.get(progressive)
                 : undefined;
-            if (match) {
-                estimateItemId = match.id;
+            if (baselineMatch) {
+                estimateItemId = baselineMatch.id;
                 // Fallback to baseline unit price/measure if missing from import
                 if (item.unit_price === undefined || item.unit_price === null || Number.isNaN(item.unit_price)) {
-                    item.unit_price = match.unit_price;
+                    item.unit_price = baselineMatch.unit_price;
                 }
-                if (!item.unit_measure && match.unit_measure) {
-                    item.unit_measure = match.unit_measure;
+                if (!item.unit_measure && baselineMatch.unit_measure) {
+                    item.unit_measure = baselineMatch.unit_measure;
                 }
             } else {
                 origin = 'addendum';
@@ -613,6 +698,151 @@ export async function persistOffer(payload: PythonImportResult, projectId: strin
                     console.warn(`[Persistence] Addendum: missing PriceListItem for code='${code}', desc='${normLongDesc || normDesc}'`);
                 }
             }
+
+            if (priceListItemId && baselineByPriceListId && !baselineByPriceListId.has(String(priceListItemId))) {
+                origin = 'addendum';
+            }
+        }
+
+        const addAlert = (data: Omit<OfferAlertInsert, 'project_id' | 'offer_id' | 'source' | 'origin'> & {
+            origin?: 'baseline' | 'addendum';
+            estimate_item_id?: Types.ObjectId;
+            price_list_item_id?: Types.ObjectId;
+        }) => {
+            pendingAlerts.push({
+                project_id: projectObjectId,
+                offer_id: offerId,
+                source,
+                origin: data.origin ?? origin,
+                estimate_item_id: data.estimate_item_id ?? estimateItemId,
+                price_list_item_id: data.price_list_item_id ?? priceListItemId,
+                ...data,
+                itemIndex
+            });
+        };
+
+        if (importMode === 'detailed') {
+            if (!baselineMatch) {
+                addAlert({
+                    type: 'addendum',
+                    severity: 'info',
+                    message: 'Missing baseline item for progressive mapping',
+                    code: code ?? null
+                });
+            } else {
+                const actualQuantity = asNumber(item.quantity);
+                const expectedQuantity = asNumber(baselineMatch.quantity);
+                if (hasDelta(actualQuantity, expectedQuantity)) {
+                    addAlert({
+                        type: 'quantity_mismatch',
+                        severity: 'warning',
+                        actual: actualQuantity,
+                        expected: expectedQuantity,
+                        delta: actualQuantity !== null && expectedQuantity !== null ? actualQuantity - expectedQuantity : null,
+                        code: code ?? null,
+                        baseline_code: baselineMatch.code ?? null
+                    });
+                }
+
+                const actualUnitPrice = asNumber(item.unit_price ?? item.prezzo_unitario);
+                const expectedUnitPrice = asNumber(baselineMatch.unit_price);
+                if (hasDelta(actualUnitPrice, expectedUnitPrice)) {
+                    addAlert({
+                        type: 'price_mismatch',
+                        severity: 'warning',
+                        actual: actualUnitPrice,
+                        expected: expectedUnitPrice,
+                        delta: actualUnitPrice !== null && expectedUnitPrice !== null ? actualUnitPrice - expectedUnitPrice : null,
+                        code: code ?? null,
+                        baseline_code: baselineMatch.code ?? null
+                    });
+                }
+
+                const normCode = normalizeCode(code);
+                const normBaselineCode = normalizeCode(baselineMatch.code ?? undefined);
+                if (normCode && normBaselineCode && normCode !== normBaselineCode) {
+                    addAlert({
+                        type: 'code_mismatch',
+                        severity: 'warning',
+                        actual: code ?? null,
+                        expected: baselineMatch.code ?? null,
+                        code: code ?? null,
+                        baseline_code: baselineMatch.code ?? null
+                    });
+                }
+            }
+        } else {
+            if (!priceListItemId) {
+                if (candidatePriceListItemIds?.length) {
+                    addAlert({
+                        type: 'ambiguous_match',
+                        severity: 'warning',
+                        message: `Multiple candidates (${candidatePriceListItemIds.length}) for matching`,
+                        code: code ?? null
+                    });
+                } else {
+                    addAlert({
+                        type: 'addendum',
+                        severity: 'info',
+                        message: 'No match found for aggregated item',
+                        code: code ?? null
+                    });
+                }
+            } else {
+                const meta = priceListMetaMap?.get(String(priceListItemId));
+                const baselineAgg = baselineByPriceListId?.get(String(priceListItemId));
+                if (!baselineAgg) {
+                    addAlert({
+                        type: 'addendum',
+                        severity: 'info',
+                        message: 'Item not present in baseline',
+                        code: code ?? null,
+                        baseline_code: meta?.code ?? null
+                    });
+                }
+                const actualQuantity = asNumber(item.quantity);
+                const expectedQuantity = baselineAgg ? asNumber(baselineAgg.totalQuantity) : null;
+                if (hasDelta(actualQuantity, expectedQuantity)) {
+                    addAlert({
+                        type: 'quantity_mismatch',
+                        severity: 'warning',
+                        actual: actualQuantity,
+                        expected: expectedQuantity,
+                        delta: actualQuantity !== null && expectedQuantity !== null ? actualQuantity - expectedQuantity : null,
+                        code: code ?? null,
+                        baseline_code: meta?.code ?? null
+                    });
+                }
+
+                const actualUnitPrice = asNumber(item.unit_price ?? item.prezzo_unitario);
+                const baselineUnitPrice = baselineAgg && baselineAgg.totalQuantity > 0
+                    ? baselineAgg.totalAmount / baselineAgg.totalQuantity
+                    : asNumber(meta?.price ?? null);
+                if (hasDelta(actualUnitPrice, baselineUnitPrice)) {
+                    addAlert({
+                        type: 'price_mismatch',
+                        severity: 'warning',
+                        actual: actualUnitPrice,
+                        expected: baselineUnitPrice,
+                        delta: actualUnitPrice !== null && baselineUnitPrice !== null ? actualUnitPrice - baselineUnitPrice : null,
+                        code: code ?? null,
+                        baseline_code: meta?.code ?? null
+                    });
+                }
+
+                const normCode = normalizeCode(code);
+                const normBaselineCode = normalizeCode(meta?.code ?? undefined);
+                if (normCode && normBaselineCode && normCode !== normBaselineCode) {
+                    addAlert({
+                        type: 'code_mismatch',
+                        severity: 'warning',
+                        actual: code ?? null,
+                        expected: meta?.code ?? null,
+                        code: code ?? null,
+                        baseline_code: meta?.code ?? null
+                    });
+                }
+            }
         }
 
         const quantity = item.quantity ?? 0;
@@ -649,16 +879,34 @@ export async function persistOffer(payload: PythonImportResult, projectId: strin
             // Detailed baseline: derive linkage only
             baseDoc.estimate_item_id = estimateItemId;
             // Progressive derived from baseline (if available)
-            const match = progressive !== undefined && detailedBaselineMap ? detailedBaselineMap.get(progressive) : undefined;
-            baseDoc.progressive = match?.progressive ?? undefined;
+            baseDoc.progressive = baselineMatch?.progressive ?? undefined;
             // No code/description/unit_measure to force inheritance from Estimate/PLI
         }
 
         return baseDoc;
     });
 
+    let insertedItems: Array<{ _id: Types.ObjectId }> = [];
     if (offerItemsDocs.length) {
-        await OfferItem.insertMany(offerItemsDocs);
+        insertedItems = await OfferItem.insertMany(offerItemsDocs);
+    }
+
+    const alertsToInsert = pendingAlerts
+        .map((alert) => {
+            const { itemIndex, ...rest } = alert;
+            const inserted = insertedItems[itemIndex];
+            if (!inserted?._id) return null;
+            return { ...rest, offer_item_id: inserted._id };
+        })
+        .filter((alert): alert is OfferAlertInsert => alert !== null);
+
+    if (alertsToInsert.length) {
+        await OfferAlert.insertMany(alertsToInsert);
+    }
+
+    const alertsByType: Record<string, number> = {};
+    for (const alert of alertsToInsert) {
+        alertsByType[alert.type] = (alertsByType[alert.type] || 0) + 1;
     }
 
     return {
@@ -667,6 +915,10 @@ export async function persistOffer(payload: PythonImportResult, projectId: strin
             offerId: offerId,
             items: offerItemsDocs.length
         },
-        warnings
+        warnings,
+        alerts: {
+            total: alertsToInsert.length,
+            by_type: alertsByType
+        }
     };
 }

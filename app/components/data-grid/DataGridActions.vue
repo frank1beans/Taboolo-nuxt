@@ -32,38 +32,40 @@ const onDelete = () => {
 </script>
 
 <template>
-  <div class="flex items-center justify-end gap-1 h-full w-full pr-1">
-    <UTooltip text="Dettaglio">
-      <button
-        type="button"
-        class="inline-flex items-center justify-center w-7 h-7 rounded-md transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary)/0.55)] bg-[hsl(var(--primary)/0.1)] text-[hsl(var(--primary))] hover:bg-[hsl(var(--primary))] hover:text-[hsl(var(--primary-foreground))]"
-        aria-label="Apri dettaglio"
-        @click.stop="onOpen"
-      >
-        <Icon name="heroicons:eye" class="w-4 h-4" />
-      </button>
+  <div class="flex items-center justify-end h-full w-full gap-1 pr-2" @click.stop>
+    <UTooltip text="Vedi dettaglio">
+      <UButton
+        color="gray"
+        variant="ghost"
+        icon="i-heroicons-arrow-right-circle"
+        size="xs"
+        class="transition-colors hover:bg-[hsl(var(--primary)/0.15)] hover:text-[hsl(var(--primary))]"
+        @click="onOpen"
+      />
     </UTooltip>
-    
+
     <UTooltip text="Modifica">
-      <button
-        type="button"
-        class="inline-flex items-center justify-center w-7 h-7 rounded-md transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-[hsl(var(--warning)/0.55)] bg-[hsl(var(--warning)/0.1)] text-[hsl(var(--warning))] hover:bg-[hsl(var(--warning))] hover:text-[hsl(var(--warning-foreground))]"
-        aria-label="Modifica"
-        @click.stop="onEdit"
-      >
-        <Icon name="heroicons:pencil-square" class="w-4 h-4" />
-      </button>
+      <UButton
+        color="gray"
+        variant="ghost"
+        icon="i-heroicons-pencil-square"
+        size="xs"
+        class="transition-colors hover:bg-[hsl(var(--muted))]"
+        @click="onEdit"
+      />
     </UTooltip>
-    
+
+    <div class="h-4 w-px bg-[hsl(var(--border))]" />
+
     <UTooltip text="Elimina">
-      <button
-        type="button"
-        class="inline-flex items-center justify-center w-7 h-7 rounded-md transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-[hsl(var(--destructive)/0.55)] bg-[hsl(var(--destructive)/0.1)] text-[hsl(var(--destructive))] hover:bg-[hsl(var(--destructive))] hover:text-[hsl(var(--destructive-foreground))]"
-        aria-label="Elimina"
-        @click.stop="onDelete"
-      >
-        <Icon name="heroicons:trash" class="w-4 h-4" />
-      </button>
+      <UButton
+        color="gray"
+        variant="ghost"
+        icon="i-heroicons-trash"
+        size="xs"
+        class="transition-colors hover:bg-rose-100 dark:hover:bg-rose-900/30 hover:text-rose-600"
+        @click="onDelete"
+      />
     </UTooltip>
   </div>
 </template>

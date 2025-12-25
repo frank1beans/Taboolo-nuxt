@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, reactive, computed, watch } from 'vue';
-import type { ApiEstimate } from '~/types/api';
+import type { ApiOfferImportResult } from '~/types/api';
 import FileDropZone from '~/components/ui/FileDropZone.vue';
 import ImportStatusCard from '~/components/ui/ImportStatusCard.vue';
 import { api } from '~/lib/api-client';
@@ -11,7 +11,7 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  (e: 'success', estimate: ApiEstimate): void;
+  (e: 'success', result: ApiOfferImportResult): void;
 }>();
 
 const { readHeadersFromFile, autoDetectColumns } = useExcelReader();
@@ -182,11 +182,18 @@ const upload = async () => {
     clearInterval(interval);
     progress.value = 100;
     status.value = 'success';
+    const warningsCount = result?.warnings?.length ?? 0;
+    const alertCount = result?.alerts?.total ?? 0;
+    let message = 'Import completato con successo';
+    if (warningsCount || alertCount) {
+      const parts = [];
+      if (warningsCount) parts.push(`${warningsCount} avvisi`);
+      if (alertCount) parts.push(`${alertCount} alert`);
+      message = `${parts.join(', ')} durante l'import`;
+    }
     uploadResult.value = {
       totalItems: result?.summary?.items,
-      message: result?.warnings?.length
-        ? `${result.warnings.length} avvisi durante l'import`
-        : 'Import completato con successo',
+      message,
     };
     emit('success', result);
   } catch (err: unknown) {

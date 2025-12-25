@@ -1,0 +1,142 @@
+{
+  "items_used": 50,
+  "items_skipped": 0,
+  "items_missing_predictions": 0,
+  "slots": {
+    "board_layers": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "support": 43,
+      "tp": 43,
+      "fp": 0,
+      "fn": 0,
+      "mismatch": 0
+    },
+    "board_type": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "support": 43,
+      "tp": 43,
+      "fp": 0,
+      "fn": 0,
+      "mismatch": 0
+    },
+    "brand": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "support": 40,
+      "tp": 40,
+      "fp": 0,
+      "fn": 0,
+      "mismatch": 0
+    },
+    "finish": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "support": 1,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "mismatch": 0
+    },
+    "fire_class": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "support": 13,
+      "tp": 13,
+      "fp": 0,
+      "fn": 0,
+      "mismatch": 0
+    },
+    "frame_material": {
+      "precision": 0.9565217391304348,
+      "recall": 0.9565217391304348,
+      "support": 23,
+      "tp": 22,
+      "fp": 1,
+      "fn": 1,
+      "mismatch": 1
+    },
+    "frame_spacing_mm": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "support": 20,
+      "tp": 20,
+      "fp": 0,
+      "fn": 0,
+      "mismatch": 0
+    },
+    "frame_type": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "support": 20,
+      "tp": 20,
+      "fp": 0,
+      "fn": 0,
+      "mismatch": 0
+    },
+    "height_cm": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "support": 1,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "mismatch": 0
+    },
+    "insulation_thickness_mm": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "support": 20,
+      "tp": 20,
+      "fp": 0,
+      "fn": 0,
+      "mismatch": 0
+    },
+    "insulation_type": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "support": 20,
+      "tp": 20,
+      "fp": 0,
+      "fn": 0,
+      "mismatch": 0
+    },
+    "material": {
+      "precision": 0.9591836734693877,
+      "recall": 0.9591836734693877,
+      "support": 49,
+      "tp": 47,
+      "fp": 2,
+      "fn": 2,
+      "mismatch": 2
+    },
+    "thickness_mm": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "support": 45,
+      "tp": 45,
+      "fp": 0,
+      "fn": 0,
+      "mismatch": 0
+    },
+    "wall_total_thickness_mm": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "support": 25,
+      "tp": 25,
+      "fp": 0,
+      "fn": 0,
+      "mismatch": 0
+    },
+    "width_cm": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "support": 1,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "mismatch": 0
+    }
+  }
+}

@@ -9,7 +9,7 @@
       <div class="p-4 border-b border-gray-200 dark:border-gray-800 flex justify-between items-center">
         <div>
           <h2 class="font-bold text-base mb-0.5">Mappa Semantica</h2>
-          <p class="text-[10px] text-gray-500 uppercase tracking-wider">{{ filteredPoints.length.toLocaleString() }} punti</p>
+          <p class="text-[10px] text-gray-500 uppercase tracking-wider">{{ filteredPoints.length.toLocaleString() }} punti • {{ poles.length }} poli</p>
         </div>
         <!-- Settings Toggle -->
         <UPopover>
@@ -46,6 +46,24 @@
                   class="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer dark:bg-gray-600 accent-primary-500"
                 />
               </div>
+
+              <!-- Show Poles Toggle -->
+              <div class="flex items-center justify-between">
+                <label class="text-xs text-gray-600 dark:text-gray-400">Mostra Poli</label>
+                <UToggle v-model="showPoles" />
+              </div>
+              
+              <!-- Manual Reload Button -->
+               <UButton 
+                  size="xs" 
+                  block 
+                  color="gray" 
+                  variant="solid" 
+                  icon="i-heroicons-arrow-path"
+                  @click="fetchPoles"
+                >
+                  Ricarica Dati
+                </UButton>
             </div>
           </template>
         </UPopover>
@@ -551,49 +569,147 @@ const currentNeighbors = computed(() => {
   return analytics.getClickedPointNeighbors(points.value as Point[], mode.value);
 });
 
+// --- Poles Integration ---
+const poles = ref<any[]>([]);
+
+// Fetch poles when project changes or status changes
+// Explicit fetch function
+const fetchPoles = async () => {
+    if (!projectId) return;
+    try {
+        console.log('[Visualizer] Fetching poles explicit...');
+        const { poles: fetchedPoles } = await $fetch<any>('/api/analytics/global-map', {
+            method: 'POST',
+            body: { project_ids: [projectId] }
+        });
+        poles.value = fetchedPoles || [];
+        console.log(`[Visualizer] Poles set: ${poles.value.length}`);
+        
+        // Visual feedback
+        const toast = useToast();
+        toast.add({
+            title: 'Poli Caricati',
+            description: `Trovati ${poles.value.length} poli gravitazionali.`,
+            color: poles.value.length > 0 ? 'green' : 'orange'
+        });
+    } catch (e) {
+        console.error("Failed to fetch poles", e);
+        const toast = useToast();
+        toast.add({ title: 'Errore', description: 'Impossibile caricare i poli.', color: 'red' });
+    }
+};
+
+// Fetch poles when project changes or status changes
+watch([() => projectId, status], async ([pid, s]) => {
+    if (pid && s === 'success') {
+         // Only auto-fetch if showPoles is true
+         if (showPoles.value) await fetchPoles();
+    }
+}, { immediate: true });
+
+watch(showPoles, (val) => {
+    if (val && poles.value.length === 0) {
+        fetchPoles();
+    }
+});
+
+onMounted(() => {
+    // Retry fetch after a short delay to ensure everything is ready
+    setTimeout(() => {
+        if (poles.value.length === 0) fetchPoles();
+    }, 1000);
+});
+
+const showPoles = ref(true); // Default enabled, but toggleable
+
 const plotData = computed(() => {
     const subset = filteredPoints.value;
-    if (subset.length === 0) return [];
-
-    const xs = subset.map(p => p.x);
-    const ys = subset.map(p => p.y);
-    const zs = subset.map(p => p.z);
-    const ids = subset.map(p => p.id);
-
-    const marker = buildMarkerConfig({
-      points: subset as Point[],
-      colorBy: colorBy.value,
-      searchResults: searchResults.value,
-      selectedPointIds: analytics.selectedPointIds.value,
-      clickedPointId: analytics.clickedPointId.value,
-      neighborIds: analytics.neighborIds.value,
-      pointSize: pointSize.value,
-      clusterPalette: analytics.clusterPalette.value,
-      outlierIds: priceAnalysis.outlierIds.value,
-    });
-
+    const currentPoles = showPoles.value ? poles.value : [];
+    
     const traces: any[] = [];
+    
+    // 1. Points Trace
+    if (subset.length > 0) {
+        const xs = subset.map(p => p.x);
+        const ys = subset.map(p => p.y);
+        const zs = subset.map(p => p.z);
+        const ids = subset.map(p => p.id);
 
-    if (mode.value === '3d') {
-        traces.push({
-            type: 'scatter3d',
-            mode: 'markers',
-            x: xs, y: ys, z: zs,
-            customdata: ids,
-            hoverinfo: 'none',
-            marker,
+        const marker = buildMarkerConfig({
+          points: subset as Point[],
+          colorBy: colorBy.value,
+          searchResults: searchResults.value,
+          selectedPointIds: analytics.selectedPointIds.value,
+          clickedPointId: analytics.clickedPointId.value,
+          neighborIds: analytics.neighborIds.value,
+          pointSize: pointSize.value,
+          clusterPalette: analytics.clusterPalette.value,
+          outlierIds: priceAnalysis.outlierIds.value,
         });
-    } else {
-        traces.push({
-            type: 'scattergl',
-            mode: 'markers',
-            x: xs, y: ys,
-            customdata: ids,
-            hoverinfo: 'none',
-            marker,
-        });
+
+        if (mode.value === '3d') {
+            traces.push({
+                type: 'scatter3d',
+                mode: 'markers',
+                x: xs, y: ys, z: zs,
+                customdata: ids,
+                hoverinfo: 'none',
+                marker,
+                name: 'Items'
+            });
+        } else {
+            traces.push({
+                type: 'scattergl',
+                mode: 'markers',
+                x: xs, y: ys,
+                customdata: ids,
+                hoverinfo: 'none',
+                marker,
+                name: 'Items'
+            });
+        }
     }
 
+    // 2. Poles Trace
+    if (currentPoles.length > 0) {
+        const px = currentPoles.map(p => p.x);
+        const py = currentPoles.map(p => p.y);
+        const pz = currentPoles.map(p => p.z);
+        const pids = currentPoles.map(p => `POLE_${p.wbs6}`);
+        const plabels = currentPoles.map(p => `Polo: ${p.wbs6}`);
+        
+        const poleMarker = {
+            size: pointSize.value * 2, // Bigger
+            symbol: mode.value === '3d' ? 'diamond' : 'star',
+            color: '#FFD700', // Gold
+            line: { color: '#000', width: 1 },
+            opacity: 0.9
+        };
+
+        if (mode.value === '3d') {
+            traces.push({
+                type: 'scatter3d',
+                mode: 'markers',
+                x: px, y: py, z: pz,
+                text: plabels,
+                hoverinfo: 'text',
+                marker: poleMarker,
+                name: 'Poles'
+            });
+        } else {
+            traces.push({
+                type: 'scattergl',
+                mode: 'markers',
+                x: px, y: py,
+                text: plabels,
+                hoverinfo: 'text',
+                marker: poleMarker,
+                name: 'Poles'
+            });
+        }
+    }
+
+    // 3. Neighbor Lines
     if (analytics.clickedPointId.value && analytics.neighborIds.value.length > 0) {
       const linesTrace = buildNeighborLinesTrace(
         subset as Point[],

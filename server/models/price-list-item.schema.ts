@@ -6,6 +6,7 @@ export interface IPriceListItem {
   code: string;
   description?: string;
   long_description?: string;
+  extended_description?: string;  // Concatenated parent descriptions for embeddings
   unit?: string;
   price?: number;
 
@@ -18,6 +19,7 @@ export interface IPriceListItem {
 
   // Semantic Search
   embedding?: number[];
+  extracted_properties?: Record<string, unknown>;
 
   // UMAP Visualization
   map2d?: { x: number; y: number };
@@ -36,6 +38,7 @@ const PriceListItemSchema = new Schema<IPriceListItem>({
   code: { type: String, required: true },
   description: { type: String },
   long_description: { type: String },
+  extended_description: { type: String },
   unit: { type: String },
   price: { type: Number },
 
@@ -46,6 +49,7 @@ const PriceListItemSchema = new Schema<IPriceListItem>({
   price_lists: { type: Map, of: Number },
 
   embedding: { type: [Number], select: false },
+  extracted_properties: { type: Schema.Types.Mixed },
 
   map2d: {
     x: { type: Number },
@@ -63,8 +67,8 @@ const PriceListItemSchema = new Schema<IPriceListItem>({
   timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' }
 });
 
-// Text index
-PriceListItemSchema.index({ code: 'text', description: 'text', long_description: 'text' });
+// Text index - include extended_description for richer search
+PriceListItemSchema.index({ code: 'text', description: 'text', long_description: 'text', extended_description: 'text' });
 PriceListItemSchema.index({ project_id: 1, estimate_id: 1 });
 
 export const PriceListItem = model<IPriceListItem>('PriceListItem', PriceListItemSchema);

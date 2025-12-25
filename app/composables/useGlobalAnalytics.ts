@@ -2,21 +2,11 @@
  * Global Analytics Composable
  * ============================
  * Manages state and API calls for cross-project analytics.
+ * Extends useBaseAnalytics with analysis-specific functionality.
  */
 
-export interface GlobalFilters {
-    projectIds: string[]
-    year: number | null
-    businessUnit: string | null
-}
-
-export interface ProjectInfo {
-    id: string
-    name: string
-    code: string
-    business_unit: string | null
-    year: number | null
-}
+import type { ProjectInfo } from '~/types/analytics'
+import { useBaseAnalytics } from './useBaseAnalytics'
 
 export interface GlobalPoint {
     id: string
@@ -49,12 +39,6 @@ export interface GlobalAnalysisParams {
     includeNeighbors: boolean
 }
 
-const defaultFilters: GlobalFilters = {
-    projectIds: [],
-    year: null,
-    businessUnit: null
-}
-
 const defaultAnalysisParams: GlobalAnalysisParams = {
     topK: 30,
     minSimilarity: 0.55,
@@ -66,48 +50,21 @@ const defaultAnalysisParams: GlobalAnalysisParams = {
 }
 
 export const useGlobalAnalytics = () => {
-    // Filters
-    const filters = reactive<GlobalFilters>({ ...defaultFilters })
+    // Base functionality
+    const base = useBaseAnalytics<GlobalMapResponse>({
+        endpoint: '/api/analytics/global-map',
+        computeEndpoint: '/api/analytics/global-compute-map'
+    })
+
+    // Analysis-specific state
     const analysisParams = reactive<GlobalAnalysisParams>({ ...defaultAnalysisParams })
-
-    // Map data
-    const mapData = ref<GlobalMapResponse | null>(null)
-    const isLoadingMap = ref(false)
-    const mapError = ref<string | null>(null)
-
-    // Analysis data
     const analysisResult = ref<any>(null)
     const isLoadingAnalysis = ref(false)
     const analysisError = ref<string | null>(null)
 
-    // Available filter options (populated from map data)
-    const availableProjects = computed(() => mapData.value?.projects ?? [])
-
-    const availableYears = computed(() => {
-        const years = new Set<number>()
-        mapData.value?.projects.forEach(p => {
-            if (p.year) years.add(p.year)
-        })
-        return Array.from(years).sort((a, b) => b - a)
-    })
-
-    const availableBusinessUnits = computed(() => {
-        const units = new Set<string>()
-        mapData.value?.projects.forEach(p => {
-            if (p.business_unit) units.add(p.business_unit)
-        })
-        return Array.from(units).sort()
-    })
-
-    // Build request body for API
-    const buildRequestBody = () => ({
-        project_ids: filters.projectIds.length > 0 ? filters.projectIds : null,
-        year: filters.year,
-        business_unit: filters.businessUnit
-    })
-
+    // Analysis request builder
     const buildAnalysisRequestBody = () => ({
-        ...buildRequestBody(),
+        ...base.buildRequestBody(),
         wbs6_filter: analysisParams.wbs6Filter,
         top_k: analysisParams.topK,
         min_similarity: analysisParams.minSimilarity,
@@ -116,25 +73,6 @@ export const useGlobalAnalytics = () => {
         estimation_method: analysisParams.estimationMethod,
         include_neighbors: analysisParams.includeNeighbors
     })
-
-    // Fetch map data
-    const fetchMapData = async () => {
-        isLoadingMap.value = true
-        mapError.value = null
-
-        try {
-            const response = await $fetch<GlobalMapResponse>('/api/analytics/global-map', {
-                method: 'POST',
-                body: buildRequestBody()
-            })
-            mapData.value = response
-        } catch (e: unknown) {
-            console.error('Failed to fetch global map:', e)
-            mapError.value = e instanceof Error ? e.message : 'Failed to load map'
-        } finally {
-            isLoadingMap.value = false
-        }
-    }
 
     // Run analysis
     const runAnalysis = async () => {
@@ -155,47 +93,18 @@ export const useGlobalAnalytics = () => {
         }
     }
 
-    // Compute UMAP for all projects
-    const isComputingMap = ref(false)
-    const computeMapResult = ref<{ status: string; project_count?: number } | null>(null)
-
-    const computeMap = async () => {
-        isComputingMap.value = true
-        mapError.value = null
-
-        try {
-            const response = await $fetch<{ status: string; project_count?: number }>('/api/analytics/global-compute-map', {
-                method: 'POST',
-                body: {
-                    project_ids: filters.projectIds.length > 0 ? filters.projectIds : null,
-                    force: false
-                }
-            })
-            computeMapResult.value = response
-            return response
-        } catch (e: unknown) {
-            console.error('Failed to compute map:', e)
-            mapError.value = e instanceof Error ? e.message : 'Failed to compute map'
-            return null
-        } finally {
-            isComputingMap.value = false
-        }
-    }
-
-    // Computed helpers
-    const points = computed(() => mapData.value?.points ?? [])
+    // Points computed
+    const points = computed(() => base.mapData.value?.points ?? [])
 
     const filteredPoints = computed(() => {
         let pts = points.value
-
-        // Filter by selected projects
-        if (filters.projectIds.length > 0) {
-            pts = pts.filter(p => filters.projectIds.includes(p.project_id))
+        if (base.filters.projectIds.length > 0) {
+            pts = pts.filter(p => base.filters.projectIds.includes(p.project_id))
         }
-
         return pts
     })
 
+    // Outlier computed helpers
     const outlierItems = computed(() => {
         if (!analysisResult.value) return []
         return analysisResult.value.categories?.flatMap((cat: any) =>
@@ -212,53 +121,35 @@ export const useGlobalAnalytics = () => {
         return ((analysisResult.value.outliers_found / analysisResult.value.total_items) * 100).toFixed(1)
     })
 
-    // Reset
-    const resetFilters = () => {
-        Object.assign(filters, defaultFilters)
-    }
-
     const resetAnalysisParams = () => {
         Object.assign(analysisParams, defaultAnalysisParams)
     }
 
-    // Initial load
-    onMounted(() => {
-        fetchMapData()
-    })
-
     return {
-        // Filters
-        filters,
-        analysisParams,
+        // From base
+        filters: base.filters,
+        mapData: base.mapData,
+        isLoadingMap: base.isLoadingMap,
+        mapError: base.mapError,
+        isComputingMap: base.isComputingMap,
+        availableProjects: base.availableProjects,
+        availableYears: base.availableYears,
+        availableBusinessUnits: base.availableBusinessUnits,
+        fetchMapData: base.fetchMapData,
+        computeMap: base.computeMap,
+        resetFilters: base.resetFilters,
 
-        // Data
-        mapData,
+        // Analysis-specific
+        analysisParams,
+        analysisResult,
+        isLoadingAnalysis,
+        analysisError,
         points,
         filteredPoints,
-        analysisResult,
-
-        // Loading/Error
-        isLoadingMap,
-        isLoadingAnalysis,
-        mapError,
-        analysisError,
-
-        // Filter options
-        availableProjects,
-        availableYears,
-        availableBusinessUnits,
-
-        // Outliers
         outlierItems,
         outlierIds,
         outlierPercent,
-
-        // Actions
-        fetchMapData,
         runAnalysis,
-        computeMap,
-        isComputingMap,
-        resetFilters,
         resetAnalysisParams
     }
 }

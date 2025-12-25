@@ -45,6 +45,63 @@ export interface ApiOfferSummary {
   is_baseline?: boolean;
 }
 
+export interface ApiOfferAlert {
+  id: string;
+  offer_id: string;
+  offer_item_id?: string | null;
+  estimate_item_id?: string | null;
+  price_list_item_id?: string | null;
+  source?: "detailed" | "aggregated";
+  origin?: "baseline" | "addendum";
+  type: string;
+  severity: "info" | "warning" | "error";
+  message?: string | null;
+  actual?: number | string | null;
+  expected?: number | string | null;
+  delta?: number | null;
+  code?: string | null;
+  baseline_code?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface ApiOfferAlertSummary {
+  total: number;
+  by_type: Record<string, number>;
+}
+
+export interface ApiOfferImportResult {
+  success: boolean;
+  summary: {
+    offerId: string;
+    items: number;
+  };
+  warnings?: string[];
+  alerts?: ApiOfferAlertSummary;
+}
+
+export interface ApiOfferAddendumItem {
+  id: string;
+  offer_id: string;
+  origin: "baseline" | "addendum";
+  source: "detailed" | "aggregated";
+  description?: string | null;
+  code?: string | null;
+  unit_measure?: string | null;
+  quantity: number;
+  unit_price: number;
+  notes?: string | null;
+  price_list_item_id?: string | null;
+  candidate_price_list_item_ids?: string[] | null;
+  resolution_status?: string | null;
+  candidates?: Array<{
+    id: string;
+    code?: string | null;
+    description?: string | null;
+    unit?: string | null;
+  }>;
+}
+
 export type ProjectStatus = "setup" | "in_progress" | "closed";
 
 export interface ApiProject {
@@ -639,6 +696,18 @@ export interface ApiPriceListItem {
   product_id: string;
   item_code: string;
   item_description?: string | null;
+  // Mapped fields from API (sometimes flattening happens or direct usage)
+  code?: string;
+  description?: string;
+  long_description?: string | null;
+  longDescription?: string | null;
+  extended_description?: string | null;
+  extendedDescription?: string | null;
+  unit?: string;
+  price?: number;
+  total_quantity?: number;
+  total_amount?: number;
+
   unit_id?: string | null;
   unit_label?: string | null;
   wbs6_code?: string | null;

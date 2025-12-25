@@ -1,0 +1,112 @@
+{
+  "material": {
+    "value": "cartongesso",
+    "evidence": "parete in cartongesso standard/lastra rinforzata",
+    "confidence": 1.0
+  },
+  "thickness_mm": {
+    "value": null,
+    "evidence": null,
+    "confidence": 0.0
+  },
+  "width_cm": {
+    "value": null,
+    "evidence": null,
+    "confidence": 0.0
+  },
+  "height_cm": {
+    "value": 270,
+    "evidence": "altezza da pavimento sopraelevato a controsoffitto h. 270cm",
+    "confidence": 1.0
+  },
+  "finish": {
+    "value": null,
+    "evidence": null,
+    "confidence": 0.0
+  },
+  "fire_class": {
+    "value": null,
+    "evidence": null,
+    "confidence": 0.0
+  },
+  "acoustic_class": {
+    "value": null,
+    "evidence": null,
+    "confidence": 0.0
+  },
+  "brand": {
+    "value": "Knauf",
+    "evidence": [
+      "tipo \"Knauf Diamant\"",
+      "tipo \"Knauf GKB\""
+    ],
+    "confidence": 1.0
+  },
+  "frame_type": {
+    "value": "mono orditura metallica",
+    "evidence": "mono orditura metallica da 50 mm",
+    "confidence": 1.0
+  },
+  "frame_spacing_mm": {
+    "value": 600,
+    "evidence": "passo dei montanti di 60cm",
+    "confidence": 1.0
+  },
+  "frame_material": {
+    "value": "acciaio zincato",
+    "evidence": "Orditura metallica in acciaio zincato da 50 mm",
+    "confidence": 1.0
+  },
+  "board_type": {
+    "value": [
+      "Knauf Diamant",
+      "Knauf GKB",
+      "Knauf GKB",
+      "Knauf Diamant"
+    ],
+    "evidence": [
+      "Lastra in cartongesso per l'antincendio e locali umidi tipo \"Knauf Diamant\"",
+      "Lastra in cartongesso standard tipo \"Knauf GKB\"",
+      "Lastra in cartongesso standard tipo \"Knauf GKB\"",
+      "Lastra in cartongesso per l'antincendio e locali umidi tipo \"Knauf Diamant\""
+    ],
+    "confidence": 1.0
+  },
+  "board_layers": {
+    "value": 4,
+    "evidence": [
+      "Lastra in cartongesso per l'antincendio e locali umidi tipo \"Knauf Diamant\" Sp. 12,5 mm",
+      "Lastra in cartongesso standard tipo \"Knauf GKB\" Sp. 12,5 mm",
+      "Lastra in cartongesso standard tipo \"Knauf GKB\" Sp. 12,5 mm",
+      "Lastra in cartongesso per l'antincendio e locali umidi tipo \"Knauf Diamant\" Sp. 12,5 mm"
+    ],
+    "confidence": 1.0
+  },
+  "insulation_type": {
+    "value": [
+      "Tecsound 35",
+      "Isover Arena 31"
+    ],
+    "evidence": [
+      "Strato isolante acustico in lamina sintetica viscoelastica tipo \"Tecsound 35\"",
+      "Strato isolante in lana minerale tipo \"Isover Arena 31\" A1"
+    ],
+    "confidence": 1.0
+  },
+  "insulation_thickness_mm": {
+    "value": [
+      2,
+      40
+    ],
+    "evidence": [
+      "Strato isolante acustico in lamina sintetica viscoelastica tipo \"Tecsound 35\" o similare a scelta della DL. Sp. 2 mm",
+      "Strato isolante in lana minerale tipo \"Isover Arena 31\" A1 o similare a scelta della DL. Sp. 40 mm"
+    ],
+    "confidence": 1.0
+  },
+  "wall_total_thickness_mm": {
+    "value": null,
+    "evidence": null,
+    "confidence": 0.0
+  }
+}

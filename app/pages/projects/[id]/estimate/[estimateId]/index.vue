@@ -7,6 +7,7 @@ import { useCurrentContext } from '~/composables/useCurrentContext';
 import DataGridActions from '~/components/data-grid/DataGridActions.vue';
 import { getStatusConfig } from '~/utils/status-mappings';
 import DataGridPage from '~/components/layout/DataGridPage.vue';
+import PageToolbar from '~/components/layout/PageToolbar.vue';
 import { formatCurrency as formatCurrencyLib, formatDelta } from '~/lib/formatters';
 
 const route = useRoute();
@@ -369,32 +370,59 @@ const gridContext = computed(() => ({
     edit: (row: OfferRow) => row?.isBaseline ? null : openEditOffer(row),
     remove: (row: OfferRow) => row?.isBaseline ? deleteEstimate() : deleteOffer(row),
   },
-  hideActionsFor: (row: OfferRow) => false, // Always show actions (renderer handles disabled states if needed, but here we want delete for all)
+  hideActionsFor: (row: OfferRow) => false,
 }));
+
+// Toolbar State
+const searchText = ref('')
+const gridApi = ref<any>(null)
+const onGridReady = (params: any) => {
+  gridApi.value = params.api
+}
+
+const handleReset = () => {
+  searchText.value = ''
+  gridApi.value?.setFilterModel(null)
+}
+
+const handleExport = () => {
+  gridApi.value?.exportDataAsExcel({ fileName: 'ritorni-gara' })
+}
 </script>
 
 <template>
   <div class="h-full flex flex-col">
     <DataGridPage
-      title="Dashboard Ritorni di Gara"
-      :subtitle="currentEstimate?.name || 'Dettaglio Gare'"
+      title="Ritorni di Gara"
       :grid-config="unifiedGridConfig"
       :row-data="unifiedRows"
       :loading="loading || statsLoading || offersLoading"
-      toolbar-placeholder="Filtra per preventivo, impresa o round..."
-      export-filename="ritorni-gara"
       empty-state-title="Nessun dato"
       empty-state-message="Non ci sono ancora offerte o dati di progetto."
       :custom-components="{ actionsRenderer: DataGridActions }"
       :context-extras="gridContext"
+      
+      :show-toolbar="false"
+      :filter-text="searchText"
       @row-dblclick="openOfferDetail"
+      @grid-ready="onGridReady"
     >
+      <!-- Meta: Estimate Name + Count -->
+      <template #header-meta>
+         <div class="flex items-center gap-2">
+            <span class="text-[hsl(var(--foreground))] font-medium">
+                {{ currentEstimate?.name || 'Dettaglio Gare' }}
+            </span>
+            <span class="text-[hsl(var(--border))]">|</span>
+            <span class="text-[hsl(var(--muted-foreground))] flex items-center gap-2">
+                <Icon name="heroicons:document-text" class="w-4 h-4 ml-1" />
+                {{ offersCount }} offerte
+            </span>
+         </div>
+      </template>
+
+      <!-- Actions -->
       <template #actions>
-        <UBadge v-if="offersCount > 0" color="neutral" variant="soft">
-            <Icon name="heroicons:document-text" class="w-3.5 h-3.5 mr-1" />
-            {{ offersCount }} offerte
-        </UBadge>
-        
         <div class="flex items-center gap-2 ml-2">
             <UButton
             color="primary"
@@ -407,8 +435,35 @@ const gridContext = computed(() => ({
             </UButton>
         </div>
       </template>
+
+      <!-- Toolbar -->
+      <template #pre-grid>
+        <PageToolbar
+          v-model="searchText"
+          search-placeholder="Filtra per preventivo, impresa o round..."
+        >
+          <template #right>
+            <button
+               v-if="searchText"
+               class="flex items-center justify-center h-9 px-4 rounded-full text-sm font-medium text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--background))] hover:text-[hsl(var(--foreground))] transition-colors"
+               @click="handleReset"
+            >
+              <Icon name="heroicons:arrow-path" class="w-4 h-4 mr-2" />
+              Reset
+            </button>     
+
+            <button
+               class="btn-outline-theme"
+               @click="handleExport"
+            >
+               Esporta
+            </button>
+          </template>
+        </PageToolbar>
+      </template>
     </DataGridPage>
 
+    <!-- Modal Teleport -->
     <Teleport to="body">
       <div v-if="isEditModalOpen" class="fixed inset-0 z-[100] flex items-center justify-center px-4 py-6">
         <!-- Backdrop -->
@@ -418,13 +473,13 @@ const gridContext = computed(() => ({
         />
 
         <!-- Modal Card -->
-        <div class="relative z-[105] w-full max-w-lg rounded-xl shadow-2xl overflow-hidden bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 flex flex-col max-h-[90vh]">
+        <div class="relative z-[105] w-full max-w-lg rounded-xl shadow-2xl overflow-hidden bg-[hsl(var(--card))] border border-[hsl(var(--border))] flex flex-col max-h-[90vh]">
           
           <!-- Header -->
-          <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/50 flex items-center justify-between shrink-0">
+          <div class="px-6 py-4 border-b border-[hsl(var(--border))] bg-[hsl(var(--muted)/0.5)] flex items-center justify-between shrink-0">
             <div>
-              <p class="text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Modifica Offerta</p>
-              <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+              <p class="text-xs font-medium uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Modifica Offerta</p>
+              <h3 class="text-lg font-semibold text-[hsl(var(--foreground))]">
                 {{ editForm.name || editForm.company_name || 'Offerta' }}
               </h3>
             </div>
@@ -451,7 +506,7 @@ const gridContext = computed(() => ({
           </div>
 
           <!-- Footer -->
-          <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/50 flex items-center justify-end gap-3 shrink-0">
+          <div class="px-6 py-4 border-t border-[hsl(var(--border))] bg-[hsl(var(--muted)/0.5)] flex items-center justify-end gap-3 shrink-0">
             <UButton color="neutral" variant="ghost" @click="closeEditModal">
               Annulla
             </UButton>

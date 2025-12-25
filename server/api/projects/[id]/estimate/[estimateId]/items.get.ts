@@ -163,7 +163,13 @@ export default defineEventHandler(async (event) => {
                             $cond: {
                                 if: { $eq: ['$source', 'aggregated'] },
                                 then: { $ifNull: ['$price_item.code', null] },
-                                else: { $ifNull: ['$estimate_item.code', { $ifNull: ['$price_item.code', null] }] }
+                                else: {
+                                    $cond: {
+                                        if: { $or: [{ $eq: ['$estimate_item.code', null] }, { $eq: ['$estimate_item.code', ''] }] },
+                                        then: { $ifNull: ['$price_item.code', null] },
+                                        else: '$estimate_item.code'
+                                    }
+                                }
                             }
                         },
 
@@ -184,7 +190,7 @@ export default defineEventHandler(async (event) => {
                         wbs_hierarchy: {
                             $arrayToObject: {
                                 $map: {
-                                    input: '$all_wbs_nodes',
+                                    input: '$wbs_nodes',
                                     as: 'node',
                                     in: {
                                         // Construct key "wbs0X" from level
@@ -238,23 +244,94 @@ export default defineEventHandler(async (event) => {
                     }
                 },
                 {
-                    $lookup: {
-                        from: 'pricelistitems',
-                        let: { pli_id: { $toObjectId: '$price_list_item_id' } }, // stored as string
-                        pipeline: [
-                            { $match: { $expr: { $eq: ['$_id', '$$pli_id'] } } }
-                        ],
-                        as: 'price_item'
+                    $addFields: {
+                        clean_pli_id: { $trim: { input: '$price_list_item_id' } }
                     }
                 },
-                { $unwind: { path: '$price_item', preserveNullAndEmptyArrays: true } },
+                {
+                    $addFields: {
+                        // Check if it's a valid ObjectId string (24 hex chars)
+                        is_valid_oid: {
+                            $regexMatch: { input: '$clean_pli_id', regex: /^[0-9a-fA-F]{24}$/ }
+                        }
+                    }
+                },
+                {
+                    $lookup: {
+                        from: 'pricelistitems',
+                        let: {
+                            raw_id: '$clean_pli_id',
+                            is_valid: '$is_valid_oid',
+                            pid: '$project_id'
+                        },
+                        pipeline: [
+                            {
+                                $match: {
+                                    $expr: {
+                                        $and: [
+                                            // Always filter by project_id to avoid cross-project pollution
+                                            { $eq: ['$project_id', '$$pid'] },
+                                            {
+                                                $or: [
+                                                    {
+                                                        $and: [
+                                                            { $eq: ['$$is_valid', true] },
+                                                            {
+                                                                $or: [
+                                                                    // Match as ObjectId (safely converted)
+                                                                    {
+                                                                        $eq: [
+                                                                            '$_id',
+                                                                            {
+                                                                                $convert: {
+                                                                                    input: '$$raw_id',
+                                                                                    to: 'objectId',
+                                                                                    onError: null,
+                                                                                    onNull: null
+                                                                                }
+                                                                            }
+                                                                        ]
+                                                                    },
+                                                                    // Match as String
+                                                                    { $eq: [{ $toString: '$_id' }, '$$raw_id'] }
+                                                                ]
+                                                            }
+                                                        ]
+                                                    },
+                                                    // 2. Fallback: Match by code (assuming raw_id might be the code)
+                                                    { $eq: ['$code', '$$raw_id'] }
+                                                ]
+                                            }
+                                        ]
+                                    }
+                                }
+                            }
+                        ],
+                        as: 'price_item_lookup'
+                    }
+                },
+                {
+                    $addFields: {
+                        price_item: { $arrayElemAt: ['$price_item_lookup', 0] }
+                    }
+                },
 
                 // Lookup WBS Nodes
                 {
                     $addFields: {
+                        effective_wbs_ids: {
+                            $setUnion: [
+                                { $ifNull: ['$wbs_ids', []] },
+                                { $ifNull: ['$price_item.wbs_ids', []] }
+                            ]
+                        }
+                    }
+                },
+                {
+                    $addFields: {
                         wbs_ids_oid: {
                             $map: {
-                                input: { $ifNull: ['$wbs_ids', []] },
+                                input: '$effective_wbs_ids',
                                 as: 'wid',
                                 in: { $toObjectId: '$$wid' }
                             }
@@ -274,6 +351,7 @@ export default defineEventHandler(async (event) => {
                 {
                     $addFields: {
                         // Inherit description from PLI if not override
+                        code: { $ifNull: ['$price_item.code', null] },
                         description: {
                             $ifNull: [
                                 '$description',
@@ -292,7 +370,8 @@ export default defineEventHandler(async (event) => {
                                     }
                                 }
                             }
-                        }
+                        },
+                        unit_measure: { $ifNull: ['$price_item.unit', null] }
                     }
                 }
             ]);

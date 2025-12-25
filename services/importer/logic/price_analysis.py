@@ -291,7 +291,7 @@ class PriceAnalyzer:
             node_id = str(node["_id"])
             mapping[node_id] = {
                 "code": node.get("code", ""),
-                "description": node.get("description", "")
+                "description": node.get("normalized_description") or node.get("description", "")
             }
         
         logger.info(f"Found {len(mapping)} WBS06 categories")
@@ -779,7 +779,7 @@ class GlobalPriceAnalyzer(PriceAnalyzer):
             if code not in mapping:
                 mapping[code] = {
                     "code": code,
-                    "description": node.get("description", ""),
+                    "description": node.get("normalized_description") or node.get("description", ""),
                     "node_ids": []
                 }
             mapping[code]["node_ids"].append(str(node["_id"]))

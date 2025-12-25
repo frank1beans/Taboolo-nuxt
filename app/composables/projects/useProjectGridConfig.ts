@@ -44,6 +44,7 @@ export const useProjectGridConfig = (rowData: Ref<Project[]>) => {
                 maxWidth: 200,
                 minWidth: 120,
                 valuesGetter: createValuesGetter('code'),
+                cellClass: 'text-[hsl(var(--muted-foreground))] font-mono text-sm tracking-wide',
             },
             {
                 field: 'name',
@@ -51,6 +52,7 @@ export const useProjectGridConfig = (rowData: Ref<Project[]>) => {
                 flex: 2,
                 minWidth: 220,
                 valuesGetter: createValuesGetter('name'),
+                cellClass: 'font-semibold text-[hsl(var(--foreground))] text-[0.95rem]',
             },
             {
                 field: 'business_unit',
@@ -59,6 +61,7 @@ export const useProjectGridConfig = (rowData: Ref<Project[]>) => {
                 minWidth: 140,
                 maxWidth: 200,
                 valuesGetter: createValuesGetter('business_unit'),
+                cellClass: 'text-[hsl(var(--muted-foreground))] text-sm',
             },
             {
                 field: 'status',
@@ -76,6 +79,7 @@ export const useProjectGridConfig = (rowData: Ref<Project[]>) => {
                 minWidth: 130,
                 maxWidth: 160,
                 valueFormatter: (params: { value: string }) => formatDate(params.value),
+                cellClass: 'text-[hsl(var(--muted-foreground))] text-sm',
             },
             {
                 field: 'updated_at',
@@ -84,6 +88,7 @@ export const useProjectGridConfig = (rowData: Ref<Project[]>) => {
                 minWidth: 160,
                 maxWidth: 180,
                 valueFormatter: (params: { value: string }) => formatDate(params.value),
+                cellClass: 'text-[hsl(var(--muted-foreground))] text-sm',
             },
             {
                 colId: 'actions',
@@ -113,7 +118,7 @@ export const useProjectGridConfig = (rowData: Ref<Project[]>) => {
         enableExport: true,
         enableColumnToggle: false,
         headerHeight: 52,
-        rowHeight: 44,
+        rowHeight: 52,
         animateRows: true,
         suppressCellFocus: true,
     }

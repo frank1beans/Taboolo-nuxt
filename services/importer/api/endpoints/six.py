@@ -1,27 +1,30 @@
-import os
+"""
+SIX File Import Endpoint
+Parses .six/.xml files and transforms to database schema.
+"""
 
+import os
 from fastapi import APIRouter, File, UploadFile, HTTPException, Form
-from typing import List
-from pydantic import BaseModel
 
 from application.process_file import process_file_content
 from loader import LoaderService
-from infrastructure.dto import Project, WbsNode, PriceList, Estimate
+from api.endpoints.shared import ImportResult, compute_embeddings_for_items, get_used_pli_ids
 
 router = APIRouter()
 
-class ImportResult(BaseModel):
-    project: Project
-    groups: List[WbsNode]
-    price_list: PriceList
-    estimate: Estimate
 
 @router.post("/{commessa_id}/import-six", response_model=ImportResult)
 async def import_six(
     commessa_id: str,
     file: UploadFile = File(...),
-    preventivo_id: str = Form(None), # Optional filter
+    preventivo_id: str = Form(None),
     compute_embeddings: bool = Form(False),
+    extract_properties: bool = Form(False),
+    use_weighted_props: bool = Form(False),
+    use_two_pass_embedding: bool = Form(True),
+    props_replication_k: int = Form(3),
+    base_weight: float = Form(0.4),
+    detail_weight: float = Form(0.6),
 ):
     """
     Parses a SIX file and transforms it into the new Database Scheme.
@@ -34,77 +37,29 @@ async def import_six(
     
     try:
         # 1. Parse using Domain Logic (SixParser)
-        # We can pass commessa_id as project_id if we want strict binding, 
-        # or let the Loader generate one if None.
         normalized = process_file_content(content, "six", filename=file.filename)
         
         # 2. Transform using LoaderService
         project, groups, price_list, estimate = LoaderService.transform(
             normalized, 
             project_id=commessa_id,
-            preventivo_id=preventivo_id
+            preventivo_id=preventivo_id,
+            extract_properties=extract_properties,
         )
-
 
         # 3. Compute Embeddings (if requested)
         if compute_embeddings and price_list.items:
-            try:
-                from logic.embedding import get_embedder
-                embedder = get_embedder()
-                
-                # Prepare texts (description + long_description or just description)
-                # We use long_description if possible, else description
-                texts = []
-                # DEBUG LOG
-                with open("debug_embeddings.log", "a") as f:
-                    f.write(f"Compute Embeddings Flag: {compute_embeddings}\n")
-                    f.write(f"Jina Key in Env: {'JINA_API_KEY' in os.environ}\n")
-
-                # 3a. Consolidate used PriceListItems
-                used_pli_ids = set()
-                # Estimate Items use price_list_item_id
-                if estimate.items:
-                    for est_item in estimate.items:
-                        # pydantic model, access by attribute
-                        if est_item.price_list_item_id:
-                            used_pli_ids.add(est_item.price_list_item_id)
-
-                # Filter items to embed
-                items_to_embed = []
-                indices_map = [] # To map back to original price_list.items index
-
-                for idx, item in enumerate(price_list.items):
-                    # Check if item is used (by ID) - assuming ID matches (it should as per loader)
-                    if item.id in used_pli_ids:
-                        text = item.long_description or item.description
-                        if text:
-                            items_to_embed.append(text)
-                            indices_map.append(idx)
-
-                print(f"Computing embeddings for {len(items_to_embed)} used items (out of {len(price_list.items)} total)...")
-                
-                if items_to_embed:
-                    vectors = embedder.compute_embeddings(items_to_embed)
-                    
-                    # Assign back to items using the map
-                    if len(vectors) == len(items_to_embed):
-                        count = 0
-                        for i, vector in enumerate(vectors):
-                            if vector:
-                                original_idx = indices_map[i]
-                                price_list.items[original_idx].embedding = vector
-                                count += 1
-                        print(f"Embeddings generated and assigned for {count} items.")
-                    else:
-                        print("Warning: Embedding count mismatch. Skipping assignment.")
-                else:
-                    print("No used items found to embed.")
-
-            except Exception as e:
-                print(f"Embedding generation failed: {e}")
-                import traceback
-                traceback.print_exc()
-                # Non-blocking error - proceed with import
+            used_pli_ids = get_used_pli_ids(estimate)
+            compute_embeddings_for_items(
+                price_list=price_list,
+                used_pli_ids=used_pli_ids if used_pli_ids else None,
+                extract_properties=extract_properties,
+                base_weight=base_weight,
+                detail_weight=detail_weight,
+                use_weighted_props=use_weighted_props,
+                use_two_pass_embedding=use_two_pass_embedding,
+                props_replication_k=props_replication_k,
+            )
         
         # DEBUG: Log sample of price_list.items to verify long_description
         if price_list.items:
@@ -124,6 +79,7 @@ async def import_six(
         import traceback
         traceback.print_exc()
         raise HTTPException(400, f"Import error: {str(e)}")
+
 
 @router.post("/{commessa_id}/import-six/preview")
 async def preview_six(
@@ -158,7 +114,7 @@ async def preview_six(
             })
             
         return {
-            "estimates": preventivi, # Populate mandatory field
+            "estimates": preventivi,
             "preventivi": preventivi,
             "groups_count": len(normalized.wbs_nodes),
             "products_count": len(normalized.price_list_items)

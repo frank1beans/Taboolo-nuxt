@@ -21,6 +21,7 @@ class PriceListItem(BaseModel):
     code: str
     description: str
     long_description: Optional[str] = None
+    extended_description: Optional[str] = None  # Concatenated parent descriptions for embeddings
     unit: str
     
     # Multiple prices by price list ID
@@ -32,6 +33,9 @@ class PriceListItem(BaseModel):
     
     # Additional properties
     properties: Dict[str, Any] = Field(default_factory=dict)
+
+    # Extracted technical properties (LLM output)
+    extracted_properties: Dict[str, Any] = Field(default_factory=dict)
     
     def get_price(self, price_list_id: Optional[str] = None) -> float:
         """

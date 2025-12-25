@@ -4,11 +4,11 @@ const STORAGE_KEY = 'app-shell:sidebar'
 const DEFAULT_WIDTH = 280
 const MIN_WIDTH = 240
 const MAX_WIDTH = 420
-const COLLAPSED_WIDTH = 64
+const COLLAPSED_WIDTH = 72
 
 const state = {
   initialized: ref(false),
-  isCollapsed: ref(false),
+  isCollapsed: ref(true),
   width: ref(DEFAULT_WIDTH),
   lastExpandedWidth: ref(DEFAULT_WIDTH),
 }

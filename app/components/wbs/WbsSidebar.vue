@@ -13,17 +13,18 @@
   >
     <!-- Header -->
     <div
-      class="page-header-bar px-4 border-b border-[hsl(var(--border))] flex items-center justify-between flex-shrink-0 bg-[hsl(var(--card))]"
+      class="h-12 px-4 flex items-center justify-between flex-shrink-0 bg-[hsl(var(--card))] border-b border-[hsl(var(--border))/0.5]"
     >
       <div class="flex items-center gap-2">
-        <UIcon name="i-heroicons-list-bullet" class="w-5 h-5 text-[hsl(var(--primary))]" />
-        <span class="text-sm font-bold text-[hsl(var(--foreground))] tracking-wide">WBS</span>
+        <UIcon name="i-heroicons-list-bullet" class="w-4 h-4 text-[hsl(var(--primary))]" />
+        <span class="text-xs font-bold text-[hsl(var(--foreground))] tracking-wider uppercase">WBS</span>
         <UBadge 
           v-if="totalNodes > 0" 
-          color="neutral" 
-          variant="subtle" 
+          color="gray" 
+          variant="soft" 
           size="xs"
-          class="ml-1"
+          class="ml-1 rounded-full px-2 py-0.5"
+          :ui="{ rounded: 'rounded-full' }"
           :aria-label="`${totalNodes} nodi totali`"
         >
           {{ totalNodes }}
@@ -32,30 +33,30 @@
       <div class="flex items-center gap-1">
         <UButton
           icon="i-heroicons-arrows-pointing-out"
-          color="neutral"
+          color="gray"
           variant="ghost"
           size="xs"
           title="Espandi tutto"
-          class="transition-transform active:scale-90 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
+          class="text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
           @click="expandAll"
         />
         <UButton
           icon="i-heroicons-arrows-pointing-in"
-          color="neutral"
+          color="gray"
           variant="ghost"
           size="xs"
           title="Collassa tutto"
-          class="transition-transform active:scale-90 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
+          class="text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
           @click="collapseAll"
         />
-        <div class="w-px h-4 bg-[hsl(var(--border))] mx-1" />
+        <div class="w-px h-3 bg-[hsl(var(--border))] mx-1" />
         <UButton
           icon="i-heroicons-x-mark"
-          color="neutral"
+          color="gray"
           variant="ghost"
           size="xs"
           title="Chiudi sidebar"
-          class="transition-transform active:scale-90 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
+          class="text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
           @click="toggleVisible(false)"
         />
       </div>

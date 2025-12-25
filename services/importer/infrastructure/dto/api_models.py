@@ -6,7 +6,7 @@ They include field aliases (e.g., id -> _id, project_id -> projectId).
 """
 
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field
 
 
@@ -42,6 +42,12 @@ class WbsNode(MongoModel):
     type: Optional[str] = None
     parent_id: Optional[str] = Field(None, alias="parentId")
     path: Optional[str] = None
+    
+    # Normalized description (e.g., "Cantierizzazioni" instead of "A001 - Cantierizzazioni")
+    normalized_description: Optional[str] = Field(None, alias="normalizedDescription")
+    
+    # Semantic embedding for WBS6 categories
+    embedding: Optional[List[float]] = None
 
 
 # --- Price Lists ---
@@ -52,6 +58,7 @@ class PriceListItem(BaseModel):
     code: str
     description: str
     long_description: Optional[str] = Field(None, alias="longDescription")
+    extended_description: Optional[str] = Field(None, alias="extendedDescription")
     unit: str
     price: float
     group_ids: List[str] = Field(default_factory=list, alias="groupIds")
@@ -62,6 +69,9 @@ class PriceListItem(BaseModel):
     
     # Semantic Search
     embedding: Optional[List[float]] = None
+
+    # Extracted technical properties (LLM output)
+    extracted_properties: Optional[Dict[str, Any]] = Field(None, alias="extractedProperties")
 
     class Config:
         populate_by_name = True

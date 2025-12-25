@@ -5,6 +5,7 @@ import type { DataGridConfig } from '~/types/data-grid';
 import { useCurrentContext } from '~/composables/useCurrentContext';
 import DataGridActions from '~/components/data-grid/DataGridActions.vue';
 import DataGridPage from '~/components/layout/DataGridPage.vue';
+import PageToolbar from '~/components/layout/PageToolbar.vue';
 import type { Estimate, Project } from '~/types/project';
 import { formatCurrency as formatCurrencyLib, formatDelta } from '~/lib/formatters';
 
@@ -223,29 +224,56 @@ const gridContext = computed(() => ({
     remove: (row?: Estimate) => deleteEstimate(row),
   },
 }));
+
+// Toolbar Props & Methods
+const searchText = ref('');
+const gridApi = ref<any>(null);
+
+const onGridReady = (params: any) => {
+  gridApi.value = params.api;
+};
+
+const handleReset = () => {
+    searchText.value = '';
+    gridApi.value?.setFilterModel(null);
+};
+
+const handleExport = () => {
+    gridApi.value?.exportDataAsExcel({ fileName: 'preventivi' });
+};
 </script>
 
 <template>
   <DataGridPage
     title="Preventivi"
-    :subtitle="project?.name || 'Dettaglio Progetto'"
     :grid-config="gridConfig"
     :row-data="gridRows"
     :loading="loading || statsLoading"
-    toolbar-placeholder="Cerca preventivo..."
-    export-filename="preventivi"
+    
+    :show-toolbar="false"
+    :filter-text="searchText"
+
     empty-state-title="Nessun preventivo"
     empty-state-message="Non ci sono preventivi associati a questo progetto."
     :custom-components="{ actionsRenderer: DataGridActions }"
     :context-extras="gridContext"
     @row-dblclick="(params) => navigateToEstimate(params?.data as Estimate | undefined)"
+    @grid-ready="onGridReady"
   >
+    <template #header-meta>
+       <div class="flex items-center gap-2">
+          <span class="text-[hsl(var(--foreground))] font-medium">
+            Progetto: {{ project?.name || '...' }}
+          </span>
+          <span class="text-[hsl(var(--border))]">|</span>
+          <span class="text-[hsl(var(--muted-foreground))]">
+            {{ estimates.length }} {{ estimates.length === 1 ? 'preventivo' : 'preventivi' }}
+          </span>
+       </div>
+    </template>
+
     <template #actions>
-      <UBadge v-if="estimates.length > 0" color="neutral" variant="soft">
-        <Icon name="heroicons:document-text" class="w-3.5 h-3.5 mr-1" />
-        {{ estimates.length }} {{ estimates.length === 1 ? 'preventivo' : 'preventivi' }}
-      </UBadge>
-      <div v-if="activeEstimateStats?.bestOffer" class="flex items-center gap-2 text-sm">
+      <div v-if="activeEstimateStats?.bestOffer" class="flex items-center gap-2 text-sm mr-2">
         <span class="stat-pill">
           Migliore offerta: {{ formatCurrency(activeEstimateStats.bestOffer) }}
         </span>
@@ -262,6 +290,32 @@ const gridContext = computed(() => ({
       >
         Importa Dati
       </UButton>
+    </template>
+
+    <!-- Toolbar Slot -->
+    <template #pre-grid>
+        <PageToolbar
+          v-model="searchText"
+          search-placeholder="Cerca preventivo..."
+        >
+          <template #right>
+            <button
+               v-if="searchText"
+               class="flex items-center justify-center h-9 px-4 rounded-full text-sm font-medium text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--background))] hover:text-[hsl(var(--foreground))] transition-colors"
+               @click="handleReset"
+            >
+              <Icon name="heroicons:arrow-path" class="w-4 h-4 mr-2" />
+              Reset
+            </button>     
+
+            <button
+               class="btn-outline-theme"
+               @click="handleExport"
+            >
+               Esporta
+            </button>
+          </template>
+        </PageToolbar>
     </template>
   </DataGridPage>
 </template>

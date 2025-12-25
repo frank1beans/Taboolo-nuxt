@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue'
-import AppSidebar from '~/components/layout/AppSidebar.vue'
-import AppHeader from '~/components/layout/AppHeader.vue'
+import SidebarRail from '~/components/layout/SidebarRail.vue'
 import { useSidebarLayout } from '~/composables/useSidebarLayout'
 import { useCurrentContext } from '~/composables/useCurrentContext'
 import { useNavigation } from '~/composables/useNavigation'
@@ -10,11 +9,7 @@ const route = useRoute()
 const {
   isCollapsed,
   width,
-  minWidth,
-  maxWidth,
-  collapsedWidth,
   toggleCollapsed,
-  setWidth,
 } = useSidebarLayout()
 
 const { currentProject, currentEstimate, hydrateFromApi, loading: contextLoading } = useCurrentContext()
@@ -138,27 +133,20 @@ const crumbs = computed(() => {
       <a href="#main-content" class="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 z-50 rounded-md bg-[hsl(var(--primary))] px-4 py-2 text-[hsl(var(--primary-foreground))] shadow-lg">
         Vai al contenuto principale
       </a>
-      <div class="flex min-h-screen bg-background text-foreground">
-        <AppSidebar
+      <div class="flex min-h-screen bg-[hsl(var(--background))]">
+        <SidebarRail
           :global-nodes="globalNodes"
           :context-nodes="contextNodes"
           :is-collapsed="isCollapsed"
           :width="width"
-          :min-width="minWidth"
-          :max-width="maxWidth"
-          :collapsed-width="collapsedWidth"
           :active-node-id="activeNodeId"
           :has-project="Boolean(currentProject)"
           :loading="contextLoading"
           @toggle="toggleCollapsed"
-          @resize="setWidth"
         />
-        <div class="flex flex-1 flex-col">
-          <AppHeader :crumbs="crumbs" />
-          <main id="main-content" class="flex-1 overflow-hidden relative" tabindex="-1">
-            <div class="w-full h-full p-6 flex flex-col overflow-hidden">
-              <slot />
-            </div>
+        <div class="flex flex-1 flex-col min-h-screen overflow-hidden">
+          <main id="main-content" class="flex-1 overflow-auto relative page-container" tabindex="-1">
+            <slot />
           </main>
         </div>
       </div>

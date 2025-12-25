@@ -272,11 +272,17 @@ class SixParser(ParserProtocol):
 
     def _parse_products_definitions(self, root: ET.Element):
         debug_count = 0
+        
+        # Track "voce" nodes (structural parents) with their extended descriptions
+        # Key: prdId (code), Value: estesa description
+        voce_descriptions: Dict[str, str] = {}
+        
         for prodotto in root.findall(f".//{self.ns}prodotto"):
             prod_id = prodotto.attrib.get("prodottoId")
             if not prod_id: continue
             
             code = prodotto.attrib.get("prdId") or prod_id
+            is_voce = prodotto.attrib.get("voce") == "true"
             
             # Description
             desc_node = prodotto.find(f"{self.ns}prdDescrizione")
@@ -307,6 +313,11 @@ class SixParser(ParserProtocol):
                 
             desc = desc.strip() or code
             
+            # Track voce nodes for later extended_description building
+            if is_voce and desc_ext:
+                voce_descriptions[code] = desc_ext.strip()
+                print(f"[DEBUG Parser] Voce node: {code} -> '{desc_ext[:60]}...'", flush=True)
+            
             # Unit
             unit = prodotto.attrib.get("unitaDiMisuraId") or "nr"
             
@@ -329,9 +340,42 @@ class SixParser(ParserProtocol):
             )
             self._price_list_items[prod_id] = prod
         
+        # SECOND PASS: Build extended_description for leaf items (items with prices)
+        # by concatenating parent voce descriptions
+        extended_count = 0
+        for prod in self._price_list_items.values():
+            # Skip if it's a voce node itself (no price) or has no code
+            if not prod.price_by_list or not prod.code:
+                continue
+            
+            # Build list of all code prefixes
+            # Example: "1C.01.900.0010.d" -> ["1C", "1C.01", "1C.01.900", "1C.01.900.0010"]
+            parts = prod.code.split('.')
+            prefixes = []
+            for i in range(1, len(parts)):
+                prefix = '.'.join(parts[:i])
+                prefixes.append(prefix)
+            
+            # Collect parent descriptions in order (root to immediate parent)
+            parent_descriptions = []
+            for prefix in prefixes:
+                if prefix in voce_descriptions:
+                    parent_descriptions.append(voce_descriptions[prefix])
+            
+            # Build extended_description if we found any parents
+            if parent_descriptions:
+                # Add own long_description at the end
+                own_desc = prod.long_description or prod.description
+                all_parts = parent_descriptions + [own_desc]
+                prod.extended_description = ' '.join(all_parts).strip()
+                extended_count += 1
+                
+                if extended_count <= 3:
+                    print(f"[DEBUG Parser] Extended desc for {prod.code}: '{prod.extended_description[:100]}...'", flush=True)
+        
         # Final debug summary
         items_with_long_desc = sum(1 for p in self._price_list_items.values() if p.long_description)
-        print(f"[DEBUG Parser] Parsed {len(self._price_list_items)} products, {items_with_long_desc} have long_description", flush=True)
+        print(f"[DEBUG Parser] Parsed {len(self._price_list_items)} products, {items_with_long_desc} have long_description, {extended_count} have extended_description", flush=True)
 
     def _parse_rilevazione(self, node: ET.Element, index: int) -> Tuple[Measurement, Optional[int], List[Tuple[int, int]]] | None:
         prod_id = node.attrib.get("prodottoId")
@@ -383,11 +427,15 @@ class SixParser(ParserProtocol):
             # Parse formula text for display
             formula = self._get_text(misura, "msrFormula") or ""
             
-            # Attributes parsing (standard)
-            length = self._parse_float(misura.attrib.get("lung"))
-            width = self._parse_float(misura.attrib.get("larg"))
-            height = self._parse_float(misura.attrib.get("alt"))
-            parts = self._parse_float(misura.attrib.get("parti"))
+            # Attributes parsing (standard) - round each to 2 decimals
+            def _round_2dp(val):
+                if val is None: return None
+                return float(Decimal(str(val)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
+            
+            length = _round_2dp(self._parse_float(misura.attrib.get("lung")))
+            width = _round_2dp(self._parse_float(misura.attrib.get("larg")))
+            height = _round_2dp(self._parse_float(misura.attrib.get("alt")))
+            parts = _round_2dp(self._parse_float(misura.attrib.get("parti")))
             
             # Cell parsing (prvCella) - overrides/supplements attributes if present
             # Format: <prvCella testo="17.50" posizione="1" />
@@ -416,13 +464,13 @@ class SixParser(ParserProtocol):
             valid_dims = [d for d in dims if d is not None]
             
             if valid_dims:
-                # Calculate from attributes
-                prod = 1.0
-                if parts is not None: prod *= parts
-                if length is not None: prod *= length
-                if width is not None: prod *= width
-                if height is not None: prod *= height
-                row_multiplier = prod
+                # Calculate from attributes (already rounded above)
+                prod = Decimal("1.0")
+                if parts is not None: prod *= Decimal(str(parts))
+                if length is not None: prod *= Decimal(str(length))
+                if width is not None: prod *= Decimal(str(width))
+                if height is not None: prod *= Decimal(str(height))
+                row_multiplier = float(prod.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
             else:
                 # 2. Try Cells
                 for cella in misura.findall(f"{self.ns}prvCella"):
@@ -430,14 +478,24 @@ class SixParser(ParserProtocol):
                      pos = int(cella.attrib.get("posizione", "0"))
                      val = self._parse_float(txt)
                      if val is not None:
-                         cells.append((pos, val, txt))
+                         # Round each cell value to 2 decimals BEFORE multiplication
+                         val_rounded = float(Decimal(str(val)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
+                         cells.append((pos, val_rounded, txt))
                 
                 cells.sort(key=lambda x: x[0])
                 if cells:
-                    prod = 1.0
+                    prod = Decimal("1.0")
                     for c in cells:
-                         prod *= c[1]
-                    row_multiplier = prod
+                         # Multiply rounded values
+                         prod *= Decimal(str(c[1]))
+                    # Round the product as well
+                    row_multiplier = float(prod.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
+                    
+                    # Debug for L032.020.07 (prodottoId 11524)
+                    prod_id = node.attrib.get("prodottoId")
+                    if prod_id == "11524":
+                        cell_details = [(c[2], c[1]) for c in cells]  # (raw_text, rounded_val)
+                        print(f"[DEBUG L032.020.07] Cells: {cell_details} -> prod={float(prod):.6f} -> row_multiplier={row_multiplier}", flush=True)
                     
                     # Map first 3 found cells to L/W/H for UI
                     if len(cells) >= 1: length = cells[0][1]
@@ -491,12 +549,10 @@ class SixParser(ParserProtocol):
 
             if row_qty is None: row_qty = 0.0
             
-            # Check for negative sign / deduction
-            segno = misura.attrib.get("msrSegno", "+")
-            if segno == "-":
+            # Apply the sign (+ or -) from operazione attribute parsed earlier
+            # This handles deductions marked with operazione="-"
+            if segno < 0:
                 row_qty = -abs(row_qty)
-                # Should we also update formula string to reflect negative? 
-                # Ideally yes, but formula is display-only. total_qty is what matters for math.
 
             
             det = MeasurementDetail(
@@ -509,7 +565,12 @@ class SixParser(ParserProtocol):
                 parts=parts
             )
             details.append(det)
-            total_qty += Decimal(str(row_qty))
+            
+            # Round each row to 2 decimals (ceiling) BEFORE summing - matches TeamSystem behavior
+            # Example: 4.0870500 becomes 4.09
+            row_qty_decimal = Decimal(str(row_qty))
+            rounded_row = row_qty_decimal.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+            total_qty += rounded_row
             row_idx += 1
             
         progressivo_id = node.attrib.get("progressivo") or str(uuid.uuid4())
@@ -635,17 +696,36 @@ class SixParser(ParserProtocol):
 
     def _eval_expression(self, val: str) -> float | None:
         """
-        Evaluates simple arithmetic expressions safely.
+        Evaluates simple arithmetic expressions safely using Decimal for precision.
         Allowed: digits, . , + - * / ( )
         """
         clean = val.replace(",", ".").strip()
-        # Regex to ensure safety: only Math chars allowed
-        if not re.match(r'^[\d\s\.\+\-\*\/\(\)]+$', clean):
+            # Regex to ensure safety: digits, math chars, and comparison operators
+        if not re.match(r'^[\d\s\.\+\-\*\/\(\)<>=]+$', clean):
             return None
         
         try:
-            # safe eval since we checked chars
-            return float(eval(clean))
+            # Handle equality operator "=" (legacy) -> "=="
+            # Use regex to replace '=' with '==' but avoid breaking '<=' or '>=' if present
+            # Lookbehind: not preceded by < or > or ! or =
+            # Lookahead: not followed by =
+            expr_ready = re.sub(r'(?<![<>!=])=(?![=])', '==', clean)
+            
+            # Use Decimal for precise arithmetic
+            # Replace numbers with Decimal() constructor calls
+            import re as re_mod
+            def to_decimal_expr(expr):
+                # Find all numbers and wrap them in Decimal()
+                return re_mod.sub(r'(\d+\.?\d*)', r'Decimal("\1")', expr)
+            
+            decimal_expr = to_decimal_expr(expr_ready)
+            result = eval(decimal_expr, {"Decimal": Decimal, "__builtins__": {}})
+            
+            # Convert boolean result to float (True=1.0, False=0.0)
+            if isinstance(result, bool):
+                return 1.0 if result else 0.0
+                
+            return float(result)
         except:
             return None
 

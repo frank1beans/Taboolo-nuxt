@@ -1,0 +1,722 @@
+[
+  {
+    "id": "6945b009362d104e80cb1c80",
+    "code": "A013.070.19",
+    "description": "Sostituzione di lastra in cartongesso su controparete esistente con nuova lastra in classe A1 \r\n\r\nFornitura e posa in opera su controparete esistente di nuova lastra in cartongesso in classe di reazione al fuoco A1, in sostituzione di quella rimossa. \r\nNel prezzo si intendono compresi e compensati gli oneri per, il taglio e lo sfrido, i paraspigoli, la formazione di vani per porte completi di rinforzo perimetrale in profilati metallici per l'ancoraggio del serramento, gli oneri per la posa di telaio per porte scorrevoli interno muro se previsti in progetto, il rinforzo strutturale per i carichi previsti in progetto, l'onere di procedere in tempi successivi all'applicazione delle lastre in attesa dell'esecuzione di impianti elettrici e termoidraulici da inserire, la formazione ed il disfacimento dei piani di lavoro interni, idonei supporti dei eventuali grigliati a pavimento nei cavedi, oneri di sigillatura REI/EI in corrispondenza di attraversamenti impiantistici di ogni genere e natura, così come tutte le opere da fabbro e da lattoniere eventualmente necessarie alla realizzazione delle stesse, il rispetto della marcatura CE e la Dichiarazione di Produzione di Prodotto DOP per i prodotti di costruzione prevista dal Regolamento n. 305/2011 (UE) e quanto altro necessario per dare il lavoro finito a regola d'arte.\r\n",
+    "expected_properties": {
+      "material": "cartongesso",
+      "fire_class": "A1"
+    }
+  },
+  {
+    "id": "6945b009362d104e80cb1cb1",
+    "code": "A020.030.14",
+    "description": "Controsoffitto in pannelli metallici microforati come esistente, marca Hatek, sistema Square Modular\r\n\r\nFornitura e posa in opera di pannelli metallici microforati marca Hatek, sistema Square Modular modello Square Ceiling Metal Panel, montati su struttura esistente e conformi al sistema esistente da campionare per approvazione della Direzione Lavori.\r\nI pannelli avranno dimensioni 1500 x 700 x 45 mm, spessore 5/10 mm, finitura superficiale RAL 9010 bianco, microforatura di tipo AP15.22D AF. STAND (foro Ø1,5 mm) con applicazione di tessuto non tessuto in classe A1 sul retro per miglioramento del comfort acustico. Il sistema sarà completo di accessori per apertura botola ove previsto.\r\n\r\nSono compresi nel prezzo: Rilievo e restituzione grafica “as built” da sottoporre ad approvazione della D.L, campionatura finitura e mock-up se richiesti, taglio e adattamento dei pannelli a sagome progettuali, sfrido, sagomatura e adattamento locale in corrispondenza di giunti strutturali. fornitura e posa del kit antisismico completo in conformità alle NTC 2018 e alle Linee Guida per elementi non strutturali, incluso l'onere per verifiche e lavorazioni integrative, fornitura di tutti gli accessori, compresi profili, staffaggi, materiali di fissaggio, trasporto, scarico e movimentazione in cantiere, formazione e smontaggio delle opere provvisionali, necessarie all'esecuzione in sicurezza, rispetto delle normative di prodotto, inclusa marcatura CE e DOP secondo Regolamento UE 305/2011 e quanto altro necessario per dare il lavoro finito a regola d'arte.",
+    "expected_properties": {
+      "material": "pannelli metallici",
+      "width_cm": 150.0,
+      "height_cm": 70.0,
+      "thickness_mm": 0.5,
+      "finish": "RAL 9010 bianco"
+    }
+  },
+  {
+    "id": "694863e1865e3b0469148d17",
+    "code": "L013.010.08",
+    "description": "DW - Sovrapprezzo per aggiunta di una singola lastra in cartongesso tipo GKB, spessore 1.25 cm, in corrispondenza dei monitor come da dettagli acustici negli elaborati \"3600_EK-0301-E\" e  \"3600_EK-0302-E\".\r\n",
+    "expected_properties": {
+      "material": "cartongesso",
+      "board_type": "GKB",
+      "thickness_mm": 12.5,
+      "board_layers": 1
+    }
+  },
+  {
+    "id": "69486739865e3b04691505dc",
+    "code": "L013.010.05",
+    "description": "DW05 - Placcaggio in lastra in cartongesso standard \r\n\r\nFornitura e posa di Placcaggio in cartongesso standard composta da:\r\n- Lastra in cartongesso standard tipo \"Knauf GKB\" o similare a scelta della DL. Sp. 12,5 mm \r\n\r\nNel prezzo si intendono compresi e compensati gli oneri per, il taglio e lo sfrido, i paraspigoli, la formazione di vani per porte completi di rinforzo perimetrale in profilati metallici per l'ancoraggio del serramento, gli oneri per la posa di telaio per porte scorrevoli interno muro se previsti in progetto, il rinforzo strutturale per i carichi previsti in progetto, l'onere di procedere in tempi successivi all'applicazione delle lastre in attesa dell'esecuzione di impianti elettrici e termoidraulici da inserire, la formazione ed il disfacimento dei piani di lavoro interni, idonei supporti dei eventuali grigliati a pavimento nei cavedi, oneri di sigillatura REI/EI in corrispondenza di attraversamenti impiantistici di ogni genere e natura, così come tutte le opere da fabbro e da lattoniere eventualmente necessarie alla realizzazione delle stesse, il rispetto della marcatura CE e la Dichiarazione di Produzione di Prodotto DOP per i prodotti di costruzione prevista dal Regolamento n. 305/2011 (UE) e quanto altro necessario per dare il lavoro finito a regola d'arte. \r\n",
+    "expected_properties": {
+      "material": "cartongesso",
+      "board_type": "GKB",
+      "thickness_mm": 12.5,
+      "board_layers": 1,
+      "brand": "Knauf"
+    }
+  },
+  {
+    "id": "694870e09343b40ef865beb2",
+    "code": "L020.090.04",
+    "description": "Realizzazione su controsoffitto a membrana EI 60, tipo CE09, realizzato con sistema Knauf D113 di botole d'ispezione per installazione complanare al controsoffitto, dim. 60x60 cm, avente Certificazione al Fuoco EI 60, costituita da cornice perimetrale esterna in alluminio e coperchio estraibile con bordo in alluminio. Coperchio estraibile dotato di sistema di chiusura brevettato Knauf, in acciaio, che permette di mantenersi chiuso mediante doppia chiusura di sicurezza e sistema di protezione anticaduta. Guaina termoespandente posizionata sul perimetro del coperchio. Rivestimento del coperchio in doppia lastra in cartongesso per l'antincendio tipo Knauf Ignilastra GKF (DF) classificate secondo DIN 18180 e UNI EN 520, realizzate in cartongesso armato con fibre minerali e additivi per una migliore coesione del nucleo in gesso sotto l'azione del fuoco spessore di ogni lastra 15 mm.\r\nNel prezzo si intendono comprese e compensati gli oneri per il taglio, lo sfrido, anche dovuto alla irregolarità dei vani, il rinforzo della struttura di supporto, l'onere per la sigillatura EI tra controsoffitto e botola con soluzioni idonee a garantire la resistenza la fuoco, gli oneri per le certificazioni, documentazione tecnica e modulistica necessarie per il rilascio del Certificato di Prevenzione Incendi per botole in cartongesso EI60 installate a controsoffitto, il rispetto della marcatura CE e la Dichiarazione di Produzione di Prodotto DOP per i prodotti di costruzione prevista dal Regolamento n. 305/2011 (UE) e quanto altro necessario per dare il lavoro finito a regola d'arte.\r\n",
+    "expected_properties": {
+      "material": "cartongesso",
+      "board_type": "GKF",
+      "board_layers": 2,
+      "thickness_mm": 15.0,
+      "fire_class": "EI 60",
+      "brand": "Knauf"
+    }
+  },
+  {
+    "id": "6948819e0ad380571ed61ef5",
+    "code": "A013.070.01",
+    "description": "Sostituzione di lastra in cartongesso su controparete/setto esistente con nuova lastra rinforzata tipo Diamant\r\n\r\nFornitura e posa in opera su controparete/setto esistente di nuova lastra in cartongesso rinforzata tipo Diamant, in sostituzione di quella rimossa. \r\nNel prezzo si intendono compresi e compensati gli oneri per, il taglio e lo sfrido, i paraspigoli, la formazione di vani per porte completi di rinforzo perimetrale in profilati metallici per l'ancoraggio del serramento, gli oneri per la posa di telaio per porte scorrevoli interno muro se previsti in progetto, il rinforzo strutturale per i carichi previsti in progetto, l'onere di procedere in tempi successivi all'applicazione delle lastre in attesa dell'esecuzione di impianti elettrici e termoidraulici da inserire, la formazione ed il disfacimento dei piani di lavoro interni, idonei supporti dei eventuali grigliati a pavimento nei cavedi, oneri di sigillatura REI/EI in corrispondenza di attraversamenti impiantistici di ogni genere e natura, così come tutte le opere da fabbro e da lattoniere eventualmente necessarie alla realizzazione delle stesse, il rispetto della marcatura CE e la Dichiarazione di Produzione di Prodotto DOP per i prodotti di costruzione prevista dal Regolamento n. 305/2011 (UE) e quanto altro necessario per dare il lavoro finito a regola d'arte.\r\n",
+    "expected_properties": {
+      "material": "cartongesso",
+      "board_type": "Diamant"
+    }
+  },
+  {
+    "id": "6948819e0ad380571ed61f02",
+    "code": "A013.070.19",
+    "description": "Sostituzione di lastra in cartongesso su controparete esistente con nuova lastra in classe A1 \r\n\r\nFornitura e posa in opera su controparete esistente di nuova lastra in cartongesso in classe di reazione al fuoco A1, in sostituzione di quella rimossa. \r\nNel prezzo si intendono compresi e compensati gli oneri per, il taglio e lo sfrido, i paraspigoli, la formazione di vani per porte completi di rinforzo perimetrale in profilati metallici per l'ancoraggio del serramento, gli oneri per la posa di telaio per porte scorrevoli interno muro se previsti in progetto, il rinforzo strutturale per i carichi previsti in progetto, l'onere di procedere in tempi successivi all'applicazione delle lastre in attesa dell'esecuzione di impianti elettrici e termoidraulici da inserire, la formazione ed il disfacimento dei piani di lavoro interni, idonei supporti dei eventuali grigliati a pavimento nei cavedi, oneri di sigillatura REI/EI in corrispondenza di attraversamenti impiantistici di ogni genere e natura, così come tutte le opere da fabbro e da lattoniere eventualmente necessarie alla realizzazione delle stesse, il rispetto della marcatura CE e la Dichiarazione di Produzione di Prodotto DOP per i prodotti di costruzione prevista dal Regolamento n. 305/2011 (UE) e quanto altro necessario per dare il lavoro finito a regola d'arte.\r\n",
+    "expected_properties": {
+      "material": "cartongesso",
+      "fire_class": "A1"
+    }
+  },
+  {
+    "id": "6948fd5adeef66517bf8ce27",
+    "code": "A013.010.04",
+    "description": "Fornitura e posa di placcaggio a parete con doppia lastra in cartongesso, sp. 2,54 cm, composta da:\r\n\r\n- Lastra in cartongesso per l'antincendio tipo \"\"Fireguard 13\"\" o similare a scelta della DL. Sp. 12,7 mm\r\n- Lastra in cartongesso per l'antincendio tipo \"\"Fireguard 13\"\" o similare a scelta della DL. Sp. 12,7 mm\r\n\r\nNel prezzo si intendono compresi e compensati gli oneri per, il taglio e lo sfrido, i paraspigoli, la formazione di vani per porte completi di rinforzo perimetrale in profilati metallici per l'ancoraggio del serramento, gli oneri per la posa di telaio per porte scorrevoli interno muro se previsti in progetto, il rinforzo strutturale per i carichi previsti in progetto, l'onere di procedere in tempi successivi all'applicazione delle lastre in attesa dell'esecuzione di impianti elettrici e termoidraulici da inserire, la formazione ed il disfacimento dei piani di lavoro interni, idonei supporti dei eventuali grigliati a pavimento nei cavedi, oneri di sigillatura REI/EI in corrispondenza di attraversamenti impiantistici di ogni genere e natura, così come tutte le opere da fabbro e da lattoniere eventualmente necessarie alla realizzazione delle stesse, il rispetto della marcatura CE e la Dichiarazione di Produzione di Prodotto DOP per i prodotti di costruzione prevista dal Regolamento n. 305/2011 (UE) e quanto altro necessario per dare il lavoro finito a regola d'arte.\r\n",
+    "expected_properties": {
+      "material": "cartongesso",
+      "board_type": "Fireguard 13",
+      "board_layers": 2,
+      "thickness_mm": 12.7,
+      "wall_total_thickness_mm": 25.4
+    }
+  },
+  {
+    "id": "6948fd5adeef66517bf8ce29",
+    "code": "A013.010.06",
+    "description": "Fornitura e posa di placcaggio a parete con doppia lastra in cartongesso, sp. 2,50 cm, composta da:\r\n\r\n- Lastra in cartongesso per l'antincendio tipo \"\"Knauf GKF\"\" o similare a scelta della DL. Sp. 12,5 mm\r\n- Lastra in cartongesso per l'antincendio tipo \"\"Knauf GKF\"\" o similare a scelta della DL. Sp. 12,5 mm\r\n\r\nNel prezzo si intendono compresi e compensati gli oneri per, il taglio e lo sfrido, i paraspigoli, la formazione di vani per porte completi di rinforzo perimetrale in profilati metallici per l'ancoraggio del serramento, gli oneri per la posa di telaio per porte scorrevoli interno muro se previsti in progetto, il rinforzo strutturale per i carichi previsti in progetto, l'onere di procedere in tempi successivi all'applicazione delle lastre in attesa dell'esecuzione di impianti elettrici e termoidraulici da inserire, la formazione ed il disfacimento dei piani di lavoro interni, idonei supporti dei eventuali grigliati a pavimento nei cavedi, oneri di sigillatura REI/EI in corrispondenza di attraversamenti impiantistici di ogni genere e natura, così come tutte le opere da fabbro e da lattoniere eventualmente necessarie alla realizzazione delle stesse, il rispetto della marcatura CE e la Dichiarazione di Produzione di Prodotto DOP per i prodotti di costruzione prevista dal Regolamento n. 305/2011 (UE) e quanto altro necessario per dare il lavoro finito a regola d'arte.\r\n",
+    "expected_properties": {
+      "material": "cartongesso",
+      "board_type": "GKF",
+      "board_layers": 2,
+      "thickness_mm": 12.5,
+      "wall_total_thickness_mm": 25.0,
+      "brand": "Knauf"
+    }
+  },
+  {
+    "id": "6948fd5adeef66517bf8ce2b",
+    "code": "A013.020.01",
+    "description": "Fornitura e posa di placcaggio REI60 a parete con mono lastra in cartongesso, sp. 2,77 cm, composta da:\r\n\r\n- Lastra in cartongesso per l'antincendio tipo \"\"Fireguard 13\"\" o similare a scelta della DL. Sp. 12,7 mm\r\n- Orditura metallica in acciaio zincato da 15 mm, con sviluppo da solaio a solaio\r\n\r\nNel prezzo si intendono compresi e compensati gli oneri per, il taglio e lo sfrido, i paraspigoli, la formazione di vani per porte completi di rinforzo perimetrale in profilati metallici per l'ancoraggio del serramento, gli oneri per la posa di telaio per porte scorrevoli interno muro se previsti in progetto, il rinforzo strutturale per i carichi previsti in progetto, l'onere di procedere in tempi successivi all'applicazione delle lastre in attesa dell'esecuzione di impianti elettrici e termoidraulici da inserire, la formazione ed il disfacimento dei piani di lavoro interni, idonei supporti dei eventuali grigliati a pavimento nei cavedi, oneri di sigillatura REI/EI in corrispondenza di attraversamenti impiantistici di ogni genere e natura, così come tutte le opere da fabbro e da lattoniere eventualmente necessarie alla realizzazione delle stesse, il rispetto della marcatura CE e la Dichiarazione di Produzione di Prodotto DOP per i prodotti di costruzione prevista dal Regolamento n. 305/2011 (UE) e quanto altro necessario per dare il lavoro finito a regola d'arte.\r\n",
+    "expected_properties": {
+      "material": "cartongesso",
+      "board_type": "Fireguard 13",
+      "board_layers": 1,
+      "thickness_mm": 12.7,
+      "wall_total_thickness_mm": 27.7,
+      "fire_class": "REI 60",
+      "frame_material": "acciaio zincato"
+    }
+  },
+  {
+    "id": "6948fd5adeef66517bf8ce2c",
+    "code": "A013.020.02",
+    "description": "Fornitura e posa di placcaggio REI60 a parete con mono lastra in cartongesso, sp. 2,77 cm, composta da:\r\n\r\n- Lastra in cartongesso per l'antincendio tipo \"\"Fireguard 13\"\" o similare a scelta della DL. Sp. 12,7 mm\r\n- Orditura metallica in acciaio zincato da 15 mm, con sviluppo da solaio a solaio\r\n\r\nNel prezzo si intendono compresi e compensati gli oneri per, il taglio e lo sfrido, i paraspigoli, la formazione di vani per porte completi di rinforzo perimetrale in profilati metallici per l'ancoraggio del serramento, gli oneri per la posa di telaio per porte scorrevoli interno muro se previsti in progetto, il rinforzo strutturale per i carichi previsti in progetto, l'onere di procedere in tempi successivi all'applicazione delle lastre in attesa dell'esecuzione di impianti elettrici e termoidraulici da inserire, la formazione ed il disfacimento dei piani di lavoro interni, idonei supporti dei eventuali grigliati a pavimento nei cavedi, oneri di sigillatura REI/EI in corrispondenza di attraversamenti impiantistici di ogni genere e natura, così come tutte le opere da fabbro e da lattoniere eventualmente necessarie alla realizzazione delle stesse, il rispetto della marcatura CE e la Dichiarazione di Produzione di Prodotto DOP per i prodotti di costruzione prevista dal Regolamento n. 305/2011 (UE) e quanto altro necessario per dare il lavoro finito a regola d'arte.\r\n",
+    "expected_properties": {
+      "material": "cartongesso",
+      "board_type": "Fireguard 13",
+      "board_layers": 1,
+      "thickness_mm": 12.7,
+      "wall_total_thickness_mm": 27.7,
+      "fire_class": "REI 60",
+      "frame_material": "acciaio zincato"
+    }
+  },
+  {
+    "id": "6948fd5adeef66517bf8ce39",
+    "code": "A018.040.01",
+    "description": "Fornitura e posa di rivestimento a parete come esistente, costituito da pannello in lamiera metallica verniciata, spessore e colore da definire e sottoporre all'approvazione della D.L., accoppiata a lastra in cartongesso, spessore 1,25cm e classe di reazione al fuoco A1. \r\nIl rivestimento sarà posato su sottostruttura costituita da montanti tubolari, dimensioni 40x20mm come indicato negli elaborati grafici di progetto. \r\nOve necessario, prevedere il ripristino del rivestimento esistente. \r\n\r\nNel prezzo si intendono compresi e compensati il taglio dei pannelli secondo sagome di progetto, lo sfrido, ferramenta varia, il dimensionamento della sottostruttura, gli elementi di aggancio e fissaggio, la formazione ed il disfacimento dei piani di lavoro, così come il rispetto della marcatura CE e la Dichiarazione di Produzione di Prodotto per i prodotti di costruzione prevista dal Regolamento n. 305/2011 (UE) e quanto altro previsto per dare il lavoro finito a regola d'arte.\r\n\r\n",
+    "expected_properties": {
+      "material": [
+        "lamiera metallica",
+        "cartongesso"
+      ],
+      "thickness_mm": 12.5,
+      "fire_class": "A1"
+    }
+  },
+  {
+    "id": "6948fd5adeef66517bf8ce3b",
+    "code": "A018.040.03",
+    "description": "Fornitura e posa di rivestimento a parete come esistente, costituito da pannello in vetro, spessore e colore da definire e sottoporre all'approvazione della D.L., accoppiato a lastra in cartongesso, spessore 1,25cm e classe di reazione al fuoco A1. \r\nIl rivestimento sarà posato su sottostruttura costituita da montanti tubolari, dimensioni 40x20mm come indicato negli elaborati grafici di progetto. \r\nOve necessario, prevedere il ripristino del rivestimento esistente. \r\nNel prezzo si intendono compresi e compensati il taglio dei pannelli secondo sagome di progetto, lo sfrido, ferramenta varia, il dimensionamento della sottostruttura, gli elementi di aggancio e fissaggio, la formazione ed il disfacimento dei piani di lavoro, così come il rispetto della marcatura CE e la Dichiarazione di Produzione di Prodotto per i prodotti di costruzione prevista dal Regolamento n. 305/2011 (UE) e quanto altro previsto per dare il lavoro finito a regola d'arte.\r\n\r\n",
+    "expected_properties": {
+      "material": [
+        "vetro",
+        "cartongesso"
+      ],
+      "thickness_mm": 12.5,
+      "fire_class": "A1"
+    }
+  },
+  {
+    "id": "694901d6deef66517bf8d298",
+    "code": "A020.010.14",
+    "description": "Fornitura e posa in opera, nelle aree indicate negli elaborati grafici di progetto, di controsoffitto a membrana realizzato con sistema tipo Knauf D113, atto a garantire una resistenza al fuoco EI 60, rapporto di classificazione 06/32301547-2, Laboratorio Applus, data di emissione 15/01/2007, norme di riferimento EN 1363-1 e EN 1364-2, ad orditura metallica doppia non sovrapposta, costituito da: \r\nOrditura metallica realizzata con profili Knauf in acciaio zincato DX51D+Z-N-A-C spessore mm 0,6 a norma UNI EN 10346, costituita da profili perimetrali a “U” mm 30/27/30; profili primari a “C” mm 27/60/27 posti ad interasse di 1200mm, profili secondari a “C” mm 27/60/27 posti ad interasse di 400mm e giunto di unione ortogonale a raso C60/27. \r\nI profili saranno conformi alla norma armonizzata EN 14195 riguardante “Profili per Sistemi in Lastre in Gesso Rivestito” con attestato di conformità CE, in classe A1 di reazione al fuoco, prodotti secondo il sistema di qualità UNI-EN-ISO 9001-2000, con produzione certificata da ICMQ.\r\nNel prezzo si intendono compresi e compensati gli oneri per la formazione delle opere provvisionali per la esecuzione dell'opere in sicurezza, e successivo smontaggio, la protezione provvisoria di pavimenti e di elementi presenti all'interno dell'area dell'intervento con posa e relativa rimozione finale di appositi teli protettivi, il taglio e lo sfrido delle lastre, la stuccatura dei giunti delle lastre e delle teste delle vite, la giunzione a regola d'arte con i controsoffitti da compensare, la realizzazione di fori per l'inserimento di eventuali corpi illuminanti o elementi impiantistici, l'inserimento di eventuale botola d'ispezione EI60, i rinforzi strutturali necessari per l'applicazione di carici pesanti, l'onere per la sigillatura EI tra controsoffitto e pareti perimetrali con soluzioni idonee a garantire la resistenza la fuoco, gli oneri per la chiusura REI degli attraversamenti impiantistici di qualsiasi tipo e natura, gli oneri per le certificazioni, documentazione tecnica e modulistica necessarie per il rilascio del Certificato di Prevenzione Incendi per Controsoffitti a Membrana EI 60, eventuali soluzioni specifiche in corrispondenza dei giunti strutturali, gli oneri per la chiusura acustica degli attraversamenti impiantistici di qualsiasi tipo e natura; l'onere di procedere in tempi successivi all'applicazione delle lastre in attesa dell'esecuzione di impianti elettrici e termoidraulici da inserire, l'onere per la verifica ed eventuali lavorazioni aggiuntive riguardanti la posa di elementi non portanti in cartongesso nel rispetto delle NTC 2018, e s.m.i., e delle Norme Sismiche vigenti, la Certificazione e collaudo acustico se richiesti in progetto, così come il rispetto della marcatura CE e la Dichiarazione di Produzione di Prodotto DOP per i prodotti di costruzione prevista dal Regolamento n. 305/2011 (UE) e quanto altro necessario per dare il lavoro finito a regola d'arte.\r\n",
+    "expected_properties": {
+      "fire_class": "EI 60",
+      "brand": "Knauf",
+      "frame_material": "acciaio zincato"
+    }
+  },
+  {
+    "id": "694901d6deef66517bf8d247",
+    "code": "A013.020.01",
+    "description": "Fornitura e posa in opera di parete divisoria interna realizzata con sistema Knauf W112, spessore totale 12,50cm, atta a garantire una resistenza al fuoco EI 60, rapporto di classificazione 215/C/16-307FR, Laboratorio LAPI, data emissione 10/03/2017, rapporto di estensione 070/C/21.AR2/22, norme di riferimento EN 1363-1 e EN 1364-1, a singola orditura metallica di 75mm, rivestita da entrambi i lati con doppia lastra in cartongesso, costituita da: \r\nOrditura metallica, con sviluppo da soletta a solaio per un'altezza massima di 5,50m, realizzata con profili tipo Knauf in acciaio zincato aventi un carico di snervamento pari a 300 N/mm², conformi alla norma europea UNI EN 10346, con rivestimento di zinco di 1° scelta e qualità Zn 99%, spessore acciaio 0,6 mm costituita da guide a \"U\" 40/75/40 mm; montanti a \"C\" 50/75/50 mm, inseriti nelle guide, ad interasse 600 mm, isolata dalle strutture perimetrali con nastro vinilico biadesivo in polietilene espanso a celle chiuse tipo Knauf K434 con funzione di taglio acustico, dello spessore di 3,5 mm e sigillati con stucco e/o silicone a completo riempimento delle fessure in corrispondenza delle giunzioni perimetrali con le strutture primarie, per il raggiungimento delle prestazioni acustiche richieste. \r\nNel prezzo si intendono compresi e compensati gli oneri per la formazione delle opere provvisionali per l'esecuzione dell'opere in sicurezza, e successivo smontaggio, la protezione provvisoria di pavimenti e di elementi presenti all'interno dell'area dell'intervento con posa e relativa rimozione finale di appositi teli protettivi, per la posa del nastro desolidarizzante alla base e in sommità della sottostruttura, per la fornitura e posa dell'isolante, per il taglio e lo sfrido delle lastre, i paraspigoli, la formazione di vani per porte completi di rinforzo perimetrale in profilati metallici per l'ancoraggio dei serramenti, gli oneri per la posa di telaio per porte scorrevoli interno muro se previsti in progetto, l'onere per i rinforzi strutturali per i carichi previsti in progetto, l'onere per la verifica ed eventuali lavorazioni aggiuntive riguardanti la posa di elementi non portanti in cartongesso nel rispetto delle NTC 2018, e s.m.i., e delle Norme Sismiche vigenti, l'onere di procedere in tempi successivi all'applicazione delle lastre in attesa dell'esecuzione di impianti elettrici e termoidraulici da inserire, l'onere per la sigillatura EI tra parete e soletta con soluzioni idonee a garantire la resistenza la fuoco e l'isolamento acustico richiesto, gli oneri per la chiusura REI degli attraversamenti impiantistici di qualsiasi tipo e natura, gli oneri per la sigillatura acustica in corrispondenza degli attraversamenti impiantistici, documentazione tecnica e modulistica necessarie per il rilascio del Certificato di Prevenzione Incendi per sistema di pareti in cartongesso EI60, gli oneri per le certificazioni e collaudo acustico se richiesti a progetto, la formazione ed il disfacimento di piani di lavoro interni, così come il rispetto della marcatura CE e la Dichiarazione di Produzione di Prodotto DOP per i prodotti di costruzione prevista dal Regolamento n. 305/2011 (UE) e quanto altro necessario per dare il lavoro finito a regola d'arte.\r\n\r\n\r\n",
+    "expected_properties": {
+      "material": "cartongesso",
+      "wall_total_thickness_mm": 125.0,
+      "fire_class": "EI 60",
+      "frame_type": "singola",
+      "frame_spacing_mm": 600,
+      "frame_material": "acciaio zincato",
+      "board_layers": 2,
+      "brand": "Knauf"
+    }
+  },
+  {
+    "id": "694908d75ce1cdf31ce7bc32",
+    "code": "A020.010.01",
+    "description": "CE01 - Fornitura e posa in opera di controsoffitto pendinato in lastre standard in cartongesso tipo \"Knauf Lastra GKB\" o similare (sp. 12,5 mm) e sottostruttura metallica con kit antisismico secondo NTC 2018 con D.M. del 17.01.2018 utilizzando raccordo a croce che consente di fissare i controventi al profilo U asolato tramite semplici viti autoperforanti, barra asolata fornita nella lunghezza di 4.000 mm, da tagliare in cantiere e da applicare fra raccordo a croce e staffe di ancoraggio; 3. staffe a solaio (l'incidenza del kit, circa 1 pz per ogni 6 mq). Sono compresi e compensati  la stuccatura della testa delle viti di fissaggio nonché la stuccatura e sigillatura dei giunti di accostamento delle lastre, eseguita con idoneo stucco previa applicazione di strisce di supporto armato con rete tessile, il taglio e lo sfrido, la realizzazione di fori per l'inserimento di eventuali corpi illuminanti o elementi impiantistici, la protezione del pavimento,così come il rispetto della marcatura CE e la Dichiarazione di Produzione di Prodotto DOP per i prodotti di costruzione prevista dal Regolamento n. 305/2011 (UE),  la pulizia finale con allontanamento dei materiali di risulta e ogni altra opera necessaria a dare l'opera finita a regola d'arte.\r\n",
+    "expected_properties": {
+      "material": "cartongesso",
+      "board_type": "GKB",
+      "thickness_mm": 12.5,
+      "board_layers": 1,
+      "brand": "Knauf"
+    }
+  },
+  {
+    "id": "694908d75ce1cdf31ce7bc33",
+    "code": "A020.010.02",
+    "description": "CE02 - Fornitura e posa in opera di controsoffitto pendinato in lastre in cartongesso per ambienti umidi tipo \"Knauf Lastra GKI\"  o similare (sp. 12,5 mm) e sottostruttura metallica con kit antisismico secondo NTC 2018 con D.M. del 17.01.2018 utilizzando raccordo a croce che consente di fissare i controventi al profilo U asolato tramite semplici viti autoperforanti, barra asolata fornita nella lunghezza di 4.000 mm, da tagliare in cantiere e da applicare fra raccordo a croce e staffe di ancoraggio; 3. staffe a solaio (l'incidenza del kit, circa 1 pz per ogni 6 mq). Sono compresi e compensati  la stuccatura della testa delle viti di fissaggio nonché la stuccatura e sigillatura dei giunti di accostamento delle lastre, eseguita con idoneo stucco previa applicazione di strisce di supporto armato con rete tessile, il taglio e lo sfrido, la realizzazione di fori per l'inserimento di eventuali corpi illuminanti o elementi impiantistici, la protezione del pavimento,così come il rispetto della marcatura CE e la Dichiarazione di Produzione di Prodotto DOP per i prodotti di costruzione prevista dal Regolamento n. 305/2011 (UE),  la pulizia finale con allontanamento dei materiali di risulta e ogni altra opera necessaria a dare l'opera finita a regola d'arte.\r\n",
+    "expected_properties": {
+      "material": "cartongesso",
+      "board_type": "GKI",
+      "thickness_mm": 12.5,
+      "board_layers": 1,
+      "brand": "Knauf"
+    }
+  },
+  {
+    "id": "694908d75ce1cdf31ce7bc34",
+    "code": "A020.010.03",
+    "description": "CE03 - Fornitura e posa in opera di controsoffitto pendinato in lastre standard in cartongesso tipo \"Knauf Lastra GKB\" o similare (sp. 12,5 mm) ed isolante di lana minerale sp. 50mm, sottostruttura metallica con kit antisismico secondo NTC 2018 con D.M. del 17.01.2018 utilizzando raccordo a croce che consente di fissare i controventi al profilo U asolato tramite semplici viti autoperforanti, barra asolata fornita nella lunghezza di 4.000 mm, da tagliare in cantiere e da applicare fra raccordo a croce e staffe di ancoraggio; 3. staffe a solaio (l'incidenza del kit, circa 1 pz per ogni 6 mq). Sono compresi e compensati  la stuccatura della testa delle viti di fissaggio nonché la stuccatura e sigillatura dei giunti di accostamento delle lastre, eseguita con idoneo stucco previa applicazione di strisce di supporto armato con rete tessile, il taglio e lo sfrido, la realizzazione di fori per l'inserimento di eventuali corpi illuminanti o elementi impiantistici, la protezione del pavimento,così come il rispetto della marcatura CE e la Dichiarazione di Produzione di Prodotto DOP per i prodotti di costruzione prevista dal Regolamento n. 305/2011 (UE),  la pulizia finale con allontanamento dei materiali di risulta e ogni altra opera necessaria a dare l'opera finita a regola d'arte.\r\n",
+    "expected_properties": {
+      "material": "cartongesso",
+      "board_type": "GKB",
+      "thickness_mm": 12.5,
+      "board_layers": 1,
+      "brand": "Knauf",
+      "insulation_type": "lana minerale",
+      "insulation_thickness_mm": 50.0
+    }
+  },
+  {
+    "id": "694908d75ce1cdf31ce7bc35",
+    "code": "A020.010.04",
+    "description": "CE04 - Fornitura e posa in opera di controsoffitto pendinato in lastre standard in cartongesso tipo \"Knauf Lastra GKB\" o similare (sp. 12,5 mm), isolante di lana minerale sp. 50mm ed elementi antivibranti, sottostruttura metallica con kit antisismico secondo NTC 2018 con D.M. del 17.01.2018 utilizzando raccordo a croce che consente di fissare i controventi al profilo U asolato tramite semplici viti autoperforanti, barra asolata fornita nella lunghezza di 4.000 mm, da tagliare in cantiere e da applicare fra raccordo a croce e staffe di ancoraggio; 3. staffe a solaio (l'incidenza del kit, circa 1 pz per ogni 6 mq). Sono compresi e compensati  la stuccatura della testa delle viti di fissaggio nonché la stuccatura e sigillatura dei giunti di accostamento delle lastre, eseguita con idoneo stucco previa applicazione di strisce di supporto armato con rete tessile, il taglio e lo sfrido, la realizzazione di fori per l'inserimento di eventuali corpi illuminanti o elementi impiantistici, la protezione del pavimento,così come il rispetto della marcatura CE e la Dichiarazione di Produzione di Prodotto DOP per i prodotti di costruzione prevista dal Regolamento n. 305/2011 (UE),  la pulizia finale con allontanamento dei materiali di risulta e ogni altra opera necessaria a dare l'opera finita a regola d'arte.\r\n",
+    "expected_properties": {
+      "material": "cartongesso",
+      "board_type": "GKB",
+      "thickness_mm": 12.5,
+      "board_layers": 1,
+      "brand": "Knauf",
+      "insulation_type": "lana minerale",
+      "insulation_thickness_mm": 50.0
+    }
+  },
+  {
+    "id": "synthetic-001",
+    "code": "SYN-001",
+    "description": "Fornitura e posa di parete in cartongesso. con mono lastra. lastra GKB tipo Knauf. sp. 12,5 mm.",
+    "expected_properties": {
+      "material": "cartongesso",
+      "board_type": "GKB",
+      "board_layers": 1,
+      "thickness_mm": 12.5,
+      "brand": "Knauf"
+    }
+  },
+  {
+    "id": "synthetic-002",
+    "code": "SYN-002",
+    "description": "Fornitura e posa di parete in cartongesso. con mono lastra. lastra GKB tipo Knauf. sp. 12,5 mm. spessore totale 10,0 cm.",
+    "expected_properties": {
+      "material": "cartongesso",
+      "board_type": "GKB",
+      "board_layers": 1,
+      "thickness_mm": 12.5,
+      "brand": "Knauf",
+      "wall_total_thickness_mm": 100.0
+    }
+  },
+  {
+    "id": "synthetic-003",
+    "code": "SYN-003",
+    "description": "Fornitura e posa di parete in cartongesso. con mono lastra. lastra GKB tipo Knauf. sp. 12,5 mm. spessore totale 12,5 cm.",
+    "expected_properties": {
+      "material": "cartongesso",
+      "board_type": "GKB",
+      "board_layers": 1,
+      "thickness_mm": 12.5,
+      "brand": "Knauf",
+      "wall_total_thickness_mm": 125.0
+    }
+  },
+  {
+    "id": "synthetic-004",
+    "code": "SYN-004",
+    "description": "Fornitura e posa di parete in cartongesso. con mono lastra. lastra GKB tipo Knauf. sp. 12,5 mm. orditura singola metallica in acciaio zincato interasse 600 mm.",
+    "expected_properties": {
+      "material": "cartongesso",
+      "board_type": "GKB",
+      "board_layers": 1,
+      "thickness_mm": 12.5,
+      "brand": "Knauf",
+      "frame_material": "acciaio zincato",
+      "frame_spacing_mm": 600,
+      "frame_type": "singola"
+    }
+  },
+  {
+    "id": "synthetic-005",
+    "code": "SYN-005",
+    "description": "Fornitura e posa di parete in cartongesso. con mono lastra. lastra GKB tipo Knauf. sp. 12,5 mm. orditura singola metallica in acciaio zincato interasse 600 mm. spessore totale 10,0 cm.",
+    "expected_properties": {
+      "material": "cartongesso",
+      "board_type": "GKB",
+      "board_layers": 1,
+      "thickness_mm": 12.5,
+      "brand": "Knauf",
+      "frame_material": "acciaio zincato",
+      "frame_spacing_mm": 600,
+      "frame_type": "singola",
+      "wall_total_thickness_mm": 100.0
+    }
+  },
+  {
+    "id": "synthetic-006",
+    "code": "SYN-006",
+    "description": "Fornitura e posa di parete in cartongesso. con mono lastra. lastra GKB tipo Knauf. sp. 12,5 mm. orditura singola metallica in acciaio zincato interasse 600 mm. spessore totale 12,5 cm.",
+    "expected_properties": {
+      "material": "cartongesso",
+      "board_type": "GKB",
+      "board_layers": 1,
+      "thickness_mm": 12.5,
+      "brand": "Knauf",
+      "frame_material": "acciaio zincato",
+      "frame_spacing_mm": 600,
+      "frame_type": "singola",
+      "wall_total_thickness_mm": 125.0
+    }
+  },
+  {
+    "id": "synthetic-007",
+    "code": "SYN-007",
+    "description": "Fornitura e posa di parete in cartongesso. con mono lastra. lastra GKB tipo Knauf. sp. 12,5 mm. orditura doppia metallica in acciaio zincato interasse 400 mm.",
+    "expected_properties": {
+      "material": "cartongesso",
+      "board_type": "GKB",
+      "board_layers": 1,
+      "thickness_mm": 12.5,
+      "brand": "Knauf",
+      "frame_material": "acciaio zincato",
+      "frame_spacing_mm": 400,
+      "frame_type": "doppia"
+    }
+  },
+  {
+    "id": "synthetic-008",
+    "code": "SYN-008",
+    "description": "Fornitura e posa di parete in cartongesso. con mono lastra. lastra GKB tipo Knauf. sp. 12,5 mm. orditura doppia metallica in acciaio zincato interasse 400 mm. spessore totale 10,0 cm.",
+    "expected_properties": {
+      "material": "cartongesso",
+      "board_type": "GKB",
+      "board_layers": 1,
+      "thickness_mm": 12.5,
+      "brand": "Knauf",
+      "frame_material": "acciaio zincato",
+      "frame_spacing_mm": 400,
+      "frame_type": "doppia",
+      "wall_total_thickness_mm": 100.0
+    }
+  },
+  {
+    "id": "synthetic-009",
+    "code": "SYN-009",
+    "description": "Fornitura e posa di parete in cartongesso. con mono lastra. lastra GKB tipo Knauf. sp. 12,5 mm. orditura doppia metallica in acciaio zincato interasse 400 mm. spessore totale 12,5 cm.",
+    "expected_properties": {
+      "material": "cartongesso",
+      "board_type": "GKB",
+      "board_layers": 1,
+      "thickness_mm": 12.5,
+      "brand": "Knauf",
+      "frame_material": "acciaio zincato",
+      "frame_spacing_mm": 400,
+      "frame_type": "doppia",
+      "wall_total_thickness_mm": 125.0
+    }
+  },
+  {
+    "id": "synthetic-010",
+    "code": "SYN-010",
+    "description": "Fornitura e posa di parete in cartongesso. con mono lastra. lastra GKB tipo Knauf. sp. 12,5 mm. isolante in lana minerale sp. 50,0 mm.",
+    "expected_properties": {
+      "material": "cartongesso",
+      "board_type": "GKB",
+      "board_layers": 1,
+      "thickness_mm": 12.5,
+      "brand": "Knauf",
+      "insulation_type": "lana minerale",
+      "insulation_thickness_mm": 50.0
+    }
+  },
+  {
+    "id": "synthetic-011",
+    "code": "SYN-011",
+    "description": "Fornitura e posa di parete in cartongesso. con mono lastra. lastra GKB tipo Knauf. sp. 12,5 mm. isolante in lana minerale sp. 50,0 mm. spessore totale 10,0 cm.",
+    "expected_properties": {
+      "material": "cartongesso",
+      "board_type": "GKB",
+      "board_layers": 1,
+      "thickness_mm": 12.5,
+      "brand": "Knauf",
+      "insulation_type": "lana minerale",
+      "insulation_thickness_mm": 50.0,
+      "wall_total_thickness_mm": 100.0
+    }
+  },
+  {
+    "id": "synthetic-012",
+    "code": "SYN-012",
+    "description": "Fornitura e posa di parete in cartongesso. con mono lastra. lastra GKB tipo Knauf. sp. 12,5 mm. isolante in lana minerale sp. 50,0 mm. spessore totale 12,5 cm.",
+    "expected_properties": {
+      "material": "cartongesso",
+      "board_type": "GKB",
+      "board_layers": 1,
+      "thickness_mm": 12.5,
+      "brand": "Knauf",
+      "insulation_type": "lana minerale",
+      "insulation_thickness_mm": 50.0,
+      "wall_total_thickness_mm": 125.0
+    }
+  },
+  {
+    "id": "synthetic-013",
+    "code": "SYN-013",
+    "description": "Fornitura e posa di parete in cartongesso. con mono lastra. lastra GKB tipo Knauf. sp. 12,5 mm. orditura singola metallica in acciaio zincato interasse 600 mm. isolante in lana minerale sp. 50,0 mm.",
+    "expected_properties": {
+      "material": "cartongesso",
+      "board_type": "GKB",
+      "board_layers": 1,
+      "thickness_mm": 12.5,
+      "brand": "Knauf",
+      "frame_material": "acciaio zincato",
+      "frame_spacing_mm": 600,
+      "frame_type": "singola",
+      "insulation_type": "lana minerale",
+      "insulation_thickness_mm": 50.0
+    }
+  },
+  {
+    "id": "synthetic-014",
+    "code": "SYN-014",
+    "description": "Fornitura e posa di parete in cartongesso. con mono lastra. lastra GKB tipo Knauf. sp. 12,5 mm. orditura singola metallica in acciaio zincato interasse 600 mm. isolante in lana minerale sp. 50,0 mm. spessore totale 10,0 cm.",
+    "expected_properties": {
+      "material": "cartongesso",
+      "board_type": "GKB",
+      "board_layers": 1,
+      "thickness_mm": 12.5,
+      "brand": "Knauf",
+      "frame_material": "acciaio zincato",
+      "frame_spacing_mm": 600,
+      "frame_type": "singola",
+      "insulation_type": "lana minerale",
+      "insulation_thickness_mm": 50.0,
+      "wall_total_thickness_mm": 100.0
+    }
+  },
+  {
+    "id": "synthetic-015",
+    "code": "SYN-015",
+    "description": "Fornitura e posa di parete in cartongesso. con mono lastra. lastra GKB tipo Knauf. sp. 12,5 mm. orditura singola metallica in acciaio zincato interasse 600 mm. isolante in lana minerale sp. 50,0 mm. spessore totale 12,5 cm.",
+    "expected_properties": {
+      "material": "cartongesso",
+      "board_type": "GKB",
+      "board_layers": 1,
+      "thickness_mm": 12.5,
+      "brand": "Knauf",
+      "frame_material": "acciaio zincato",
+      "frame_spacing_mm": 600,
+      "frame_type": "singola",
+      "insulation_type": "lana minerale",
+      "insulation_thickness_mm": 50.0,
+      "wall_total_thickness_mm": 125.0
+    }
+  },
+  {
+    "id": "synthetic-016",
+    "code": "SYN-016",
+    "description": "Fornitura e posa di parete in cartongesso. con mono lastra. lastra GKB tipo Knauf. sp. 12,5 mm. orditura doppia metallica in acciaio zincato interasse 400 mm. isolante in lana minerale sp. 50,0 mm.",
+    "expected_properties": {
+      "material": "cartongesso",
+      "board_type": "GKB",
+      "board_layers": 1,
+      "thickness_mm": 12.5,
+      "brand": "Knauf",
+      "frame_material": "acciaio zincato",
+      "frame_spacing_mm": 400,
+      "frame_type": "doppia",
+      "insulation_type": "lana minerale",
+      "insulation_thickness_mm": 50.0
+    }
+  },
+  {
+    "id": "synthetic-017",
+    "code": "SYN-017",
+    "description": "Fornitura e posa di parete in cartongesso. con mono lastra. lastra GKB tipo Knauf. sp. 12,5 mm. orditura doppia metallica in acciaio zincato interasse 400 mm. isolante in lana minerale sp. 50,0 mm. spessore totale 10,0 cm.",
+    "expected_properties": {
+      "material": "cartongesso",
+      "board_type": "GKB",
+      "board_layers": 1,
+      "thickness_mm": 12.5,
+      "brand": "Knauf",
+      "frame_material": "acciaio zincato",
+      "frame_spacing_mm": 400,
+      "frame_type": "doppia",
+      "insulation_type": "lana minerale",
+      "insulation_thickness_mm": 50.0,
+      "wall_total_thickness_mm": 100.0
+    }
+  },
+  {
+    "id": "synthetic-018",
+    "code": "SYN-018",
+    "description": "Fornitura e posa di parete in cartongesso. con mono lastra. lastra GKB tipo Knauf. sp. 12,5 mm. orditura doppia metallica in acciaio zincato interasse 400 mm. isolante in lana minerale sp. 50,0 mm. spessore totale 12,5 cm.",
+    "expected_properties": {
+      "material": "cartongesso",
+      "board_type": "GKB",
+      "board_layers": 1,
+      "thickness_mm": 12.5,
+      "brand": "Knauf",
+      "frame_material": "acciaio zincato",
+      "frame_spacing_mm": 400,
+      "frame_type": "doppia",
+      "insulation_type": "lana minerale",
+      "insulation_thickness_mm": 50.0,
+      "wall_total_thickness_mm": 125.0
+    }
+  },
+  {
+    "id": "synthetic-019",
+    "code": "SYN-019",
+    "description": "Fornitura e posa di parete in cartongesso. con mono lastra. lastra GKB tipo Knauf. sp. 12,5 mm. isolante in lana di roccia sp. 40,0 mm.",
+    "expected_properties": {
+      "material": "cartongesso",
+      "board_type": "GKB",
+      "board_layers": 1,
+      "thickness_mm": 12.5,
+      "brand": "Knauf",
+      "insulation_type": "lana di roccia",
+      "insulation_thickness_mm": 40.0
+    }
+  },
+  {
+    "id": "synthetic-020",
+    "code": "SYN-020",
+    "description": "Fornitura e posa di parete in cartongesso. con mono lastra. lastra GKB tipo Knauf. sp. 12,5 mm. isolante in lana di roccia sp. 40,0 mm. spessore totale 10,0 cm.",
+    "expected_properties": {
+      "material": "cartongesso",
+      "board_type": "GKB",
+      "board_layers": 1,
+      "thickness_mm": 12.5,
+      "brand": "Knauf",
+      "insulation_type": "lana di roccia",
+      "insulation_thickness_mm": 40.0,
+      "wall_total_thickness_mm": 100.0
+    }
+  },
+  {
+    "id": "synthetic-021",
+    "code": "SYN-021",
+    "description": "Fornitura e posa di parete in cartongesso. con mono lastra. lastra GKB tipo Knauf. sp. 12,5 mm. isolante in lana di roccia sp. 40,0 mm. spessore totale 12,5 cm.",
+    "expected_properties": {
+      "material": "cartongesso",
+      "board_type": "GKB",
+      "board_layers": 1,
+      "thickness_mm": 12.5,
+      "brand": "Knauf",
+      "insulation_type": "lana di roccia",
+      "insulation_thickness_mm": 40.0,
+      "wall_total_thickness_mm": 125.0
+    }
+  },
+  {
+    "id": "synthetic-022",
+    "code": "SYN-022",
+    "description": "Fornitura e posa di parete in cartongesso. con mono lastra. lastra GKB tipo Knauf. sp. 12,5 mm. orditura singola metallica in acciaio zincato interasse 600 mm. isolante in lana di roccia sp. 40,0 mm.",
+    "expected_properties": {
+      "material": "cartongesso",
+      "board_type": "GKB",
+      "board_layers": 1,
+      "thickness_mm": 12.5,
+      "brand": "Knauf",
+      "frame_material": "acciaio zincato",
+      "frame_spacing_mm": 600,
+      "frame_type": "singola",
+      "insulation_type": "lana di roccia",
+      "insulation_thickness_mm": 40.0
+    }
+  },
+  {
+    "id": "synthetic-023",
+    "code": "SYN-023",
+    "description": "Fornitura e posa di parete in cartongesso. con mono lastra. lastra GKB tipo Knauf. sp. 12,5 mm. orditura singola metallica in acciaio zincato interasse 600 mm. isolante in lana di roccia sp. 40,0 mm. spessore totale 10,0 cm.",
+    "expected_properties": {
+      "material": "cartongesso",
+      "board_type": "GKB",
+      "board_layers": 1,
+      "thickness_mm": 12.5,
+      "brand": "Knauf",
+      "frame_material": "acciaio zincato",
+      "frame_spacing_mm": 600,
+      "frame_type": "singola",
+      "insulation_type": "lana di roccia",
+      "insulation_thickness_mm": 40.0,
+      "wall_total_thickness_mm": 100.0
+    }
+  },
+  {
+    "id": "synthetic-024",
+    "code": "SYN-024",
+    "description": "Fornitura e posa di parete in cartongesso. con mono lastra. lastra GKB tipo Knauf. sp. 12,5 mm. orditura singola metallica in acciaio zincato interasse 600 mm. isolante in lana di roccia sp. 40,0 mm. spessore totale 12,5 cm.",
+    "expected_properties": {
+      "material": "cartongesso",
+      "board_type": "GKB",
+      "board_layers": 1,
+      "thickness_mm": 12.5,
+      "brand": "Knauf",
+      "frame_material": "acciaio zincato",
+      "frame_spacing_mm": 600,
+      "frame_type": "singola",
+      "insulation_type": "lana di roccia",
+      "insulation_thickness_mm": 40.0,
+      "wall_total_thickness_mm": 125.0
+    }
+  },
+  {
+    "id": "synthetic-025",
+    "code": "SYN-025",
+    "description": "Fornitura e posa di parete in cartongesso. con mono lastra. lastra GKB tipo Knauf. sp. 12,5 mm. orditura doppia metallica in acciaio zincato interasse 400 mm. isolante in lana di roccia sp. 40,0 mm.",
+    "expected_properties": {
+      "material": "cartongesso",
+      "board_type": "GKB",
+      "board_layers": 1,
+      "thickness_mm": 12.5,
+      "brand": "Knauf",
+      "frame_material": "acciaio zincato",
+      "frame_spacing_mm": 400,
+      "frame_type": "doppia",
+      "insulation_type": "lana di roccia",
+      "insulation_thickness_mm": 40.0
+    }
+  },
+  {
+    "id": "synthetic-026",
+    "code": "SYN-026",
+    "description": "Fornitura e posa di parete in cartongesso. con mono lastra. lastra GKB tipo Knauf. sp. 12,5 mm. orditura doppia metallica in acciaio zincato interasse 400 mm. isolante in lana di roccia sp. 40,0 mm. spessore totale 10,0 cm.",
+    "expected_properties": {
+      "material": "cartongesso",
+      "board_type": "GKB",
+      "board_layers": 1,
+      "thickness_mm": 12.5,
+      "brand": "Knauf",
+      "frame_material": "acciaio zincato",
+      "frame_spacing_mm": 400,
+      "frame_type": "doppia",
+      "insulation_type": "lana di roccia",
+      "insulation_thickness_mm": 40.0,
+      "wall_total_thickness_mm": 100.0
+    }
+  },
+  {
+    "id": "synthetic-027",
+    "code": "SYN-027",
+    "description": "Fornitura e posa di parete in cartongesso. con mono lastra. lastra GKB tipo Knauf. sp. 12,5 mm. orditura doppia metallica in acciaio zincato interasse 400 mm. isolante in lana di roccia sp. 40,0 mm. spessore totale 12,5 cm.",
+    "expected_properties": {
+      "material": "cartongesso",
+      "board_type": "GKB",
+      "board_layers": 1,
+      "thickness_mm": 12.5,
+      "brand": "Knauf",
+      "frame_material": "acciaio zincato",
+      "frame_spacing_mm": 400,
+      "frame_type": "doppia",
+      "insulation_type": "lana di roccia",
+      "insulation_thickness_mm": 40.0,
+      "wall_total_thickness_mm": 125.0
+    }
+  },
+  {
+    "id": "synthetic-028",
+    "code": "SYN-028",
+    "description": "Fornitura e posa di parete in cartongesso. con mono lastra. lastra GKB tipo Knauf. sp. 12,5 mm. resistenza al fuoco REI 60.",
+    "expected_properties": {
+      "material": "cartongesso",
+      "board_type": "GKB",
+      "board_layers": 1,
+      "thickness_mm": 12.5,
+      "brand": "Knauf",
+      "fire_class": "REI 60"
+    }
+  },
+  {
+    "id": "synthetic-029",
+    "code": "SYN-029",
+    "description": "Fornitura e posa di parete in cartongesso. con mono lastra. lastra GKB tipo Knauf. sp. 12,5 mm. resistenza al fuoco REI 60. spessore totale 10,0 cm.",
+    "expected_properties": {
+      "material": "cartongesso",
+      "board_type": "GKB",
+      "board_layers": 1,
+      "thickness_mm": 12.5,
+      "brand": "Knauf",
+      "fire_class": "REI 60",
+      "wall_total_thickness_mm": 100.0
+    }
+  },
+  {
+    "id": "synthetic-030",
+    "code": "SYN-030",
+    "description": "Fornitura e posa di parete in cartongesso. con mono lastra. lastra GKB tipo Knauf. sp. 12,5 mm. resistenza al fuoco REI 60. spessore totale 12,5 cm.",
+    "expected_properties": {
+      "material": "cartongesso",
+      "board_type": "GKB",
+      "board_layers": 1,
+      "thickness_mm": 12.5,
+      "brand": "Knauf",
+      "fire_class": "REI 60",
+      "wall_total_thickness_mm": 125.0
+    }
+  },
+  {
+    "id": "synthetic-031",
+    "code": "SYN-031",
+    "description": "Fornitura e posa di parete in cartongesso. con mono lastra. lastra GKB tipo Knauf. sp. 12,5 mm. resistenza al fuoco REI 60. orditura singola metallica in acciaio zincato interasse 600 mm.",
+    "expected_properties": {
+      "material": "cartongesso",
+      "board_type": "GKB",
+      "board_layers": 1,
+      "thickness_mm": 12.5,
+      "brand": "Knauf",
+      "fire_class": "REI 60",
+      "frame_material": "acciaio zincato",
+      "frame_spacing_mm": 600,
+      "frame_type": "singola"
+    }
+  }
+]

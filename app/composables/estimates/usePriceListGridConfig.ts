@@ -56,6 +56,22 @@ export const usePriceListGridConfig = (_rowData: Ref<ApiPriceListItem[]>) => {
                 headerName: 'Descrizione',
                 flex: 2,
                 minWidth: 300,
+                // Prioritize extended > long > description
+                valueGetter: (params: any) => {
+                    const data = params.data;
+                    if (!data) return '';
+                    return data.extendedDescription ||
+                        data.extended_description ||
+                        data.longDescription ||
+                        data.long_description ||
+                        data.description ||
+                        data.item_description ||
+                        '';
+                },
+                cellRenderer: (params: any) => {
+                    // Optional: tooltip for full text if truncated
+                    return params.value;
+                }
             },
             {
                 field: 'unit',

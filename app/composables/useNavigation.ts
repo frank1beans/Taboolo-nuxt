@@ -28,6 +28,12 @@ export const useNavigation = (
                 to: '/analytics',
             },
             {
+                id: 'analytics-properties',
+                label: 'Analytics Proprieta',
+                icon: 'heroicons:adjustments-horizontal',
+                to: '/analytics/properties',
+            },
+            {
                 id: 'catalogs',
                 label: 'Listini Generali',
                 icon: 'heroicons:book-open',

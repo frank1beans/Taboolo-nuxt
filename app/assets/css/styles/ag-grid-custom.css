@@ -1,54 +1,101 @@
-/* AG Grid Custom Theme - Minimal Design */
+/* AG Grid Custom Theme - Premium Card Table */
 
-/* Shared theme tokens (light + dark inherit from CSS variables) */
-.ag-theme-quartz,
-.ag-theme-quartz-dark {
+/* Light theme base */
+.ag-theme-quartz {
   --ag-background-color: hsl(var(--card));
   --ag-foreground-color: hsl(var(--foreground));
-  --ag-border-color: hsl(var(--border));
-  --ag-secondary-border-color: hsl(var(--border) / 0.4);
-  --ag-border-radius: var(--radius-lg);
-  --ag-card-radius: var(--radius-lg);
-  --ag-header-height: 52px;
-  --ag-row-height: 44px;
+  --ag-border-color: hsl(var(--border) / 0.3);
+  --ag-secondary-border-color: transparent;
+  --ag-border-radius: var(--radius-xl);
+  --ag-card-radius: var(--radius-xl);
+  --ag-header-height: 48px;
+  --ag-row-height: 48px;
 
-  /* Header */
-  --ag-header-background-color: hsl(var(--secondary));
+  /* Header - Light mode: soft blue-gray */
+  --ag-header-background-color: hsl(228 20% 97%);
   --ag-header-foreground-color: hsl(var(--foreground));
-  --ag-header-column-separator-color: hsl(var(--border) / 0.6);
+  --ag-header-column-separator-color: transparent;
 
-  /* Rows */
-  --ag-row-hover-color: hsl(var(--table-row-hover));
-  --ag-selected-row-background-color: hsl(var(--table-row-selected));
+  /* Rows - Light mode hover */
+  --ag-row-hover-color: hsl(228 25% 96%);
+  --ag-selected-row-background-color: hsl(152 50% 95%);
   --ag-odd-row-background-color: transparent;
 
-  /* Cell */
+  /* Cell - No borders */
   --ag-cell-horizontal-border: none;
-  --ag-row-border-color: hsl(var(--table-border));
+  --ag-row-border-color: hsl(var(--border) / 0.15);
 
   /* Inputs */
-  --ag-input-border-color: hsl(var(--border));
+  --ag-input-border-color: hsl(var(--border) / 0.3);
   --ag-input-focus-border-color: hsl(var(--ring));
 
   /* Font */
   --ag-font-family: var(--font-sans);
-  --ag-font-size: 13px;
+  --ag-font-size: 14px;
 
   /* Spacing */
-  --ag-grid-size: 4px;
-  --ag-cell-horizontal-padding: 14px;
-  --ag-row-height: 42px;
+  --ag-grid-size: 6px;
+  --ag-cell-horizontal-padding: 16px;
 
   /* Grid dimensions */
   min-height: 520px;
   height: 100%;
 
-  /* Scrollbar improvements */
+  /* Scrollbar */
   --ag-scrollbar-size: 8px;
   --ag-control-panel-background-color: hsl(var(--card));
-  --ag-widget-container-horizontal-padding: 10px;
-  --ag-card-shadow: var(--shadow-sm);
-  --ag-popup-shadow: var(--shadow-md);
+  --ag-widget-container-horizontal-padding: 12px;
+  --ag-card-shadow: none;
+  --ag-popup-shadow: var(--shadow-lg);
+}
+
+/* Dark theme overrides */
+.ag-theme-quartz-dark {
+  --ag-background-color: hsl(var(--card));
+  --ag-foreground-color: hsl(var(--foreground));
+  --ag-border-color: hsl(var(--border) / 0.3);
+  --ag-secondary-border-color: transparent;
+  --ag-border-radius: var(--radius-xl);
+  --ag-card-radius: var(--radius-xl);
+  --ag-header-height: 48px;
+  --ag-row-height: 48px;
+
+  /* Header - Dark mode: use card background */
+  --ag-header-background-color: hsl(var(--muted));
+  --ag-header-foreground-color: hsl(var(--foreground));
+  --ag-header-column-separator-color: transparent;
+
+  /* Rows - Dark mode hover */
+  --ag-row-hover-color: hsl(var(--muted) / 0.5);
+  --ag-selected-row-background-color: hsl(var(--primary) / 0.15);
+  --ag-odd-row-background-color: transparent;
+
+  /* Cell - No borders */
+  --ag-cell-horizontal-border: none;
+  --ag-row-border-color: hsl(var(--border) / 0.15);
+
+  /* Inputs */
+  --ag-input-border-color: hsl(var(--border) / 0.3);
+  --ag-input-focus-border-color: hsl(var(--ring));
+
+  /* Font */
+  --ag-font-family: var(--font-sans);
+  --ag-font-size: 14px;
+
+  /* Spacing */
+  --ag-grid-size: 6px;
+  --ag-cell-horizontal-padding: 16px;
+
+  /* Grid dimensions */
+  min-height: 520px;
+  height: 100%;
+
+  /* Scrollbar */
+  --ag-scrollbar-size: 8px;
+  --ag-control-panel-background-color: hsl(var(--card));
+  --ag-widget-container-horizontal-padding: 12px;
+  --ag-card-shadow: none;
+  --ag-popup-shadow: var(--shadow-lg);
 }
 
 /* ============= Hide Native Filters (using custom filter modal) ============= */
@@ -82,12 +129,20 @@
 
 /* ============= Global Overrides ============= */
 
-/* Header styling */
-.ag-theme-quartz .ag-header,
+/* Header styling - Light mode soft rounded appearance */
+.ag-theme-quartz .ag-header {
+  border-bottom: none;
+  font-weight: 600;
+  background: hsl(228 20% 97%);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+
+/* Header styling - Dark mode */
 .ag-theme-quartz-dark .ag-header {
-  border-bottom: 1px solid hsl(var(--border) / 0.6);
-  font-weight: 700;
-  background: hsl(var(--secondary));
+  border-bottom: none;
+  font-weight: 600;
+  background: hsl(var(--muted));
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
 }
 
 /* Make sure both group row and column row are rendered (avoid accidental collapse) */
@@ -103,12 +158,12 @@
 }
 
 .ag-theme-quartz {
-  background-color: #ffffff;
+  background-color: hsl(var(--card));
   color: hsl(var(--foreground));
 }
 
 .ag-theme-quartz-dark {
-  background-color: hsl(var(--background));
+  background-color: hsl(var(--card));
   color: hsl(var(--foreground));
 }
 
@@ -141,11 +196,16 @@
 .ag-theme-quartz-dark .ag-header-cell {
   display: flex;
   align-items: center;
-  padding: 6px 10px;
+  justify-content: flex-start;
+  padding: 0 12px;
+  height: 100%;
 }
 
 .ag-theme-quartz .ag-header-cell-label,
 .ag-theme-quartz-dark .ag-header-cell-label {
+  display: flex;
+  align-items: center;
+  height: 100%;
   font-weight: 600;
   font-size: 10px;
   text-transform: uppercase;
@@ -155,17 +215,18 @@
   line-height: 1.3;
   text-align: left;
   justify-content: flex-start;
-  align-items: center;
   gap: 6px;
 }
 
 /* Column groups */
 .ag-theme-quartz .ag-header-group-cell,
 .ag-theme-quartz-dark .ag-header-group-cell {
+  display: flex;
+  align-items: center;
   font-weight: 700;
   font-size: 13px;
-  border-bottom: 1px solid hsl(var(--border));
-  background: linear-gradient(180deg, hsl(var(--muted) / 0.5) 0%, hsl(var(--muted) / 0.2) 100%);
+  border-bottom: none;
+  background: transparent;
 }
 
 /* Cell styling */
@@ -193,17 +254,20 @@
   color: hsl(var(--foreground));
 }
 
-/* Row styling */
+/* Row styling - Soft hover, minimal borders */
 .ag-theme-quartz .ag-row,
 .ag-theme-quartz-dark .ag-row {
-  border-bottom: 1px solid hsl(var(--table-border));
+  border-bottom: 1px solid hsl(var(--border) / 0.08);
   background-color: hsl(var(--card));
-  transition: background-color 0.1s ease;
+  transition: all 0.15s ease;
 }
 
 .ag-theme-quartz .ag-row:hover,
 .ag-theme-quartz-dark .ag-row:hover {
-  background-color: var(--ag-row-hover-color);
+  background-color: hsl(var(--muted) / 0.7) !important;
+  box-shadow: 0 4px 16px -4px rgba(0, 0, 0, 0.15), inset 0 0 0 1px hsl(var(--border) / 0.2);
+  cursor: pointer;
+  z-index: 5;
 }
 
 .ag-theme-quartz .ag-row-selected,
@@ -377,12 +441,13 @@
   padding: 4px 8px;
 }
 
-/* Minimal rounded corners */
+/* Premium rounded corners for card table */
 .ag-theme-quartz,
 .ag-theme-quartz-dark {
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-xl);
   overflow: hidden;
-  border: 1px solid hsl(var(--border));
+  border: none;
+  box-shadow: none;
 }
 
 /* Improve readability with better contrast */

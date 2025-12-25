@@ -496,10 +496,10 @@ const navigateToProject = () => {
                      </div>
 
                      <!-- Embedding Toggle (Always visible if Raw Parser is on and we have data) -->
-                     <div v-if="useRawParser && sixPreview" class="flex items-center justify-between p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 mt-4 shadow-sm">
+                     <div v-if="useRawParser && sixPreview" class="info-card-row mt-4">
                         <div class="flex flex-col gap-1">
                           <span class="text-sm font-medium">Genera Embedding AI (Jina)</span>
-                          <span class="text-xs text-gray-500">Arricchisce i dati per ricerca semantica. Richiede più tempo.</span>
+                          <span class="text-xs text-[hsl(var(--muted-foreground))]">Arricchisce i dati per ricerca semantica. Richiede più tempo.</span>
                         </div>
                         <UCheckbox v-model="enableEmbeddings" color="primary" />
                      </div>
@@ -650,10 +650,10 @@ const navigateToProject = () => {
                           description="Verranno importati i dati e strutturati automaticamente."
                         />
 
-                        <div class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                        <div class="info-card-row">
                            <div class="flex flex-col gap-1">
                              <span class="text-sm font-medium">Genera Embedding AI (Jina)</span>
-                             <span class="text-xs text-gray-500">Arricchisce i dati per ricerca semantica. Richiede più tempo.</span>
+                             <span class="text-xs text-[hsl(var(--muted-foreground))]">Arricchisce i dati per ricerca semantica. Richiede più tempo.</span>
                            </div>
                            <UToggle v-model="enableEmbeddings" />
                          </div>

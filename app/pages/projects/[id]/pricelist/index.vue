@@ -14,14 +14,14 @@ import type { Project } from '~/types/project'
 import { ref, computed, watch } from 'vue'
 import { useCurrentContext } from '~/composables/useCurrentContext'
 import { useWbsTree } from '~/composables/useWbsTree'
+import DataGridActions from '~/components/data-grid/DataGridActions.vue'
 import DataGridPage from '~/components/layout/DataGridPage.vue'
+import PageToolbar from '~/components/layout/PageToolbar.vue'
 
 // ---------------------------------------------------------------------------
 // Layout & Page Meta
 // ---------------------------------------------------------------------------
-definePageMeta({
-  breadcrumb: 'Listino',
-})
+definePageMeta({})
 
 const route = useRoute()
 const router = useRouter()
@@ -224,78 +224,91 @@ const formattedTotalAmount = computed(() => {
 
 const { gridConfig } = usePriceListGridConfig(filteredRowData)
 
-const pageTitle = computed(() => 
+const pageTitle = computed(() => 'Listino')
+const pageSubtitle = computed(() => 
   selectedEstimateName.value || (activeEstimateId.value ? 'Listino Preventivo' : 'Listino di Progetto')
 )
+
+// Toolbar State
+const searchText = ref('')
+const gridApi = ref<any>(null)
+const onGridReady = (params: any) => {
+  gridApi.value = params.api
+}
+
+const handleReset = () => {
+  searchText.value = ''
+  onWbsNodeSelected(null)
+  gridApi.value?.setFilterModel(null)
+}
+
+const handleExport = () => {
+  gridApi.value?.exportDataAsExcel({ fileName: 'listino-items' })
+}
 </script>
 
 <template>
   <DataGridPage
     :title="pageTitle"
-    subtitle="Listino"
     :grid-config="gridConfig"
     :row-data="filteredRowData"
     :loading="loading"
-    toolbar-placeholder="Cerca voce..."
-    export-filename="listino-items"
     empty-state-title="Nessuna voce trovata"
     empty-state-message="Il listino non contiene ancora voci."
+    
+    :show-toolbar="false"
+    :filter-text="searchText"
+    @grid-ready="onGridReady"
   >
-    <!-- ACTIONS -->
+    <!-- Header Meta: Context + Stats -->
+    <template #header-meta>
+       <div class="flex items-center gap-2">
+         <!-- Context -->
+         <span class="text-[hsl(var(--foreground))] font-medium">
+            {{ pageSubtitle }}
+         </span>
+         <span class="text-[hsl(var(--border))]">|</span>
+         <!-- Items Count -->
+         <span class="text-[hsl(var(--muted-foreground))] flex items-center gap-2">
+            <Icon name="heroicons:list-bullet" class="w-4 h-4 ml-1" />
+            {{ filteredRowData.length }} voci
+         </span>
+         <!-- Total Amount (if > 0) -->
+         <template v-if="totalAmount > 0">
+           <span class="text-[hsl(var(--border))]">|</span>
+           <span class="flex items-center gap-1 font-medium text-[hsl(var(--success))]">
+              <Icon name="heroicons:currency-euro" class="w-4 h-4" />
+              {{ formattedTotalAmount }}
+           </span>
+         </template>
+       </div>
+    </template>
+
+    <!-- Header Actions (WBS/View Controls) -->
     <template #actions>
       <UButton
         :icon="wbsSidebarVisible ? 'i-heroicons-sidebar' : 'i-heroicons-sidebar'"
         color="neutral"
         variant="ghost"
         size="sm"
-        label="WBS"
-        :title="wbsSidebarVisible ? 'Nascondi WBS' : 'Mostra WBS'"
+        :label="wbsSidebarVisible ? 'Nascondi WBS' : 'Mostra WBS'"
         @click="wbsSidebarVisible = !wbsSidebarVisible"
       />
-      <UBadge v-if="selectedWbsNode" color="primary" variant="soft" class="gap-1.5 pl-2 pr-1 py-1">
-        <Icon name="heroicons:funnel-solid" class="w-3.5 h-3.5" />
-        <span class="max-w-48 truncate">{{ selectedWbsNode.name }}</span>
-        <UButton
-          icon="i-heroicons-x-mark"
-          color="neutral"
-          variant="ghost"
-          size="xs"
-          title="Rimuovi filtro WBS"
-          class="hover:bg-[hsl(var(--primary)/0.2)]"
-          @click="onWbsNodeSelected(null)"
-        />
-      </UBadge>
-      <UBadge v-if="filteredRowData.length > 0" color="neutral" variant="soft">
-        <Icon name="heroicons:list-bullet" class="w-3.5 h-3.5 mr-1" />
-        {{ filteredRowData.length }} voci
-      </UBadge>
-      <!-- Grand Total -->
-      <div
-        v-if="totalAmount > 0"
-        :class="[
-          'flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-lg',
-          colorMode.value === 'dark'
-            ? 'bg-[hsl(var(--success)/0.2)] text-[hsl(var(--success))] border border-[hsl(var(--success)/0.3)]'
-            : 'bg-[hsl(var(--success-light))] text-[hsl(var(--success))] border border-[hsl(var(--success)/0.2)]'
-        ]"
-      >
-        <Icon name="heroicons:currency-euro" class="w-5 h-5" />
-        <span>Totale: {{ formattedTotalAmount }}</span>
-      </div>
     </template>
 
-    <!-- PRE-GRID (Pending Items) -->
+    <!-- Toolbar Slot -->
     <template #pre-grid>
+        <!-- Pending Items Section (Pre-Grid Content) -->
         <div
             v-if="!activeEstimateId && !loading"
-            class="py-10 text-center text-sm text-[hsl(var(--muted-foreground))]"
+            class="py-4 px-4 mb-4 text-center text-sm text-[hsl(var(--muted-foreground))]"
         >
           Seleziona un preventivo per visualizzare il listino.
         </div>
 
         <div
           v-if="activeEstimateId && pendingItems.length"
-          class="mb-4 border border-[hsl(var(--border))] rounded-lg p-4 bg-[hsl(var(--muted)/0.4)]"
+          class="mb-6 border border-[hsl(var(--border))] rounded-xl p-4 bg-[hsl(var(--muted)/0.4)]"
         >
           <div class="flex items-center justify-between mb-3">
             <div>
@@ -314,7 +327,7 @@ const pageTitle = computed(() =>
             <div
               v-for="item in pendingItems"
               :key="item.id"
-              class="rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-3"
+              class="rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-3 shadow-xs"
             >
               <div class="flex flex-col gap-1">
                 <div class="flex items-start justify-between gap-2">
@@ -333,7 +346,7 @@ const pageTitle = computed(() =>
                   class="w-full sm:w-72 rounded-md border px-3 py-2 text-sm"
                   :class="colorMode.value === 'dark'
                     ? 'bg-[hsl(var(--muted))/0.2] border-[hsl(var(--border))] text-[hsl(var(--foreground))]'
-                    : 'bg-white border-[hsl(var(--border))] text-[hsl(var(--foreground))]'"
+                    : 'bg-[hsl(var(--card))] border-[hsl(var(--border))] text-[hsl(var(--foreground))]'"
                 >
                   <option value="" disabled>Seleziona codice</option>
                   <option
@@ -359,9 +372,48 @@ const pageTitle = computed(() =>
             </div>
           </div>
         </div>
+
+        <!-- The Toolbar -->
+        <PageToolbar
+          v-model="searchText"
+          search-placeholder="Cerca voce..."
+        >
+          <template #left>
+             <UBadge v-if="selectedWbsNode" color="primary" variant="soft" class="gap-1.5 pl-2 pr-1 py-1 ml-2">
+                <Icon name="heroicons:funnel-solid" class="w-3.5 h-3.5" />
+                <span class="max-w-48 truncate">{{ selectedWbsNode.name }}</span>
+                <UButton
+                  icon="i-heroicons-x-mark"
+                  color="neutral"
+                  variant="ghost"
+                  size="xs"
+                  title="Rimuovi filtro WBS"
+                  class="hover:bg-[hsl(var(--primary)/0.2)]"
+                  @click="onWbsNodeSelected(null)"
+                />
+              </UBadge>
+          </template>
+
+          <template #right>
+            <button
+               v-if="searchText || selectedWbsNode"
+               class="flex items-center justify-center h-9 px-4 rounded-full text-sm font-medium text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--background))] hover:text-[hsl(var(--foreground))] transition-colors"
+               @click="handleReset"
+            >
+              <Icon name="heroicons:arrow-path" class="w-4 h-4 mr-2" />
+              Reset
+            </button>     
+
+            <button
+               class="btn-outline-theme"
+               @click="handleExport"
+            >
+               Esporta
+            </button>
+          </template>
+        </PageToolbar>
     </template>
 
-    <!-- SIDEBAR -->
     <template #sidebar>
       <WbsSidebar
         v-if="wbsSidebarVisible"

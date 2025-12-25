@@ -1,0 +1,3 @@
+"""
+Structured Property Extraction Module
+"""

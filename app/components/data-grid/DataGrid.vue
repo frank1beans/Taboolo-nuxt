@@ -2,7 +2,7 @@
   <ClientOnly>
     <div
       ref="gridWrapper"
-      class="w-full relative flex flex-col rounded-xl border overflow-hidden border-[hsl(var(--border))] bg-[hsl(var(--card))] text-[hsl(var(--foreground))]"
+      class="w-full relative flex flex-col overflow-hidden bg-transparent"
       :style="{ height }"
     >
       <!-- Loading State -->
@@ -12,11 +12,13 @@
       <template v-else-if="rowData.length > 0">
         <!-- Toolbar -->
         <DataGridToolbar
+          v-if="showToolbar"
           v-model="quickFilterText"
           :placeholder="toolbarPlaceholder"
           :enable-reset="true"
           :enable-export="config.enableExport !== false"
           :enable-column-toggle="config.enableColumnToggle !== false"
+          class="mb-4"
           @apply-filter="applyQuickFilter"
           @clear-filter="clearQuickFilter"
           @export="exportToXlsx(exportFilename)"
@@ -141,6 +143,8 @@ const props = withDefaults(
     customComponents?: Record<string, unknown>;
     contextExtras?: Record<string, unknown>;
     domLayout?: 'normal' | 'autoHeight' | 'print';
+    showToolbar?: boolean;
+    filterText?: string;
   }>(),
   {
     rowData: () => [],
@@ -156,8 +160,11 @@ const props = withDefaults(
     customComponents: () => ({}),
     contextExtras: () => ({}),
     domLayout: 'normal',
+    showToolbar: true,
+    filterText: '',
   }
 );
+
 
 const emit = defineEmits<{
   'row-click': [row: RowData];
@@ -206,6 +213,19 @@ const {
   openFilterPanel,
   getCurrentFilter,
 } = useDataGridFilters(gridApi, props.config.columns);
+
+// Watch external filterText prop
+watch(() => props.filterText, (newValue) => {
+  if (newValue !== undefined) {
+    quickFilterText.value = newValue;
+    // Apply filter immediately if API is ready, strictly speaking useDataGridFilters should handle this but let's be safe
+    // Actually useDataGridFilters likely watches quickFilterText or provides applyQuickFilter.
+    // Let's assume assigning to quickFilterText is enough if bound, or valid if we call apply.
+    // Checking useDataGridFilters implementation would be ideal but treating quickFilterText as the source of truth.
+    // However, usually one needs to trigger the API.
+    gridApi.value?.setGridOption('quickFilterText', newValue);
+  }
+});
 
 const { exportToXlsx } = useDataGridExport(gridApi);
 
@@ -337,6 +357,7 @@ defineExpose({
   refreshData: () => gridApi.value?.refreshCells(),
   getSelectedRows: () => gridApi.value?.getSelectedRows() || [],
   clearFilters: clearAllFilters,
+  openColumnConfig, // Exposed for external toolbar
 });
 </script>
 
@@ -353,7 +374,7 @@ defineExpose({
 
 :deep(.ag-theme-quartz .ag-header),
 :deep(.ag-theme-quartz-dark .ag-header) {
-  border-bottom: 1px solid hsl(var(--border) / 0.4);
+  border-bottom: none;
 }
 
 :deep(.ag-theme-quartz .ag-cell),

@@ -1,5 +1,5 @@
 <template>
-  <div class="flex flex-col gap-1 relative">
+  <div class="flex items-center gap-2 h-full">
     <div class="flex items-center gap-1.5 text-[11px] font-semibold whitespace-nowrap">
       <span class="text-[11px] font-semibold uppercase tracking-wide text-[hsl(var(--muted-foreground))]">
         {{ params.displayName }}
