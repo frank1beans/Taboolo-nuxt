@@ -41,6 +41,8 @@ def parse_lx_return_excel(
     price_column: str,
     quantity_column: str | None = None,
     progressive_column: str | None = None,
+    header_row_index: int | None = None,
+    long_description_columns: Sequence[str] | None = None,
 ) -> ParsedEstimate:
     """
     LX linear parser: one row = one item, no header/total combination.
@@ -53,7 +55,12 @@ def parse_lx_return_excel(
         workbook.close()
 
     rows, dropped_columns, kept_column_indexes = drop_empty_columns(raw_rows)
-    header_idx = locate_header_row(rows)
+
+    if header_row_index is not None and header_row_index >= 0:
+        header_idx = header_row_index
+    else:
+        header_idx = locate_header_row(rows)
+
     if header_idx is None:
         raise ValueError("Il foglio Excel selezionato non contiene righe valide da importare")
     data_rows = rows[header_idx + 1:]
@@ -82,12 +89,21 @@ def parse_lx_return_excel(
         description_indexes = _ensure_indexes_lc("descrizione", description_columns, data_rows, header_row, column_warnings, suggestions)
     except ValueError:
         description_indexes = []  # Description is optional if code is present
+
+    # Try to resolve long description columns - optional
+    try:
+        if long_description_columns and any(col for col in long_description_columns):
+            long_description_indexes = _ensure_indexes_lc("descrizione_estesa", long_description_columns, data_rows, header_row, column_warnings, suggestions)
+        else:
+            long_description_indexes = []
+    except ValueError:
+        long_description_indexes = []
     
-    # At least one of code or description must be present
-    if not code_indexes and not description_indexes:
+    # At least one of code or description or long description must be present
+    if not code_indexes and not description_indexes and not long_description_indexes:
         available = ", ".join([str(cell) for cell in header_row if cell]) if header_row else ""
         raise ValueError(
-            f"È necessario selezionare almeno una colonna codice o descrizione. "
+            f"È necessario selezionare almeno una colonna codice, descrizione o descrizione estesa. "
             f"Intestazioni rilevate: {available or 'nessuna'}"
         )
 
@@ -115,6 +131,7 @@ def parse_lx_return_excel(
     logger.info(f"[LX Parser] Header row index: {header_idx}")
     logger.info(f"[LX Parser] Header content: {header_row[:10] if header_row else 'None'}...")
     logger.info(f"[LX Parser] Code indexes: {code_indexes}, Description indexes: {description_indexes}")
+    logger.info(f"[LX Parser] Long Description indexes: {long_description_indexes}")
     logger.info(f"[LX Parser] Price index: {price_index}, Quantity index: {quantity_index}")
     logger.info(f"[LX Parser] Data rows count: {len(data_rows)}")
     if data_rows:
@@ -126,6 +143,7 @@ def parse_lx_return_excel(
     for data_row, formula_row in zip(data_rows, formula_rows):
         codice = combine_code(data_row, code_indexes)
         descrizione = combine_text(data_row, description_indexes)
+        descrizione_estesa = combine_text(data_row, long_description_indexes)
         progressivo = _cell_to_progressive(data_row, progressive_index)
         quantita = cell_to_float(data_row, quantity_index) if quantity_index is not None else None
         prezzo_unitario = sanitize_price_candidate(cell_to_float(data_row, price_index))
@@ -157,6 +175,7 @@ def parse_lx_return_excel(
                 "column_warnings": column_warnings or None,
                 "tokens": tokens,
             },
+            long_description=descrizione_estesa
         )
         voci.append(voce)
         ordine += 1

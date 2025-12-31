@@ -1,640 +1,703 @@
 <template>
-  <div class="flex flex-col h-screen overflow-hidden bg-[hsl(var(--background))] text-[hsl(var(--foreground))]">
-    <!-- 1. Standard Page Header -->
-    <div 
-      class="flex-shrink-0"
-      style="padding-left: var(--page-pad-x); padding-right: var(--page-pad-x); padding-top: var(--page-pad-top); padding-bottom: 8px;"
-    >
-      <PageHeader title="Analytics" :meta="analyticsSubtitle">
-        <template #rightSlot>
-          <!-- Tab Switcher (moved to right slot for compactness) -->
-           <div class="flex items-center gap-1 p-1 mr-4 bg-[hsl(var(--muted)/0.3)] rounded-lg border border-[hsl(var(--border))]">
-              <button 
-                @click="activeTab = 'explore'"
-                :class="['px-3 py-1.5 text-xs font-medium rounded-md transition-all', 
-                  activeTab === 'explore' ? 'bg-[hsl(var(--background))] text-[hsl(var(--foreground))] shadow-sm' : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]']"
-              >
-                Esplora
-              </button>
-              <button 
-                @click="activeTab = 'analysis'"
-                :class="['px-3 py-1.5 text-xs font-medium rounded-md transition-all flex items-center gap-1.5', 
-                  activeTab === 'analysis' ? 'bg-[hsl(var(--background))] text-[hsl(var(--foreground))] shadow-sm' : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]']"
-              >
-                Analisi
-                <span v-if="analytics.analysisResult.value?.outliers_found" class="bg-red-500 text-white text-[9px] px-1.5 py-0.5 rounded-full">
-                  {{ analytics.analysisResult.value.outliers_found }}
-                </span>
-              </button>
-           </div>
+  <div class="h-full overflow-hidden">
+    <MainPage :loading="isLoadingMap">
+      <template #header>
+        <PageHeader title="Analytics" :meta="analyticsSubtitle" :divider="false">
+          <!-- Right slot cleared as tabs are moved to sidebar -->
+        </PageHeader>
+      </template>
 
-          <!-- Primary Action -->
-          <UButton 
-            v-if="activeTab === 'analysis'"
-            color="primary" 
-            variant="solid"
-            icon="i-heroicons-play"
-            :loading="analytics.isLoadingAnalysis.value"
-            @click="runPriceAnalysis"
+      <template #default>
+        <!-- Full-screen map container -->
+        <div class="h-full relative rounded-xl overflow-hidden bg-[hsl(var(--muted)/0.2)] border border-[hsl(var(--border))]">
+          
+          <!-- Loading State with Chart Skeleton -->
+          <ChartLoadingState 
+            v-if="isLoadingMap" 
+            class="absolute inset-0 z-30"
+            message="Caricamento mappa semantica..."
+            submessage="Elaborazione embeddings in corso"
+          />
+
+          <!-- Empty State: No Data -->
+          <div 
+            v-if="!isLoadingMap && displayedPoints.length === 0" 
+            class="absolute inset-0 z-20 flex items-center justify-center bg-[hsl(var(--card)/0.9)]"
           >
-            Esegui Analisi
-          </UButton>
-        </template>
-      </PageHeader>
-    </div>
-
-    <!-- 2. Main Content Area (Sidebar + Map) -->
-    <div class="flex-1 flex overflow-hidden px-6 pb-6 gap-6 pt-2">
-      
-      <!-- Sidebar Card (Resizable) -->
-      <aside 
-        ref="sidebarRef"
-        class="flex-shrink-0 flex flex-col rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] shadow-sm overflow-hidden relative transition-all"
-        :style="{ width: sidebarWidth + 'px' }"
-      >
-        <!-- Filter Header -->
-        <div class="p-4 border-b border-[hsl(var(--border))] flex justify-between items-center bg-[hsl(var(--muted)/0.2)]">
-           <h3 class="font-semibold text-xs uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Configurazione</h3>
-           <UTooltip text="Reset filtri">
-             <UButton icon="i-heroicons-arrow-path" size="2xs" color="gray" variant="ghost" @click="resetFilters" />
-           </UTooltip>
-        </div>
-
-        <div class="flex-1 min-h-0 overflow-y-auto p-4 space-y-6">
-          
-          <!-- Section: Data Source -->
-          <div class="space-y-3">
-            <h4 class="text-[10px] font-bold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Origine Dati</h4>
-            
-            <div class="space-y-3">
-              <!-- Projects -->
-              <div class="space-y-1">
-                <label class="text-[10px] text-[hsl(var(--muted-foreground))]">Progetti</label>
-                <USelectMenu
-                  v-model="selectedProjects"
-                  :items="projectOptions"
-                  value-key="value"
-                  multiple
-                  placeholder="Tutti i progetti"
-                  size="sm"
-                />
+            <div class="flex flex-col items-center gap-4 text-center max-w-sm p-6">
+              <div class="w-16 h-16 rounded-2xl flex items-center justify-center bg-[hsl(var(--muted))] border border-[hsl(var(--border))]">
+                <Icon name="heroicons:chart-bar" class="w-8 h-8 text-[hsl(var(--muted-foreground))]" />
               </div>
-              
-              <!-- Year/BU Group -->
-              <div class="grid grid-cols-2 gap-2">
-                 <div class="space-y-1">
-                    <label class="text-[10px] text-[hsl(var(--muted-foreground))]">Anno</label>
-                    <USelectMenu v-model="selectedYear" :items="yearOptions" placeholder="Tutti" size="sm" />
-                 </div>
-                 <div class="space-y-1">
-                    <label class="text-[10px] text-[hsl(var(--muted-foreground))]">Business Unit</label>
-                    <USelectMenu v-model="selectedBU" :items="buOptions" placeholder="Tutte" size="sm" />
-                 </div>
+              <div>
+                <h3 class="text-lg font-semibold text-[hsl(var(--foreground))] mb-1">Nessun dato disponibile</h3>
+                <p class="text-sm text-[hsl(var(--muted-foreground))]">
+                  {{ hasSearchQuery ? 'Nessun risultato per la ricerca. Prova a modificare i criteri.' : 'Seleziona un progetto o modifica i filtri per visualizzare i dati.' }}
+                </p>
               </div>
-
-              <!-- Action: Reload -->
-              <UButton 
-                block 
-                size="xs"
-                color="primary" 
-                variant="soft"
-                icon="i-heroicons-funnel"
-                :loading="analytics.isLoadingMap.value"
-                @click="analytics.fetchMapData" 
-                class="mt-2"
-              >
-                Aggiorna Mappa
-              </UButton>
-            </div>
-          </div>
-
-          <!-- Section: Visualization (Explore Tab Only) -->
-          <div v-if="activeTab === 'explore'" class="pt-4 border-t border-[hsl(var(--border))] space-y-4">
-            <h4 class="text-[10px] font-bold uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Visualizzazione</h4>
-            
-            <div class="space-y-1">
-               <label class="text-[10px] text-[hsl(var(--muted-foreground))]">Colorazione</label>
-               <USelectMenu v-model="colorBy" :items="colorByOptions" value-key="value" size="sm" />
-            </div>
-
-            <!-- Sliders & Toggles -->
-            <div class="space-y-4">
-                <!-- Point Size -->
-                <div>
-                  <div class="flex justify-between items-center mb-1">
-                    <span class="text-[10px] text-[hsl(var(--muted-foreground))]">Dimensione</span>
-                    <span class="text-[10px] font-mono bg-[hsl(var(--secondary))] px-1 rounded">{{ pointSize }}px</span>
-                  </div>
-                  <input type="range" v-model.number="pointSize" min="2" max="15" class="w-full accent-[hsl(var(--primary))] h-1.5 bg-[hsl(var(--secondary))] rounded-lg cursor-pointer" />
-                </div>
-                
-                <!-- Toggles Row -->
-                <div class="grid grid-cols-3 gap-2">
-                      <button 
-                        @click="showPoles = !showPoles"
-                        class="flex flex-col items-center justify-center gap-1 p-2 rounded-lg border transition-all text-[10px]"
-                        :class="showPoles ? 'bg-[hsl(var(--primary)/0.1)] border-[hsl(var(--primary)/0.3)] text-[hsl(var(--primary))] font-medium' : 'bg-[hsl(var(--secondary)/0.5)] border-transparent text-[hsl(var(--muted-foreground))]'"
-                      >
-                        <UIcon name="i-heroicons-map-pin" class="w-4 h-4" />
-                        Poli
-                      </button>
-                   
-                      <button 
-                        @click="is3D = !is3D"
-                        class="flex flex-col items-center justify-center gap-1 p-2 rounded-lg border transition-all text-[10px]"
-                        :class="is3D ? 'bg-[hsl(var(--primary)/0.1)] border-[hsl(var(--primary)/0.3)] text-[hsl(var(--primary))] font-medium' : 'bg-[hsl(var(--secondary)/0.5)] border-transparent text-[hsl(var(--muted-foreground))]'"
-                      >
-                        <UIcon name="i-heroicons-cube-transparent" class="w-4 h-4" />
-                        3D
-                      </button>
-                   
-                      <button 
-                        @click="showAxes = !showAxes"
-                        class="flex flex-col items-center justify-center gap-1 p-2 rounded-lg border transition-all text-[10px]"
-                        :class="showAxes ? 'bg-[hsl(var(--primary)/0.1)] border-[hsl(var(--primary)/0.3)] text-[hsl(var(--primary))] font-medium' : 'bg-[hsl(var(--secondary)/0.5)] border-transparent text-[hsl(var(--muted-foreground))]'"
-                      >
-                        <UIcon name="i-heroicons-squares-plus" class="w-4 h-4" />
-                        Assi
-                      </button>
-                </div>
-            </div>
-            
-            <!-- Dynamic Legend -->
-             <div class="pt-4 border-t border-[hsl(var(--border))]">
-                 <!-- PROJECTS LEGEND -->
-                 <template v-if="colorBy === 'project'">
-                    <div class="flex items-center justify-between mb-2">
-                    <h3 class="font-bold text-[10px] uppercase tracking-wider text-[hsl(var(--muted-foreground))]">Progetti</h3>
-                    <div class="flex gap-1 text-[9px]">
-                        <button @click="showAllProjectsVisibility" class="text-[hsl(var(--primary))] hover:underline">Tutti</button>
-                        <span class="text-[hsl(var(--muted-foreground))]">/</span>
-                        <button @click="hideAllProjectsVisibility" class="text-[hsl(var(--primary))] hover:underline">Nessuno</button>
-                    </div>
-                    </div>
-                    <div class="space-y-1 max-h-40 overflow-y-auto pr-1">
-                    <button 
-                        v-for="project in analytics.mapData.value?.projects" 
-                        :key="project.id"
-                        @click="toggleProjectVisibility(project.id)"
-                        class="w-full px-2 py-1.5 rounded flex justify-between items-center text-xs transition-colors hover:bg-[hsl(var(--accent))]"
-                        :class="visibleProjects.has(project.id) ? 'text-[hsl(var(--foreground))]' : 'text-[hsl(var(--muted-foreground))] opacity-50'"
-                    >
-                        <span class="flex items-center gap-2 truncate">
-                        <UIcon 
-                            :name="visibleProjects.has(project.id) ? 'i-heroicons-eye' : 'i-heroicons-eye-slash'" 
-                            class="w-3.5 h-3.5 flex-shrink-0"
-                        />
-                        <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" :style="{ backgroundColor: getProjectColor(project.id) }"></span>
-                        <span class="truncate">{{ project.name || project.code }}</span>
-                        </span>
-                    </button>
-                    </div>
-                 </template>
-                 
-                 <!-- Other Legends (simplified for brevity, similar logic) -->
-                 <!-- WBS06 -->
-                 <template v-else-if="colorBy === 'wbs06'">
-                     <!-- Render WBS06 list similarly -->
-                     <div class="text-xs text-muted-foreground">Legenda WBS06 ({{ uniqueWbs6Categories.length }} cat)</div>
-                 </template>
-             </div>
-          </div>
-
-          <!-- Section: Advanced -->
-          <div class="pt-4 border-t border-[hsl(var(--border))]">
-             <UButton 
-                block 
-                size="xs"
-                color="gray" 
-                variant="ghost"
-                class="justify-between group"
-                @click="showAdvanced = !showAdvanced"
-             >
-                <span class="text-[hsl(var(--muted-foreground))] text-[10px] uppercase font-bold tracking-wider">Avanzate</span>
-                <UIcon :name="showAdvanced ? 'i-heroicons-chevron-up' : 'i-heroicons-chevron-down'" class="text-[hsl(var(--muted-foreground))]" />
-             </UButton>
-             
-             <div v-show="showAdvanced" class="mt-3 space-y-3">
-                 <!-- Analysis Params -->
-                 <div v-if="activeTab === 'analysis'" class="space-y-3">
-                    <UFormGroup label="Top K Neighbors" size="xs">
-                        <input type="range" v-model.number="analytics.analysisParams.topK" min="10" max="50" step="5" class="w-full accent-primary h-1.5 bg-gray-200 rounded-lg cursor-pointer" />
-                        <div class="text-right text-[10px] text-muted-foreground">{{ analytics.analysisParams.topK }}</div>
-                    </UFormGroup>
-                 </div>
-
-                 <UButton 
-                  block 
-                  size="xs"
-                  variant="outline" 
-                  color="warning" 
-                  icon="i-heroicons-cpu-chip"
-                  :loading="analytics.isComputingMap.value"
-                  @click="triggerComputeMap" 
-                >
-                  Ricalcola UMAP
+              <div class="flex items-center gap-2">
+                <UButton v-if="hasSearchQuery" color="primary" size="sm" icon="i-heroicons-x-mark" @click="clearSearch">
+                  Cancella ricerca
                 </UButton>
-             </div>
-          </div>
-          
-        </div>
-        
-        <!-- Resize Handle -->
-         <div 
-            @mousedown="startResize"
-            class="absolute right-0 top-0 bottom-0 w-1 cursor-ew-resize hover:bg-[hsl(var(--primary))] transition-colors z-10 opacity-0 hover:opacity-100"
-         ></div>
-      </aside>
-
-      <!-- Main Chart Area -->
-      <main class="flex-1 relative min-h-0 bg-[hsl(var(--card))/0.3] border border-[hsl(var(--border))] rounded-xl overflow-hidden shadow-sm">
-        
-        <!-- Loading Overlay -->
-        <div v-if="analytics.isLoadingMap.value" class="absolute inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-20">
-            <div class="flex flex-col items-center gap-3">
-                <UIcon name="i-heroicons-arrow-path" class="w-8 h-8 text-[hsl(var(--primary))] animate-spin" />
-                <span class="text-sm font-medium">Caricamento mappa...</span>
+                <UButton v-else color="primary" size="sm" icon="i-heroicons-arrow-path" @click="fetchData">
+                  Ricarica dati
+                </UButton>
+              </div>
             </div>
-        </div>
+          </div>
 
-        <!-- Map - absolute fill -->
-        <ClientOnly>
+          <!-- Semantic Map -->
+          <ClientOnly>
             <SemanticMap 
-            :data="plotData" 
-            :layout="plotLayout"
-            :config="plotConfig"
-            @click="onPointClick"
-            @hover="onPointHover"
-            @unhover="onPointUnhover"
-            class="absolute inset-0"
+              ref="semanticMapRef"
+              :data="plotData" 
+              :layout="plotLayout"
+              :config="plotConfig"
+              class="absolute inset-0"
+              @click="onPointClick"
+              @hover="onPointHover"
+              @unhover="onPointUnhover"
             />
-        </ClientOnly>
+          </ClientOnly>
 
-        <!-- Hover Info (Floating Card) -->
-        <transition 
+          <!-- Floating Toolbar (Map Controls) -->
+          <MapToolbar
+            v-model:selected-projects="mapControls.selectedProjects.value"
+            v-model:selected-year="mapControls.selectedYear.value"
+            v-model:selected-b-u="mapControls.selectedBU.value"
+            v-model:color-by="mapControls.colorBy.value"
+            v-model:point-size="mapControls.pointSize.value"
+            v-model:is3-d="mapControls.is3D.value"
+            v-model:show-axes="mapControls.showAxes.value"
+            v-model:show-poles="mapControls.showPoles.value"
+            :project-options="projectOptions"
+            :year-options="yearOptions"
+            :bu-options="buOptions"
+            :color-options="colorOptions"
+            :loading="isLoadingMap"
+            :mode="analyticsMode"
+            :show-analysis-button="false"
+            :analysis-loading="globalAnalytics.isLoadingAnalysis.value"
+            @refresh="fetchData"
+            @reset="resetFilters"
+            @run-analysis="runPriceAnalysis"
+          />
+
+          <!-- Search Panel -->
+          <div class="absolute top-4 right-4 left-4 sm:left-auto sm:w-80 z-20">
+            <div class="bg-[hsl(var(--card))] shadow-xl rounded-xl border border-[hsl(var(--border))] overflow-hidden">
+              <div class="flex items-center gap-2 px-3 py-2 border-b border-[hsl(var(--border))]">
+                <UIcon name="i-heroicons-magnifying-glass" class="w-4 h-4 text-[hsl(var(--muted-foreground))]" />
+                <input
+                  v-model="searchInput"
+                  type="text"
+                  placeholder="Cerca voci simili..."
+                  class="flex-1 bg-transparent text-sm focus:outline-none placeholder:text-[hsl(var(--muted-foreground))]"
+                >
+                <button
+                  v-if="searchInput"
+                  class="text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] transition-colors"
+                  title="Cancella ricerca"
+                  @click="clearSearch"
+                >
+                  <UIcon name="i-heroicons-x-mark" class="w-4 h-4" />
+                </button>
+              </div>
+
+              <!-- Zoom Controls when searching -->
+              <div v-if="hasSearchQuery && searchMatches.length > 0" class="px-3 py-2 border-b border-[hsl(var(--border))] flex items-center gap-2">
+                <button
+                  class="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 text-xs font-medium rounded-md bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] hover:opacity-90 transition-opacity"
+                  title="Zoom sui risultati"
+                  @click="zoomToSearchResults"
+                >
+                  <UIcon name="i-heroicons-magnifying-glass-plus" class="w-3.5 h-3.5" />
+                  Zoom Risultati
+                </button>
+                <button
+                  class="flex items-center justify-center gap-1.5 px-2 py-1.5 text-xs font-medium rounded-md border border-[hsl(var(--border))] hover:bg-[hsl(var(--muted)/0.5)] transition-colors"
+                  title="Resetta vista"
+                  @click="resetMapView"
+                >
+                  <UIcon name="i-heroicons-arrows-pointing-out" class="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              <div v-if="hasSearchQuery" class="max-h-80 overflow-y-auto">
+                <div class="px-3 py-2 text-[10px] uppercase tracking-wider text-[hsl(var(--muted-foreground))] bg-[hsl(var(--muted)/0.3)] flex items-center justify-between">
+                  <span>Voci simili</span>
+                  <div class="flex items-center gap-2">
+                    <UIcon v-if="semanticLoading" name="i-heroicons-arrow-path" class="w-3.5 h-3.5 animate-spin text-[hsl(var(--muted-foreground))]" />
+                    <span class="font-mono">{{ searchMatches.length }}</span>
+                  </div>
+                </div>
+
+                <div v-if="semanticLoading" class="px-3 py-3 text-xs text-[hsl(var(--muted-foreground))]">
+                  Ricerca semantica in corso...
+                </div>
+                <div v-else-if="searchGroups.length === 0" class="px-3 py-3 text-xs text-[hsl(var(--muted-foreground))]">
+                  Nessun risultato
+                </div>
+
+                <div v-for="group in searchGroups" :key="group.clusterId" class="border-t border-[hsl(var(--border))]">
+                  <div class="px-3 py-2 text-[10px] uppercase tracking-wider text-[hsl(var(--muted-foreground))] flex items-center justify-between">
+                    <div class="flex items-center gap-2 min-w-0">
+                      <span class="w-2 h-2 rounded-full flex-shrink-0" :style="{ backgroundColor: getClusterColor(group.clusterId) }" />
+                      <span class="truncate">Cluster {{ group.clusterId }}</span>
+                    </div>
+                    <span class="font-mono">{{ group.count }}</span>
+                  </div>
+
+                  <button
+                    v-for="hit in group.items"
+                    :key="hit.point.id"
+                    class="w-full text-left px-3 py-2 hover:bg-[hsl(var(--muted)/0.4)] transition-colors"
+                    @click="selectSearchPoint(hit.point)"
+                  >
+                    <div class="flex items-start gap-2">
+                      <span class="w-2 h-2 rounded-full mt-1 flex-shrink-0" :style="{ backgroundColor: getClusterColor(group.clusterId) }" />
+                      <div class="min-w-0">
+                        <div class="text-xs font-medium text-[hsl(var(--foreground))] truncate">
+                          {{ hit.point.label }}
+                        </div>
+                        <div class="text-[10px] text-[hsl(var(--muted-foreground))] truncate">
+                          {{ hit.point.code || hit.point.id }} - {{ hit.point.project_name }}
+                        </div>
+                      </div>
+                    </div>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Hover Info Card -->
+          <transition 
             enter-active-class="transition ease-out duration-200"
             enter-from-class="opacity-0 translate-y-2"
             enter-to-class="opacity-100 translate-y-0"
             leave-active-class="transition ease-in duration-150"
             leave-from-class="opacity-100 translate-y-0"
             leave-to-class="opacity-0 translate-y-2"
-        >
-            <div v-if="hoveredPoint" class="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 bg-[hsl(var(--card))] shadow-xl rounded-lg border border-[hsl(var(--border))] p-3 flex items-center gap-4 min-w-[300px]">
-                <div class="w-3 h-3 rounded-full flex-shrink-0 shadow-sm" :style="{ backgroundColor: getProjectColor(hoveredPoint.project_id) }"></div>
-                <div class="flex-1 min-w-0">
-                    <div class="font-medium text-sm truncate">{{ hoveredPoint.label }}</div>
-                    <div class="text-xs text-[hsl(var(--muted-foreground))] flex items-center gap-2">
-                        <span>{{ hoveredPoint.project_name }}</span>
-                        <span>•</span>
-                        <span class="font-mono">{{ hoveredPoint.code }}</span>
-                    </div>
+          >
+            <div 
+              v-if="hoveredPoint" 
+                class="absolute bottom-4 right-4 z-20 bg-[hsl(var(--card))] shadow-xl rounded-lg border border-[hsl(var(--border))] p-3 max-w-xs"
+              >              
+              <div class="flex items-start gap-3">
+                <div class="w-3 h-3 rounded-full flex-shrink-0 mt-1 shadow-sm" :style="{ backgroundColor: getProjectColor(hoveredPoint.project_id) }"/>
+                <div class="min-w-0">
+                  <div class="font-medium text-sm truncate">{{ hoveredPoint.label }}</div>
+                  <div class="text-xs text-[hsl(var(--muted-foreground))] mt-0.5">
+                    {{ hoveredPoint.project_name }} · {{ hoveredPoint.code }}
+                  </div>
+                  <div v-if="hoveredPoint.price" class="text-sm font-bold text-green-600 dark:text-green-400 mt-1">
+                    {{ formatCurrency(hoveredPoint.price) }}
+                  </div>
                 </div>
-                <div v-if="hoveredPoint.price" class="text-right">
-                    <div class="text-sm font-bold text-green-600 dark:text-green-400">{{ formatCurrency(hoveredPoint.price) }}</div>
-                </div>
+              </div>
             </div>
-        </transition>
-      </main>
-    </div>
+          </transition>
+
+        </div>
+      </template>
+    </MainPage>
+    
   </div>
 </template>
 
 <script setup lang="ts">
-import { useGlobalAnalytics, type GlobalPoint } from '~/composables/useGlobalAnalytics';
+definePageMeta({
+  disableDefaultSidebar: true,
+})
+import { reactive, computed, ref, watch, onMounted, onUnmounted } from 'vue'
+  import { useGlobalAnalytics, type GlobalPoint } from '~/composables/useGlobalAnalytics'
+  import { useGlobalPropertyAnalytics, type PropertyPoint } from '~/composables/useGlobalPropertyAnalytics'
+  import { useMapControls, WBS06_PALETTE } from '~/composables/useMapControls'
+  import { catalogApi } from '~/lib/api/catalog'
+  import { formatCurrency } from '~/lib/formatters'
+  import MainPage from '~/components/layout/MainPage.vue'
+import PageHeader from '~/components/layout/PageHeader.vue'
+import MapToolbar from '~/components/analytics/MapToolbar.vue'
+import PointDetailSidebar from '~/components/analytics/PointDetailSidebar.vue'
+import ChartLoadingState from '~/components/ui/ChartLoadingState.vue'
+import { useSidebarModules } from '~/composables/useSidebarModules'
+import { useAppSidebar } from '~/composables/useAppSidebar'
+import { useWbsTree } from '~/composables/useWbsTree'
+import WbsModule from '~/components/sidebar/modules/WbsModule.vue'
+import AnalyticsDataModule from '~/components/sidebar/modules/AnalyticsDataModule.vue'
+import AnalyticsLegendModule from '~/components/sidebar/modules/AnalyticsLegendModule.vue'
+import AnalyticsUmapModule from '~/components/sidebar/modules/AnalyticsUmapModule.vue'
+import AnalysisResultsModule from '~/components/sidebar/modules/AnalysisResultsModule.vue'
 
-const analytics = useGlobalAnalytics();
-const toast = useToast();
+// Analytics composables
+const globalAnalytics = useGlobalAnalytics()
+const propertyAnalytics = useGlobalPropertyAnalytics()
+const toast = useToast()
 
-// Computed Subtitle for PageHeader
-const analyticsSubtitle = computed(() => {
-   const pts = visibilityFilteredPoints.value.length.toLocaleString();
-   const pls = poles.value.length;
-   const projects = analytics.mapData.value?.projects?.length || 0;
-   return `${pts} punti · ${pls} poli · ${projects} progetti`;
-});
+// Shared map controls
+const mapControls = useMapControls({
+  defaultPointSize: 6,
+  defaultShowPoles: true
+})
 
-// UI State
-const activeTab = ref<'explore' | 'analysis'>('explore');
-const hoveredPoint = ref<GlobalPoint | null>(null);
-const colorBy = ref<'project' | 'cluster' | 'amount' | 'wbs06'>('project');
-const showAdvanced = ref(false);
+// ========== MODE & UI STATE ==========
+const analyticsMode = ref<'global' | 'properties'>('global')
+const hoveredPoint = ref<GlobalPoint | PropertyPoint | null>(null)
+const selectedPoint = ref<PropertyPoint | null>(null)
+const clickedPoint = ref<GlobalPoint | PropertyPoint | null>(null)
 
-// Map controls
-const pointSize = ref(6);
-const is3D = ref(false);
-const showAxes = ref(false);
+const { registerModule, unregisterModule, setActiveModule } = useSidebarModules()
+const { showDefaultSidebar } = useAppSidebar()
 
-// Analysis UI state
-const showAllCategories = ref(false);
-const selectedCategory = ref<string | null>(null);
-const showAllOutliers = ref(false);
-const selectedOutlier = ref<string | null>(null);
 
-// Local filter refs (USelectMenu needs object selections)
-const selectedProjects = ref<{label: string, value: string}[]>([]);
-const selectedYear = ref<{label: string, value: number | null} | null>(null);
-const selectedBU = ref<{label: string, value: string | null} | null>(null);
-
-// Poles Integration
-const poles = ref<any[]>([]);
-const showPoles = ref(true);
-
-// Reset Filters Action
 const resetFilters = () => {
-    selectedProjects.value = [];
-    selectedYear.value = null;
-    selectedBU.value = null;
-    analytics.fetchMapData();
-};
-
-// ========== RESIZABLE SIDEBAR ==========
-const sidebarRef = ref<HTMLElement | null>(null);
-const sidebarWidth = ref(300); // Default width
-const isResizing = ref(false);
-const resizeStartX = ref(0);
-const resizeStartWidth = ref(0);
-
-function startResize(e: MouseEvent) {
-  isResizing.value = true;
-  resizeStartX.value = e.clientX;
-  resizeStartWidth.value = sidebarWidth.value;
-  document.body.style.cursor = 'ew-resize';
-  document.body.style.userSelect = 'none';
-  document.addEventListener('mousemove', handleResize);
-  document.addEventListener('mouseup', stopResize);
-  e.preventDefault();
+  currentAnalytics.value.resetFilters()
 }
 
-function handleResize(e: MouseEvent) {
-  if (!isResizing.value) return;
-  const deltaX = e.clientX - resizeStartX.value;
-  const newWidth = resizeStartWidth.value + deltaX;
-  if (newWidth >= 240 && newWidth <= 500) {
-    sidebarWidth.value = newWidth;
+const searchInput = ref('')
+const debouncedQuery = ref('')
+
+// Reference to the SemanticMap component for zoom control
+const semanticMapRef = ref<InstanceType<typeof import('~/components/visualizer/SemanticMap.vue').default> | null>(null)
+
+// Poles
+interface Pole {
+  x: number
+  y: number
+  z?: number
+  description?: string
+  wbs6?: string
+}
+const poles = ref<Pole[]>([])
+
+// Recalculate Map Handler
+const handleRecalculateMap = async () => {
+  try {
+    const res = await globalAnalytics.recalculateMap()
+    if (res?.status === 'accepted') {
+      toast.add({
+        title: 'Calcolo avviato',
+        description: 'Ricalcolo mappa avviato in background.'
+      })
+
+      const updated = await globalAnalytics.waitForMapUpdate()
+      if (updated) {
+        toast.add({
+          title: 'Mappa aggiornata',
+          description: 'Dati ricaricati dopo il ricalcolo.'
+        })
+      } else {
+        toast.add({
+          title: 'Calcolo in corso',
+          description: 'Il ricalcolo richiede piu tempo. Aggiorna tra poco.',
+          color: 'orange' as any
+        })
+      }
+    }
+  } catch {
+    toast.add({ 
+      title: 'Errore', 
+      description: 'Impossibile avviare il calcolo.', 
+      color: 'red' as any 
+    })
   }
 }
 
-function stopResize() {
-  isResizing.value = false;
-  document.body.style.cursor = '';
-  document.body.style.userSelect = '';
-  document.removeEventListener('mousemove', handleResize);
-  document.removeEventListener('mouseup', stopResize);
-}
+// ========== COMPUTED ==========
+const currentAnalytics = computed(() => 
+  analyticsMode.value === 'global' ? globalAnalytics : propertyAnalytics
+)
 
-onUnmounted(() => {
-  document.removeEventListener('mousemove', handleResize);
-  document.removeEventListener('mouseup', stopResize);
-});
+const MIN_SEMANTIC_QUERY = 3
 
-// ========== VISIBILITY TOGGLES ==========
-const visibleProjects = ref<Set<string>>(new Set());
-const visibleWbs6 = ref<Set<string>>(new Set());
-const visibleClusters = ref<Set<number>>(new Set());
+const isLoadingMap = computed(() => currentAnalytics.value.isLoadingMap.value)
+const hasSearchQuery = computed(() => debouncedQuery.value.trim().length >= MIN_SEMANTIC_QUERY)
 
-// Compute unique WBS6 categories
-const uniqueWbs6Categories = computed(() => {
-  const map = new Map<string, { code: string; desc: string; count: number }>();
-  analytics.points.value.forEach(p => {
-    const desc = p.wbs06_desc || p.wbs06 || 'N/A';
-    const existing = map.get(desc);
-    if (existing) {
-      existing.count++;
-    } else {
-      map.set(desc, { code: desc, desc: desc, count: 1 });
-    }
-  });
-  return Array.from(map.values()).sort((a, b) => b.count - a.count);
-});
+let searchTimer: ReturnType<typeof setTimeout> | null = null
+watch(searchInput, (val) => {
+  if (searchTimer) clearTimeout(searchTimer)
+  searchTimer = setTimeout(() => {
+    debouncedQuery.value = val
+  }, 180)
+})
 
-// Compute unique clusters
-const uniqueClusters = computed(() => {
-  const map = new Map<number, { id: number; count: number }>();
-  analytics.points.value.forEach(p => {
-    const cluster = p.cluster ?? -1;
-    const existing = map.get(cluster);
-    if (existing) {
-      existing.count++;
-    } else {
-      map.set(cluster, { id: cluster, count: 1 });
-    }
-  });
-  return Array.from(map.values()).sort((a, b) => b.count - a.count);
-});
-
-// Initialize visibility sets
-watch(() => analytics.mapData.value, (data) => {
-  if (data?.projects) {
-    visibleProjects.value = new Set(data.projects.map(p => p.id));
+const analyticsSubtitle = computed(() => {
+  if (analyticsMode.value === 'global') {
+    const total = basePoints.value.length.toLocaleString()
+    const shown = displayedPoints.value.length.toLocaleString()
+    const pts = hasSearchQuery.value ? `${shown} risultati su ${total} punti` : `${shown} punti`
+    const pls = poles.value.length
+    const projects = globalAnalytics.mapData.value?.projects?.length || 0
+    return `${pts} · ${pls} poli · ${projects} progetti`
+  } else {
+    const total = basePoints.value.length.toLocaleString()
+    const shown = displayedPoints.value.length.toLocaleString()
+    const pts = hasSearchQuery.value ? `${shown} risultati su ${total} punti con proprietà` : `${shown} punti con proprietà`
+    const projects = propertyAnalytics.mapData.value?.projects?.length || 0
+    return `${pts} · ${projects} progetti`
   }
-}, { immediate: true });
+})
 
-watch(() => analytics.points.value, (points) => {
-  if (points.length > 0) {
-    const wbs6Descs = new Set(points.map(p => p.wbs06_desc || p.wbs06 || 'N/A'));
-    visibleWbs6.value = wbs6Descs;
-    const clusterIds = new Set(points.map(p => p.cluster ?? -1));
-    visibleClusters.value = clusterIds;
-  }
-}, { immediate: true });
-
-// Toggle functions
-function toggleProjectVisibility(projectId: string) {
-  const newSet = new Set(visibleProjects.value);
-  if (newSet.has(projectId)) newSet.delete(projectId);
-  else newSet.add(projectId);
-  visibleProjects.value = newSet;
-}
-
-function toggleWbs6Visibility(wbs6Code: string) {
-  const newSet = new Set(visibleWbs6.value);
-  if (newSet.has(wbs6Code)) newSet.delete(wbs6Code);
-  else newSet.add(wbs6Code);
-  visibleWbs6.value = newSet;
-}
-
-function toggleClusterVisibility(clusterId: number) {
-  const newSet = new Set(visibleClusters.value);
-  if (newSet.has(clusterId)) newSet.delete(clusterId);
-  else newSet.add(clusterId);
-  visibleClusters.value = newSet;
-}
-
-// Select all / none
-function showAllProjectsVisibility() {
-  const projects = analytics.mapData.value?.projects ?? [];
-  visibleProjects.value = new Set(projects.map(p => p.id));
-}
-function hideAllProjectsVisibility() {
-  visibleProjects.value = new Set();
-}
-function showAllWbs6Visibility() {
-  visibleWbs6.value = new Set(uniqueWbs6Categories.value.map(w => w.code));
-}
-function hideAllWbs6Visibility() {
-  visibleWbs6.value = new Set();
-}
-function showAllClustersVisibility() {
-  visibleClusters.value = new Set(uniqueClusters.value.map(c => c.id));
-}
-function hideAllClustersVisibility() {
-  visibleClusters.value = new Set();
-}
-
-// Visibility-filtered points
-const visibilityFilteredPoints = computed(() => {
-  return analytics.filteredPoints.value.filter(p => {
-    return visibleProjects.value.has(p.project_id) && 
-           visibleWbs6.value.has(p.wbs06_desc || p.wbs06 || 'N/A') &&
-           visibleClusters.value.has(p.cluster ?? -1);
-  });
-});
-
-const fetchPoles = async () => {
-    try {
-        const { poles: fetchedPoles } = await $fetch<any>('/api/analytics/global-map', {
-            method: 'POST',
-            body: { 
-              project_ids: selectedProjects.value.length > 0 ? selectedProjects.value.map(p => p.value) : undefined 
-            }
-        });
-        poles.value = fetchedPoles || [];
-        toast.add({ title: 'Poli Aggiornati', description: `Visualizzati ${poles.value.length} poli.`, color: 'green', timeout: 2000 });
-    } catch (e) {
-        console.error("Failed to fetch poles", e);
-    }
-};
-
-onMounted(() => {
-    setTimeout(fetchPoles, 1000);
-});
-
-watch(showPoles, (val) => {
-    if (val && poles.value.length === 0) fetchPoles();
-});
-
-watch(selectedProjects, (val) => {
-  if (showPoles.value) fetchPoles();
-  analytics.filters.projectIds = val.map(p => p.value);
-}, { deep: true });
-
-watch(selectedYear, (val) => {
-  analytics.filters.year = val?.value ?? null;
-});
-
-watch(selectedBU, (val) => {
-  analytics.filters.businessUnit = val?.value ?? null;
-});
-
-const projectOptions = computed(() => 
-  analytics.availableProjects.value.map(p => ({
+const projectOptions = computed(() => {
+  return currentAnalytics.value.availableProjects.value.map((p: any) => ({
     label: p.name || p.code,
     value: p.id
   }))
-);
+})
 
-const yearOptions = computed(() => 
-  [{ label: 'Tutti gli anni', value: null }, ...analytics.availableYears.value.map(y => ({
-    label: String(y),
-    value: y
-  }))]
-);
+const yearOptions = computed(() => {
+  return [
+    { label: 'Tutti gli anni', value: null }, 
+    ...currentAnalytics.value.availableYears.value.map((y: number) => ({
+      label: String(y),
+      value: y
+    }))
+  ]
+})
 
-const buOptions = computed(() => 
-  [{ label: 'Tutte le BU', value: null }, ...analytics.availableBusinessUnits.value.map(bu => ({
-    label: bu,
-    value: bu
-  }))]
-);
+const buOptions = computed(() => {
+  return [
+    { label: 'Tutte le BU', value: null }, 
+    ...currentAnalytics.value.availableBusinessUnits.value.map((bu: string) => ({
+      label: bu,
+      value: bu
+    }))
+  ]
+})
 
-const colorByOptions = [
-  { label: 'Progetto', value: 'project' },
-  { label: 'Cluster', value: 'cluster' },
-  { label: 'Prezzo', value: 'amount' },
-  { label: 'WBS06', value: 'wbs06' },
-];
+const colorOptions = computed(() => {
+  if (analyticsMode.value === 'properties') {
+    return [
+      { label: 'Progetto', value: 'project' },
+      { label: 'Cluster', value: 'cluster' },
+      { label: 'WBS06', value: 'wbs06' },
+      { label: 'Proprietà', value: 'properties' },
+    ]
+  }
+  return [
+    { label: 'Progetto', value: 'project' },
+    { label: 'Cluster', value: 'cluster' },
+    { label: 'Prezzo', value: 'amount' },
+    { label: 'WBS06', value: 'wbs06' },
+  ]
+})
 
-// Palettes
-const wbs06Palette = [
-  '#3b82f6', '#ef4444', '#22c55e', '#f59e0b', '#8b5cf6',
-  '#ec4899', '#06b6d4', '#84cc16', '#f97316', '#6366f1',
-  '#14b8a6', '#a855f7', '#10b981', '#f43f5e', '#0ea5e9',
-  '#78716c', '#ea580c', '#65a30d', '#0891b2', '#7c3aed',
-  '#db2777', '#0284c7', '#4d7c0f', '#dc2626', '#9333ea',
-  '#059669', '#d97706', '#2563eb', '#c026d3', '#16a34a'
-];
+const sidebarFilters = computed(() => currentAnalytics.value.filters)
+const sidebarProjects = computed(() => currentAnalytics.value.availableProjects.value)
+const sidebarYears = computed(() => currentAnalytics.value.availableYears.value)
+const sidebarBusinessUnits = computed(() => currentAnalytics.value.availableBusinessUnits.value)
+const sidebarLoading = computed(() =>
+  currentAnalytics.value.isLoadingMap.value || currentAnalytics.value.isComputingMap.value
+)
+const sidebarColorBy = computed(() =>
+  mapControls.colorBy.value as 'project' | 'cluster' | 'amount' | 'wbs06' | 'properties'
+)
 
-const wbs06ColorMap = computed(() => {
-  const map = new Map<string, string>();
-  const uniqueWbs = [...new Set(analytics.points.value.map(p => p.wbs06_desc || p.wbs06 || 'N/A'))];
-  uniqueWbs.sort().forEach((wbs, idx) => {
-    map.set(wbs, wbs06Palette[idx % wbs06Palette.length]);
-  });
-  return map;
-});
+// Visibility sets
+const visibleProjects = ref<Set<string>>(new Set())
+const visibleWbs6 = ref<Set<string>>(new Set())
+const visibleClusters = ref<Set<number>>(new Set())
 
-function getWbs06Color(wbs06: string): string {
-  return wbs06ColorMap.value.get(wbs06 || 'N/A') || wbs06Palette[0];
+// Visibility-filtered points (global mode)
+const visibilityFilteredPoints = computed(() => {
+  return globalAnalytics.filteredPoints.value.filter((p: GlobalPoint) => {
+    return visibleProjects.value.has(p.project_id) && 
+           visibleWbs6.value.has(p.wbs06_desc || p.wbs06 || 'N/A') &&
+           visibleClusters.value.has(p.cluster ?? -1)
+  })
+})
+
+// Property-filtered points (property mode)
+const propertyPoints = computed(() => {
+  return propertyAnalytics.filteredPoints.value
+})
+
+type SearchPoint = GlobalPoint | PropertyPoint
+type SearchHit = { point: SearchPoint; score: number; clusterId: number }
+type SearchGroup = { clusterId: number; count: number; items: SearchHit[]; topScore: number }
+
+const MAX_CLUSTER_ITEMS = 6
+const MAX_GROUPS = 8
+const SEMANTIC_TOP_K = 100
+
+const semanticResults = ref<{ id: string; score: number }[]>([])
+const semanticLoading = ref(false)
+const lastSemanticQuery = ref('')
+let searchToken = 0
+
+const basePoints = computed(() => {
+  return analyticsMode.value === 'global' ? visibilityFilteredPoints.value : propertyPoints.value
+})
+
+// WBS Tree for Analytics
+const {
+  wbsNodes,
+  selectedWbsNode,
+  onWbsNodeSelected,
+} = useWbsTree(basePoints as any, {
+  getLevels: (item: any) => {
+    const levels: { code: string; name?: string; level?: number }[] = []
+    if (item.wbs06) {
+      levels.push({ code: item.wbs06, name: item.wbs06_desc || item.wbs06, level: 6 })
+    }
+    return levels
+  }
+})
+
+// Sync WBS filter back to map visibility
+watch(selectedWbsNode, (node) => {
+  if (node) {
+    visibleWbs6.value.clear()
+    visibleWbs6.value.add(node.name)
+  } else {
+    legendWbs6Categories.value.forEach(w => visibleWbs6.value.add(w.code))
+  }
+})
+
+const semanticProjectId = computed(() => {
+  const ids = mapControls.selectedProjects.value.map(p => p.value)
+  return ids.length === 1 ? ids[0] : undefined
+})
+
+const pointById = computed(() => {
+  const map = new Map<string, SearchPoint>()
+  basePoints.value.forEach(point => {
+    map.set(point.id, point)
+  })
+  return map
+})
+
+const runSemanticSearch = async (query: string) => {
+  if (query === lastSemanticQuery.value) return
+  const token = ++searchToken
+  semanticLoading.value = true
+  semanticResults.value = []
+
+  try {
+    const results = await catalogApi.semanticSearch({
+      query,
+      projectId: semanticProjectId.value,
+      topK: SEMANTIC_TOP_K,
+    })
+    if (token !== searchToken) return
+    semanticResults.value = results.map(result => ({
+      id: String(result.id),
+      score: result.score,
+    }))
+    lastSemanticQuery.value = query
+  } catch {
+    if (token !== searchToken) return
+    semanticResults.value = []
+    lastSemanticQuery.value = ''
+  } finally {
+    if (token === searchToken) semanticLoading.value = false
+  }
 }
 
-const projectPalette = [
-  '#3b82f6', '#ef4444', '#22c55e', '#f59e0b', '#8b5cf6',
-  '#ec4899', '#06b6d4', '#84cc16', '#f97316', '#6366f1',
-  '#14b8a6', '#a855f7', '#10b981', '#f43f5e', '#0ea5e9'
-];
+watch(debouncedQuery, (value) => {
+  const query = value.trim()
+  if (query.length < MIN_SEMANTIC_QUERY) {
+    semanticResults.value = []
+    semanticLoading.value = false
+    lastSemanticQuery.value = ''
+    return
+  }
+  runSemanticSearch(query)
+})
+
+watch(semanticProjectId, () => {
+  const query = debouncedQuery.value.trim()
+  if (query.length < MIN_SEMANTIC_QUERY) return
+  runSemanticSearch(query)
+})
+
+const searchMatches = computed<SearchHit[]>(() => {
+  if (!hasSearchQuery.value) return []
+  if (semanticResults.value.length === 0) return []
+  const points = pointById.value
+  const matches: SearchHit[] = []
+
+  semanticResults.value.forEach((result) => {
+    const point = points.get(String(result.id))
+    if (!point) return
+    matches.push({
+      point,
+      score: result.score,
+      clusterId: point.cluster ?? -1
+    })
+  })
+
+  matches.sort((a, b) => b.score - a.score)
+  return matches
+})
+
+const searchMatchedIds = computed(() => new Set(searchMatches.value.map(hit => hit.point.id)))
+
+const searchGroups = computed<SearchGroup[]>(() => {
+  if (!hasSearchQuery.value) return []
+  const groups = new Map<number, SearchGroup>()
+
+  for (const hit of searchMatches.value) {
+    const existing = groups.get(hit.clusterId)
+    if (existing) {
+      existing.count += 1
+      existing.topScore = Math.max(existing.topScore, hit.score)
+      existing.items.push(hit)
+    } else {
+      groups.set(hit.clusterId, {
+        clusterId: hit.clusterId,
+        count: 1,
+        topScore: hit.score,
+        items: [hit]
+      })
+    }
+  }
+
+  const result = Array.from(groups.values())
+  result.forEach(group => {
+    group.items.sort((a, b) => b.score - a.score)
+    group.items = group.items.slice(0, MAX_CLUSTER_ITEMS)
+  })
+
+  result.sort((a, b) => {
+    if (b.count !== a.count) return b.count - a.count
+    return b.topScore - a.topScore
+  })
+
+  return result.slice(0, MAX_GROUPS)
+})
+
+const displayedPoints = computed(() => {
+  if (!hasSearchQuery.value) return basePoints.value
+  if (semanticLoading.value && semanticResults.value.length === 0) return basePoints.value
+  const ids = searchMatchedIds.value
+  if (ids.size === 0) return []
+  return basePoints.value.filter(p => ids.has(p.id))
+})
+
+const clearSearch = () => {
+  if (searchTimer) clearTimeout(searchTimer)
+  searchTimer = null
+  searchToken += 1
+  searchInput.value = ''
+  debouncedQuery.value = ''
+  semanticResults.value = []
+  semanticLoading.value = false
+  lastSemanticQuery.value = ''
+  // Reset view when clearing search
+  resetMapView()
+}
+
+const selectSearchPoint = (point: SearchPoint) => {
+  clickedPoint.value = point
+  if (analyticsMode.value === 'properties') {
+    selectedPoint.value = point as PropertyPoint
+  }
+  // Zoom to the selected point
+  zoomToPoint(point)
+}
+
+// ========== MAP ZOOM FUNCTIONS ==========
+
+/**
+ * Zoom to all search results
+ */
+const zoomToSearchResults = () => {
+  if (!semanticMapRef.value || searchMatches.value.length === 0) return
+  
+  // Get indices of matched points in the displayedPoints array
+  const matchedIds = new Set(searchMatches.value.map(m => m.point.id))
+  const indices: number[] = []
+  
+  displayedPoints.value.forEach((point, index) => {
+    if (matchedIds.has(point.id)) {
+      indices.push(index)
+    }
+  })
+  
+  if (indices.length > 0) {
+    semanticMapRef.value.zoomToPoints(indices, { transition: true, padding: 0.15 })
+  }
+}
+
+/**
+ * Zoom to a specific point
+ */
+const zoomToPoint = (point: SearchPoint) => {
+  if (!semanticMapRef.value) return
+  
+  const index = displayedPoints.value.findIndex(p => p.id === point.id)
+  if (index >= 0) {
+    semanticMapRef.value.zoomToPoints([index], { transition: true, padding: 0.3 })
+  }
+}
+
+/**
+ * Reset the map view to show all points
+ */
+const resetMapView = () => {
+  if (!semanticMapRef.value) return
+  semanticMapRef.value.resetView({ transition: true })
+}
+
+// ========== PLOT DATA ==========
+const wbs06ColorMap = computed(() => {
+  const map = new Map<string, string>()
+  const pts = analyticsMode.value === 'global' ? globalAnalytics.points.value : propertyPoints.value
+  const uniqueWbs = [...new Set(pts.map((p: SearchPoint) => p.wbs06_desc || p.wbs06 || 'N/A'))]
+  uniqueWbs.sort().forEach((wbs, idx) => {
+    map.set(String(wbs), WBS06_PALETTE[idx % WBS06_PALETTE.length])
+  })
+  return map
+})
 
 function getProjectColor(projectId: string): string {
-  const projects = analytics.availableProjects.value;
-  const idx = projects.findIndex(p => p.id === projectId);
-  if (idx < 0) return projectPalette[0];
-  return projectPalette[idx % projectPalette.length];
+  return mapControls.getProjectColor(projectId, currentAnalytics.value.availableProjects.value)
 }
-
-function getProjectPointCount(projectId: string): number {
-  return analytics.points.value.filter(p => p.project_id === projectId).length;
-}
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR', minimumFractionDigits: 2 }).format(value);
-}
-
-const clusterPalette = [
-  '#3b82f6', '#f97316', '#22c55e', '#a855f7', '#ef4444',
-  '#14b8a6', '#eab308', '#ec4899', '#0ea5e9', '#f59e0b',
-  '#10b981', '#6366f1', '#d946ef', '#84cc16', '#06b6d4',
-  '#f43f5e', '#8b5cf6', '#64748b'
-];
 
 function getClusterColor(clusterId: number): string {
-  if (clusterId < 0) return '#888888';
-  return clusterPalette[clusterId % clusterPalette.length];
+  return mapControls.getClusterColor(clusterId)
+}
+
+function getWbs06Color(wbs06: string): string {
+  return mapControls.getWbs06Color(wbs06, wbs06ColorMap.value)
 }
 
 const plotData = computed(() => {
-  const pts = visibilityFilteredPoints.value;
-  if (pts.length === 0) return [];
+  const pts = displayedPoints.value
+  if (pts.length === 0) return []
 
-  const xs = pts.map(p => p.x);
-  const ys = pts.map(p => p.y);
+  const xs = pts.map((p) => p.x)
+  const ys = pts.map((p) => p.y)
+  const colorBy = mapControls.colorBy.value
 
-  let colors: (string | number)[];
-  let colorscale: string | undefined;
-  let showColorbar = false;
+  let colors: (string | number)[]
+  let colorscale: string | undefined
+  let showColorbar = false
 
-  if (colorBy.value === 'project') {
-    colors = pts.map(p => getProjectColor(p.project_id));
-  } else if (colorBy.value === 'cluster') {
-    colors = pts.map(p => getClusterColor(p.cluster ?? -1));
-  } else if (colorBy.value === 'wbs06') {
-    colors = pts.map(p => getWbs06Color(p.wbs06_desc || p.wbs06));
+  if (colorBy === 'project') {
+    colors = pts.map((p) => getProjectColor(p.project_id || ''))
+  } else if (colorBy === 'cluster') {
+    colors = pts.map((p) => getClusterColor(p.cluster ?? -1))
+  } else if (colorBy === 'wbs06') {
+    colors = pts.map((p) => getWbs06Color(p.wbs06_desc || p.wbs06 || 'N/A'))
+  } else if (colorBy === 'properties' && analyticsMode.value === 'properties') {
+    colors = pts.map((p) => (p as PropertyPoint).properties_count ?? Object.keys((p as PropertyPoint).extracted_properties || {}).length)
+    colorscale = 'Viridis'
+    showColorbar = true
   } else {
-    colors = pts.map(p => p.price ?? 0);
-    colorscale = 'Viridis';
-    showColorbar = true;
+    // Use log scale for price to better distribute colors (avoid all points looking the same)
+    colors = pts.map((p) => {
+      const price = (p as GlobalPoint).price ?? 0
+      return price > 0 ? Math.log10(price + 1) : 0
+    })
+    colorscale = 'Viridis'
+    showColorbar = true
   }
 
-  const outlierSet = analytics.outlierIds.value;
-  const sizes = pts.map(p => outlierSet.has(p.id) ? pointSize.value * 1.8 : pointSize.value);
+  const outlierSet = globalAnalytics.outlierIds.value
+  const pointSize = mapControls.pointSize.value
+  const sizes = pts.map((p) => outlierSet.has(p.id) ? pointSize * 1.8 : pointSize)
 
   const marker: any = {
     size: sizes,
@@ -642,132 +705,399 @@ const plotData = computed(() => {
     color: colors,
     sizemode: 'diameter',
     line: { width: 0 },
-  };
+  }
 
   if (colorscale) {
-    marker.colorscale = colorscale;
+    marker.colorscale = colorscale
     if (showColorbar) {
-      marker.colorbar = { 
-        thickness: 12, len: 0.4, bgcolor: 'rgba(0,0,0,0)', borderwidth: 0,
-        tickfont: { size: 10, color: '#888' },
-        title: { text: colorBy.value === 'amount' ? 'Prezzo €' : 'Cluster', font: { size: 11 } }
-      };
+      marker.colorbar = { thickness: 12, len: 0.4, bgcolor: 'rgba(0,0,0,0)', borderwidth: 0 }
     }
   }
 
   const mainTrace: any = {
-      x: xs, y: ys, customdata: pts, hoverinfo: 'none', marker
-  };
+    x: xs, y: ys, customdata: pts, hoverinfo: 'none', marker
+  }
 
-  if (is3D.value) {
-      mainTrace.type = 'scatter3d'; mainTrace.mode = 'markers';
-      mainTrace.z = pts.map(p => p.z ?? 0);
+  if (mapControls.is3D.value) {
+    mainTrace.type = 'scatter3d'
+    mainTrace.mode = 'markers'
+    mainTrace.z = pts.map((p) => p.z ?? 0)
   } else {
-      mainTrace.type = 'scattergl'; mainTrace.mode = 'markers';
+    mainTrace.type = 'scattergl'
+    mainTrace.mode = 'markers'
   }
 
-  const traces: any[] = [mainTrace];
+  const traces: any[] = [mainTrace]
 
-  if (showPoles.value && poles.value.length > 0) {
-      const p = poles.value;
-      const px = p.map(pt => pt.x);
-      const py = p.map(pt => pt.y);
-      const plabels = p.map(pt => pt.description ? pt.description : `Polo ${pt.wbs6}`);
-      
-      const poleMarker = {
-          size: pointSize.value * 2, 
-          symbol: is3D.value ? 'diamond' : 'star',
-          color: '#ffd700', opacity: 1.0
-      };
+  // Add poles
+  const currentPoles = analyticsMode.value === 'global' ? poles.value : propertyAnalytics.poles.value ?? []
+  if (mapControls.showPoles.value && currentPoles.length > 0) {
+    const p = currentPoles
+    const px = p.map((pt) => pt.x)
+    const py = p.map((pt) => pt.y)
+    const plabels = p.map((pt) => pt.description || `Polo ${pt.wbs6}`)
+    
+    const poleTrace: any = {
+      x: px, y: py, text: plabels, mode: 'markers+text',
+      textposition: 'top center', textfont: { size: 11, color: '#000' },
+      marker: { size: pointSize * 2, symbol: 'star', color: '#ffd700', opacity: 1.0 },
+      name: 'Poles', hoverinfo: 'none',
+    }
 
-      const commonPoleTrace = {
-          x: px, y: py, text: plabels, mode: 'markers+text',
-          textposition: 'top center', textfont: { size: 11, color: '#000' },
-          marker: poleMarker, name: 'Poles', hoverinfo: 'none',
-      };
-
-      if (is3D.value) {
-          const pz = p.map(pt => pt.z ?? 0);
-          traces.push({ ...commonPoleTrace, type: 'scatter3d', z: pz, mode: 'markers', hoverinfo: 'text', hoverlabel: { bgcolor: '#FFF', bordercolor: '#ffd700' } });
-      } else {
-          traces.push({ ...commonPoleTrace, type: 'scatter' });
-      }
+    if (mapControls.is3D.value) {
+      poleTrace.type = 'scatter3d'
+      poleTrace.z = p.map((pt) => pt.z ?? 0)
+      poleTrace.mode = 'markers'
+    } else {
+      poleTrace.type = 'scatter'
+    }
+    traces.push(poleTrace)
   }
-  return traces;
-});
+  return traces
+})
 
 const plotLayout = computed(() => {
-  const axisConfig = {
-    visible: showAxes.value, showgrid: showAxes.value, zeroline: false, showticklabels: showAxes.value, autorange: true,
-  };
-  const margin = showAxes.value ? { l: 50, r: 20, b: 40, t: 20 } : { l: 0, r: 0, b: 0, t: 0 };
-
-  const common = {
-      margin, paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)',
-      showlegend: false, uirevision: 'true', hovermode: 'closest'
-  };
-
-  if (is3D.value) {
-    return { ...common, scene: { xaxis: axisConfig, yaxis: axisConfig, zaxis: axisConfig, bgcolor: 'rgba(0,0,0,0)' } };
+  const showAxes = mapControls.showAxes.value
+  // Don't use autorange: true - it resets zoom on every update
+  // Use uirevision to preserve the user's zoom/pan state
+  return {
+    margin: { t: 0, b: 0, l: 0, r: 0 },
+    showlegend: false,
+    hovermode: 'closest',
+    uirevision: mapControls.is3D.value ? 'true' : 'false', // Keep zoom state unless switching 2D/3D (which forces a redraw)
+    scene: {
+      xaxis: { title: '', showgrid: showAxes, zeroline: showAxes, showticklabels: false, visible: showAxes },
+      yaxis: { title: '', showgrid: showAxes, zeroline: showAxes, showticklabels: false, visible: showAxes },
+      zaxis: { title: '', showgrid: showAxes, zeroline: showAxes, showticklabels: false, visible: showAxes },
+      dragmode: 'orbit',
+      aspectmode: 'cube'
+    },
+    xaxis: { 
+      showgrid: showAxes, 
+      zeroline: showAxes, 
+      showticklabels: false, 
+      visible: showAxes,
+      // Default range (optional, can be better handled by Plotly's auto-range on first render)
+    },
+    yaxis: { 
+      showgrid: showAxes, 
+      zeroline: showAxes, 
+      showticklabels: false, 
+      visible: showAxes,
+      scaleanchor: 'x',
+      scaleratio: 1
+    },
+    dragmode: 'pan',
   }
-  return { ...common, dragmode: 'pan', xaxis: axisConfig, yaxis: axisConfig, autosize: true };
-});
-
-const displayedCategories = computed(() => {
-  const cats = analytics.analysisResult.value?.categories ?? [];
-  return showAllCategories.value ? cats : cats.slice(0, 5);
-});
-
-function getSeverityClasses(severity?: string): string {
-  switch (severity) {
-    case 'high': return 'bg-red-100 dark:bg-red-900/30 border-red-300 dark:border-red-700 hover:bg-red-200 dark:hover:bg-red-900/40';
-    case 'medium': return 'bg-orange-100 dark:bg-orange-900/30 border-orange-300 dark:border-orange-700 hover:bg-orange-200 dark:hover:bg-orange-900/40';
-    default: return 'bg-yellow-100 dark:bg-yellow-900/30 border-yellow-300 dark:border-yellow-700 hover:bg-yellow-200 dark:hover:bg-yellow-900/40';
-  }
-}
+})
 
 const plotConfig = {
-  responsive: true, displayModeBar: 'hover', displaylogo: false, scrollZoom: true,
-  modeBarButtonsToRemove: ['toImage', 'sendDataToCloud']
-};
-
-function onPointClick(data: any) {
-  if (!data?.points?.[0]) return;
-  const point = data.points[0].customdata as GlobalPoint;
-  toast.add({ title: point.code, description: `${point.label} - ${point.project_name}`, color: 'info' });
+  responsive: true,
+  displayModeBar: false,
+  scrollZoom: true
 }
 
-function onPointHover(data: any) {
-  if (!data?.points?.[0]) return;
-  hoveredPoint.value = data.points[0].customdata as GlobalPoint;
-}
-
-function onPointUnhover() {
-  hoveredPoint.value = null;
-}
-
-async function runPriceAnalysis() {
-  await analytics.runAnalysis();
-  if (analytics.analysisResult.value) {
-    toast.add({
-      title: 'Analisi completata',
-      description: `${analytics.analysisResult.value.outliers_found} outlier trovati su ${analytics.analysisResult.value.total_items} voci`,
-      color: analytics.analysisResult.value.outliers_found > 0 ? 'warning' : 'success'
-    });
+const onPointClick = (event: any) => {
+  const point = event.points[0]?.customdata
+  if (point) {
+    clickedPoint.value = point
   }
 }
 
-function navigateToPoint(itemId: string) {
-  const point = analytics.points.value.find(p => p.id === itemId);
-  if (point) toast.add({ title: 'Outlier', description: `${point.code}: ${point.label}`, color: 'warning' });
-}
-
-async function triggerComputeMap() {
-  const result = await analytics.computeMap();
-  if (result) {
-    toast.add({ title: 'Calcolo UMAP avviato', description: `Background job started for ${result.project_count || 'N'} projects.`, color: 'success' });
-  } else if (analytics.mapError.value) {
-    toast.add({ title: 'Errore', description: analytics.mapError.value, color: 'error' });
+const onPointHover = (event: any) => {
+  const point = event.points[0]?.customdata
+  if (point) {
+    hoveredPoint.value = point
   }
 }
+
+const onPointUnhover = () => {
+  hoveredPoint.value = null
+}
+
+const runPriceAnalysis = async () => {
+  if (analyticsMode.value !== 'global') return
+  await globalAnalytics.runAnalysis()
+}
+
+// Legend handling (helper)
+const getProjectPointCount = (projectId: string) => {
+  return basePoints.value.filter(p => p.project_id === projectId).length
+}
+
+const legendProjects = computed(() => {
+  return currentAnalytics.value.availableProjects.value
+})
+
+const legendWbs6Categories = computed(() => {
+  const counts = new Map<string, number>()
+  const descs = new Map<string, string>()
+  
+  const pts = analyticsMode.value === 'global' ? globalAnalytics.points.value : propertyPoints.value // use unfiltered for total counts
+  
+  pts.forEach((p: SearchPoint) => {
+    const code = p.wbs06 || 'N/A'
+    counts.set(code, (counts.get(code) || 0) + 1)
+    if (p.wbs06_desc) descs.set(code, p.wbs06_desc)
+  })
+
+  return Array.from(counts.entries()).map(([code, count]) => ({
+    code,
+    desc: descs.get(code) || code,
+    count
+  })).sort((a, b) => b.count - a.count)
+})
+
+const legendClusters = computed(() => {
+  const counts = new Map<number, number>()
+  const pts = analyticsMode.value === 'global' ? globalAnalytics.points.value : propertyPoints.value
+  
+  pts.forEach((p: SearchPoint) => {
+    const c = p.cluster ?? -1
+    counts.set(c, (counts.get(c) || 0) + 1)
+  })
+
+  return Array.from(counts.entries()).map(([id, count]) => ({
+    id,
+    count
+  })).sort((a, b) => a.id - b.id)
+})
+
+// Initialize Visibility
+const initVisibility = () => {
+  // Show all projects
+  currentAnalytics.value.availableProjects.value.forEach((p: any) => visibleProjects.value.add(p.id))
+  
+  // Show all WBS6
+  const pts = analyticsMode.value === 'global' ? globalAnalytics.points.value : propertyPoints.value
+  pts.forEach((p: SearchPoint) => {
+    visibleWbs6.value.add(p.wbs06_desc || p.wbs06 || 'N/A')
+    visibleClusters.value.add(p.cluster ?? -1)
+  })
+}
+
+// Watch for data load to init visibility
+watch(() => globalAnalytics.points.value.length, (newVal, oldVal) => {
+  if (newVal > 0 && oldVal === 0) {
+    initVisibility()
+  }
+})
+
+// Handlers for visibility
+const handleToggleVisibility = (type: 'project' | 'wbs06' | 'cluster', id: string | number) => {
+  if (type === 'project') {
+    const val = id as string
+    if (visibleProjects.value.has(val)) visibleProjects.value.delete(val)
+    else visibleProjects.value.add(val)
+  } else if (type === 'wbs06') {
+    const val = id as string
+    if (visibleWbs6.value.has(val)) visibleWbs6.value.delete(val)
+    else visibleWbs6.value.add(val)
+  } else {
+    // cluster
+    const val = id as number
+    if (visibleClusters.value.has(val)) visibleClusters.value.delete(val)
+    else visibleClusters.value.add(val)
+  }
+}
+
+const handleShowAll = (type: 'project' | 'wbs06' | 'cluster') => {
+  if (type === 'project') {
+    currentAnalytics.value.availableProjects.value.forEach((p: any) => visibleProjects.value.add(p.id))
+  } else if (type === 'wbs06') {
+     legendWbs6Categories.value.forEach(w => visibleWbs6.value.add(w.code))
+  } else if (type === 'cluster') {
+    legendClusters.value.forEach(c => visibleClusters.value.add(c.id))
+  }
+}
+
+const handleHideAll = (type: 'project' | 'wbs06' | 'cluster') => {
+  if (type === 'project') visibleProjects.value.clear()
+  else if (type === 'wbs06') visibleWbs6.value.clear()
+  else if (type === 'cluster') visibleClusters.value.clear()
+}
+
+const handleUpdateAnalysisParam = (key: any, value: any) => {
+  // @ts-ignore
+  globalAnalytics.analysisParams[key] = value
+}
+
+const umapLoading = computed(() =>
+  globalAnalytics.isLoadingMap.value || globalAnalytics.isComputingMap.value
+)
+const analysisResult = computed(() => globalAnalytics.analysisResult.value)
+const analysisLoading = computed(() => globalAnalytics.isLoadingAnalysis.value)
+const analysisError = computed(() => globalAnalytics.analysisError.value)
+
+const registerAnalyticsModules = () => {
+  registerModule({
+    id: 'analytics-data',
+    label: 'Dati',
+    icon: 'heroicons:adjustments-horizontal',
+    order: 10,
+    component: AnalyticsDataModule,
+    props: reactive({
+      mode: analyticsMode,
+      filters: sidebarFilters,
+      availableProjects: sidebarProjects,
+      availableYears: sidebarYears,
+      availableBusinessUnits: sidebarBusinessUnits,
+      isLoadingMap: sidebarLoading,
+      'onUpdate:mode': (value: 'global' | 'properties') => {
+        analyticsMode.value = value
+      },
+      'onUpdate:filters': (value: any) => {
+        Object.assign(currentAnalytics.value.filters, value)
+      },
+      onRefreshMap: () => currentAnalytics.value.fetchMapData(),
+    }),
+  })
+
+  registerModule({
+    id: 'analytics-umap',
+    label: 'UMAP',
+    icon: 'heroicons:cpu-chip',
+    order: 20,
+    component: AnalyticsUmapModule,
+    props: reactive({
+      mapParams: globalAnalytics.mapParams,
+      isLoadingMap: umapLoading,
+      'onUpdate:mapParams': (value: any) => Object.assign(globalAnalytics.mapParams, value),
+      onRecalculateMap: handleRecalculateMap,
+    }),
+  })
+
+  registerModule({
+    id: 'analytics-legend',
+    label: 'Legenda',
+    icon: 'heroicons:swatch',
+    order: 30,
+    component: AnalyticsLegendModule,
+    props: reactive({
+      colorBy: sidebarColorBy,
+      projects: legendProjects,
+      wbs6Categories: legendWbs6Categories,
+      clusters: legendClusters,
+      visibleProjects,
+      visibleWbs6,
+      visibleClusters,
+      getProjectColor,
+      getWbs06Color,
+      getClusterColor,
+      getProjectPointCount,
+      onToggleVisibility: handleToggleVisibility,
+      onShowAll: handleShowAll,
+      onHideAll: handleHideAll,
+    }),
+  })
+
+  if (analyticsMode.value === 'global') {
+    registerModule({
+      id: 'analytics-analysis',
+      label: 'Analisi',
+      icon: 'heroicons:chart-bar',
+      order: 40,
+      component: AnalysisResultsModule,
+      props: reactive({
+        analysisParams: globalAnalytics.analysisParams,
+        analysisResult,
+        analysisLoading,
+        analysisError,
+        onUpdateAnalysisParam: handleUpdateAnalysisParam,
+        onRunAnalysis: runPriceAnalysis,
+        onToggleVisibility: handleToggleVisibility,
+      }),
+    })
+  }
+
+  registerModule({
+    id: 'wbs',
+    label: 'WBS',
+    icon: 'heroicons:squares-2x2',
+    order: 45,
+    component: WbsModule,
+    props: reactive({
+      nodes: wbsNodes,
+      selectedNodeId: computed(() => selectedWbsNode.value?.id ?? null),
+      onNodeSelected: (node: any) => onWbsNodeSelected(node),
+    }),
+  })
+}
+
+watch(clickedPoint, (point) => {
+  if (point) {
+    registerModule({
+      id: 'analytics-detail',
+      label: 'Dettaglio',
+      icon: 'heroicons:document-text',
+      order: 5,
+      group: 'secondary',
+      component: PointDetailSidebar,
+      props: reactive({
+        point: point,
+        mode: analyticsMode.value,
+        onClose: () => {
+          clickedPoint.value = null
+        },
+      }),
+    })
+    setActiveModule('analytics-detail')
+    return
+  }
+  unregisterModule('analytics-detail')
+})
+
+// Initial fetch
+onMounted(async () => {
+  registerAnalyticsModules()
+  await fetchData()
+})
+
+onUnmounted(() => {
+  unregisterModule('analytics-data')
+  unregisterModule('analytics-umap')
+  unregisterModule('analytics-legend')
+  unregisterModule('analytics-analysis')
+  unregisterModule('analytics-detail')
+})
+
+const fetchData = async () => {
+  if (analyticsMode.value === 'global') {
+    if (globalAnalytics.points.value.length === 0) {
+      await globalAnalytics.fetchMapData()
+    }
+  } else {
+    if (propertyAnalytics.points.value.length === 0) {
+      await propertyAnalytics.fetchMapData()
+    }
+  }
+}
+
+watch(analyticsMode, (mode) => {
+  fetchData()
+  if (mode === 'global') {
+    registerModule({
+      id: 'analytics-analysis',
+      label: 'Analisi',
+      icon: 'heroicons:chart-bar',
+      order: 40,
+      component: AnalysisResultsModule,
+      props: reactive({
+        analysisParams: globalAnalytics.analysisParams,
+        analysisResult,
+        analysisLoading,
+        analysisError,
+        onUpdateAnalysisParam: handleUpdateAnalysisParam,
+        onRunAnalysis: runPriceAnalysis,
+        onToggleVisibility: handleToggleVisibility,
+      }),
+    })
+  } else {
+    unregisterModule('analytics-analysis')
+  }
+  // Reset visibility when mode changes? Maybe not needed if logic handles it.
+  // But we need to ensure visibility sets are populated for the new data
+  setTimeout(initVisibility, 100)
+})
+
 </script>

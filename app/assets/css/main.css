@@ -91,8 +91,6 @@
 
     --success: 152 60% 35%;
     --success-foreground: 0 0% 100%;
-    --success: 152 60% 35%;
-    --success-foreground: 0 0% 100%;
     --success-light: 152 50% 95%;
 
     --info: 215 60% 50%;
@@ -113,7 +111,6 @@
 
     /* ===========================================
        BORDER RADIUS - Premium generous
-       =========================================== */
     --radius: 0.75rem;
     /* 12px */
     --radius-sm: 0.5rem;
@@ -129,16 +126,36 @@
     --radius-3xl: 1.75rem;
     /* 28px */
     --radius-full: 9999px;
-    /* Layout */
-    --page-header-height: 64px;
-    /* Fixed header height */
+
+    /* ===========================================
+       SHELL LAYOUT TOKENS
+    --topbar-height: 56px;
+    /* Slightly taller for better breathing room */
+    --bottombar-height: 32px;
+
+    /* Double Sidebar Dimensions */
+    --rail-width: 64px;
+    /* Fixed icon rail */
+    --sidebar-width: 300px;
+    /* Context panel width */
+    --sidebar-collapsed-width: 56px;
+    /* Context panel can fully collapse */
+
+    --sidebar-min-width: 240px;
+    --sidebar-max-width: 360px;
+/* Fixed header height */
+    --workspace-gutter-x: 1.25rem;
+    --workspace-gutter-y: 1.75rem;
+    --workspace-header-offset: 0.75rem;
 
     /* Global Page Spacing Tokens (apply to both themes) */
     --page-bg: hsl(var(--background));
-    --page-pad-top: 1.5rem;
-    /* ~24px mobile */
-    --page-pad-x: 1rem;
-    /* ~16px mobile */
+    --page-pad-top: 2rem;
+    /* 32px */
+    --page-pad-x: 2rem;
+    /* 32px */
+    --page-pad-left: 0.75rem;
+    /* gap più stretto tra sidebar e contenuto */
     --card-radius: var(--radius-xl);
     --card-shadow: var(--shadow-sm);
     --divider-color: hsl(var(--border));
@@ -176,6 +193,7 @@
     --sidebar-border: 225 15% 18%;
     /* Nearly invisible */
     --sidebar-ring: 152 60% 55%;
+    --sidebar-surface: 0 0% 99%;
 
     /* Shadows - Premium soft shadows for depth */
     --shadow-xs: 0 1px 3px rgba(0, 0, 0, 0.04);
@@ -188,6 +206,47 @@
     --transition-fast: all 0.15s ease;
     --transition-smooth: all 0.2s ease;
     --transition-slow: all 0.3s ease;
+
+    /* ===========================================
+       STATUS COLORS - Enterprise Project States
+    --status-in-progress: 152 60% 35%;
+    --status-in-progress-light: 152 50% 95%;
+    --status-setup: 220 10% 55%;
+    --status-setup-light: 220 10% 96%;
+    --status-warning: 38 95% 50%;
+    --status-warning-light: 38 90% 95%;
+    --status-completed: 152 60% 28%;
+    --status-completed-light: 152 50% 92%;
+    --status-draft: 0 0% 60%;
+    --status-draft-light: 0 0% 96%;
+
+    /* ===========================================
+       DENSITY SPACING - Compact vs Comfortable
+    --density-cell-padding-compact: 0.375rem 0.5rem;
+    --density-cell-padding-comfortable: 0.625rem 0.75rem;
+    --density-row-height-compact: 32px;
+    --density-row-height-comfortable: 44px;
+    --density-gap-compact: 0.5rem;
+    --density-gap-comfortable: 1rem;
+
+    /* ===========================================
+       KPI CARD TOKENS
+    --kpi-card-padding: 0.875rem 1rem;
+    --kpi-value-size: 1.5rem;
+    --kpi-label-size: 0.7rem;
+
+    /* ===========================================
+       ACC-STYLE FILTER SYSTEM
+       Autodesk Construction Cloud inspired tokens
+    --acc-primary: 168 70% 40%;
+    /* Teal-green #009C8C equivalent */
+    --acc-primary-soft: 168 30% 90%;
+    --acc-filter-wbs-bg: 152 45% 92%;
+    --acc-filter-wbs-text: 152 65% 28%;
+    --acc-filter-wbs-border: 152 45% 75%;
+    --acc-filter-column-bg: 210 50% 93%;
+    --acc-filter-column-text: 210 65% 35%;
+    --acc-filter-column-border: 210 45% 78%;
   }
 
   .dark,
@@ -275,6 +334,7 @@
     --sidebar-accent-foreground: 220 10% 92%;
     --sidebar-border: 230 12% 16%;
     --sidebar-ring: 152 60% 55%;
+    --sidebar-surface: 230 15% 12%;
 
     /* === SHADOWS === */
     --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.4);
@@ -285,15 +345,25 @@
     --shadow-xl: 0 12px 32px rgba(0, 0, 0, 0.8);
     --shadow-glow: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 4px 16px rgba(0, 0, 0, 0.5);
     --page-header-height: 64px;
+
+    /* === ACC-STYLE FILTER SYSTEM (Dark Mode) === */
+    --acc-primary: 168 65% 48%;
+    --acc-primary-soft: 168 35% 22%;
+    --acc-filter-wbs-bg: 152 40% 18%;
+    --acc-filter-wbs-text: 152 60% 65%;
+    --acc-filter-wbs-border: 152 35% 30%;
+    --acc-filter-column-bg: 210 40% 18%;
+    --acc-filter-column-text: 210 55% 70%;
+    --acc-filter-column-border: 210 35% 32%;
   }
 
   /* Desktop overrides */
   @media (min-width: 1024px) {
     :root {
       --page-pad-top: 2rem;
-      /* ~32px desktop */
+      /* 32px desktop */
       --page-pad-x: 2rem;
-      /* ~32px desktop */
+      /* 32px desktop */
     }
   }
 
@@ -432,26 +502,7 @@
     line-height: 1.4;
     color: hsl(var(--foreground));
   }
-
-  .page-container {
-    padding-top: var(--page-pad-top);
-    padding-left: var(--page-pad-x);
-    padding-right: var(--page-pad-x);
-    padding-bottom: var(--page-pad-x);
-    width: 100%;
-    max-width: 100%;
-    margin: 0 auto;
-  }
-
-  .page-content {
-    /* Legacy helper, map to container or deprecate */
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 1.25rem;
-  }
-
-  *:focus-visible {
+*:focus-visible {
     outline: 3px solid hsl(var(--ring));
     outline-offset: 3px;
     border-radius: 6px;
@@ -467,14 +518,12 @@
     outline-offset: 2px;
   }
 
-  .page-header-bar {
-    height: var(--page-header-height);
-    min-height: var(--page-header-height);
-    display: flex;
-    align-items: center;
+  .page-header {
+    padding-top: var(--workspace-header-offset);
+    padding-left: var(--workspace-gutter-x);
+    padding-right: var(--workspace-gutter-x);
   }
-
-  @media (prefers-reduced-motion: reduce) {
+@media (prefers-reduced-motion: reduce) {
 
     *,
     *::before,
@@ -501,61 +550,24 @@
     border-right: none;
     color: hsl(var(--sidebar-foreground));
   }
-
-  .app-icon-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    background: transparent;
-    border: 1px solid hsl(var(--sidebar-border) / 0.5);
-    color: hsl(var(--sidebar-foreground));
-    border-radius: var(--radius-md);
-  }
-
-  .app-icon-btn:hover {
-    background: hsl(var(--sidebar-accent) / 0.5);
-    border-color: hsl(var(--sidebar-border));
-  }
-
-  .app-icon-btn:focus-visible {
-    outline: none;
-    box-shadow: 0 0 0 2px hsl(var(--sidebar-ring) / 0.3);
-  }
-
-  .app-nav-item {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    border: 1px solid transparent;
-    background: transparent;
-    color: hsl(var(--sidebar-foreground));
-    transition: var(--transition-smooth);
-  }
-
-  .app-nav-item:hover {
-    background: hsl(var(--sidebar-accent) / 0.7);
-  }
-
-  .app-nav-item--active {
-    background: hsl(var(--sidebar-accent));
-    border-color: hsl(var(--sidebar-border));
-    color: hsl(var(--sidebar-foreground));
-  }
-
-  .app-nav-item--active:hover {
-    background: hsl(var(--sidebar-accent));
-  }
-
-  /* Large content surface that mimics the soft card container of the reference */
-  .app-surface {
-    width: 100%;
-    max-width: 1480px;
-    margin: 1.25rem auto 2rem;
+/* Large content surface - Clean with subtle structure */
+.surface-card {
     background: hsl(var(--card));
-    border-radius: var(--radius-xl);
-    border: 1px solid hsl(var(--border) / 0.3);
+    border: 1px solid hsl(var(--border));
+    border-left: none;
+    /* Seamlessly attach to sidebar */
+    margin-left: 0;
+    border-radius: 0 var(--radius-xl) var(--radius-xl) 0;
     box-shadow: var(--shadow-sm);
-    overflow: hidden;
+  }
+
+  /* Card with left border when no sidebar is present */
+/* Sticky page header inside card */
+  .page-header-sticky {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    background: hsl(var(--card));
   }
 
   /* Page shell used by PageShell component */
@@ -566,17 +578,50 @@
 
   .workspace-inner {
     margin: 0 auto;
-    max-width: 1440px;
-    padding: 0.8rem 1rem 1rem;
+    max-width: 100%;
+    padding-top: var(--workspace-header-offset);
+    padding-right: var(--workspace-gutter-x);
+    padding-bottom: 1.25rem;
+    padding-left: var(--workspace-gutter-x);
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    gap: 0.75rem;
     height: 100%;
+  }
+
+  .workspace-gutter {
+    padding-top: var(--workspace-header-offset);
+    padding-right: var(--workspace-gutter-x);
+    padding-bottom: var(--workspace-gutter-y);
+    padding-left: var(--workspace-gutter-x);
+  }
+
+  /* Flex container that fills remaining vertical space */
+  .workspace-body-fill {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* Scrollable content wrapper inside body fill */
+  .workspace-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
   }
 
   @media (min-width: 1280px) {
     .workspace-inner {
-      padding: 1.5rem 1.75rem 1.75rem;
+      padding: 1.25rem 1.5rem 1.5rem;
+    }
+
+    .workspace-inner {
+      padding-top: var(--workspace-header-offset);
+      padding-right: var(--workspace-gutter-x);
+      padding-bottom: 1.5rem;
+      padding-left: var(--workspace-gutter-x);
     }
   }
 
@@ -589,10 +634,14 @@
     align-items: flex-start;
     justify-content: space-between;
     gap: 1rem;
-    border: 1px solid hsl(var(--border) / 0.2);
+
+    /* Clean header with subtle background */
+    border: none;
+    border-bottom: 1px solid hsl(var(--border) / 0.4);
     background: hsl(var(--card));
-    border-radius: var(--radius-lg);
+    border-radius: 0;
     padding: 0.75rem 1rem;
+
     position: sticky;
     top: 0;
     z-index: 10;
@@ -634,10 +683,14 @@
     align-items: center;
     justify-content: space-between;
     gap: 0.75rem;
-    border: 1px solid hsl(var(--border) / 0.2);
+
+    /* Integrated toolbar */
     background: hsl(var(--card));
-    border-radius: var(--radius-lg);
-    padding: 0.85rem 1rem;
+    border-radius: 0;
+    border: none;
+    border-bottom: 1px solid hsl(var(--border) / 0.3);
+    padding: 0.5rem 1rem;
+    margin: 0;
   }
 
   .workspace-header-actions {
@@ -696,157 +749,7 @@
     font-weight: 600;
     color: hsl(var(--foreground));
   }
-
-  /* ===========================================
-     CARD HEADER PATTERNS
-     Unified header styling for all card components
-     =========================================== */
-  .card-header-label {
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    font-weight: 500;
-    color: hsl(var(--muted-foreground));
-  }
-
-  .card-header-title {
-    font-size: 1.125rem;
-    font-weight: 600;
-    line-height: 1.3;
-    color: hsl(var(--foreground));
-  }
-
-  .card-header-subtitle {
-    font-size: 0.75rem;
-    color: hsl(var(--muted-foreground));
-    margin-top: 0.125rem;
-  }
-
-  /* ===========================================
-     STAT PILLS / BADGES
-     Unified pill styling for status indicators
-     =========================================== */
-  .stat-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.25rem;
-    padding: 0.25rem 0.75rem;
-    border-radius: var(--radius-full);
-    font-size: 0.875rem;
-    font-weight: 500;
-    background: hsl(var(--sidebar-accent));
-    color: hsl(var(--foreground));
-  }
-
-  .stat-pill--success {
-    background: hsl(var(--success) / 0.1);
-    color: hsl(var(--success));
-  }
-
-  .stat-pill--warning {
-    background: hsl(var(--warning) / 0.1);
-    color: hsl(var(--warning));
-  }
-
-  .stat-pill--danger {
-    background: hsl(var(--destructive) / 0.1);
-    color: hsl(var(--destructive));
-  }
-
-  .stat-pill--info {
-    background: hsl(var(--info) / 0.1);
-    color: hsl(var(--info));
-  }
-
-  /* ===========================================
-     COMPANY CELL COLORS
-     For comparison tables with multiple companies
-     =========================================== */
-  .company-cell {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    height: 100%;
-  }
-
-  .company-cell--1 {
-    background: hsl(var(--company-1) / 0.08);
-    border-right: 1px solid hsl(var(--company-1) / 0.2);
-  }
-
-  .company-cell--2 {
-    background: hsl(var(--company-2) / 0.08);
-    border-right: 1px solid hsl(var(--company-2) / 0.2);
-  }
-
-  .company-cell--3 {
-    background: hsl(var(--company-3) / 0.08);
-    border-right: 1px solid hsl(var(--company-3) / 0.2);
-  }
-
-  .company-cell--4 {
-    background: hsl(var(--company-4) / 0.08);
-    border-right: 1px solid hsl(var(--company-4) / 0.2);
-  }
-
-  .company-cell--5 {
-    background: hsl(var(--company-5) / 0.08);
-    border-right: 1px solid hsl(var(--company-5) / 0.2);
-  }
-
-  .company-cell--start {
-    border-left: 2px solid currentColor;
-  }
-
-  .company-cell--end {
-    border-right-width: 2px;
-  }
-
-  /* ===========================================
-     CONTAINER RADIUS HIERARCHY
-     Consistent rounded corners for component types
-     =========================================== */
-  .container-2xl {
-    border-radius: var(--radius-2xl);
-  }
-
-  .container-xl {
-    border-radius: var(--radius-xl);
-  }
-
-  .container-lg {
-    border-radius: var(--radius-lg);
-  }
-
-  .container-md {
-    border-radius: var(--radius-md);
-  }
-
-  /* ===========================================
-     DELTA VALUE STYLING
-     For positive/negative value indicators
-     =========================================== */
-  .delta-positive {
-    color: hsl(var(--destructive));
-    font-weight: 600;
-  }
-
-  .delta-negative {
-    color: hsl(var(--success));
-    font-weight: 600;
-  }
-
-  .delta-neutral {
-    color: hsl(var(--muted-foreground));
-  }
-
-  /* ===========================================
-     STANDARDIZED UI PATTERNS
-     Common patterns for consistent styling across pages
-     =========================================== */
-
-  /* Secondary/Outline button - replaces hardcoded bg-white buttons */
-  .btn-outline-theme {
+.btn-outline-theme {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -918,46 +821,7 @@
     border: none;
   }
 
-  /* Toggle button (for control panels like 3D, Poli, Assi) */
-  .toggle-btn {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 0.25rem;
-    padding: 0.5rem;
-    border-radius: 0.5rem;
-    border: 1px solid transparent;
-    font-size: 0.625rem;
-    transition: all 0.15s ease;
-    background: hsl(var(--secondary) / 0.5);
-    color: hsl(var(--muted-foreground));
-  }
-
-  .toggle-btn:hover {
-    background: hsl(var(--secondary));
-  }
-
-  .toggle-btn--active {
-    background: hsl(var(--primary) / 0.1);
-    border-color: hsl(var(--primary) / 0.3);
-    color: hsl(var(--primary));
-    font-weight: 500;
-  }
-
-  /* Info card row (for toggle options like embeddings) */
-  .info-card-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 1rem;
-    border-radius: 0.5rem;
-    border: 1px solid hsl(var(--border));
-    background: hsl(var(--card));
-    box-shadow: var(--shadow-xs);
-  }
-
-  /* Value display badge (for sliders, counters) */
+/* Value display badge (for sliders, counters) */
   .value-badge {
     font-size: 0.625rem;
     font-family: ui-monospace, monospace;
@@ -978,128 +842,6 @@
 }
 
 @layer utilities {
-
-  /* Auth page layout */
-  .auth-layout {
-    display: flex;
-    min-height: 100vh;
-    align-items: center;
-    justify-content: center;
-    background: hsl(var(--background));
-    padding: 1rem;
-  }
-
-  /* Section spacing utilities */
-  .section-spacing {
-    margin-top: 1rem;
-  }
-
-  .section-spacing-lg {
-    margin-top: 1.5rem;
-  }
-
-  /* Content grid utilities */
-  .content-grid {
-    display: grid;
-    gap: 1rem;
-  }
-
-  .content-grid-2 {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  @media (max-width: 768px) {
-    .content-grid-2 {
-      grid-template-columns: 1fr;
-    }
-  }
-
-  .stats-grid {
-    display: grid;
-    gap: 1rem;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-
-  @media (max-width: 1024px) {
-    .stats-grid {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-  }
-
-  @media (max-width: 640px) {
-    .stats-grid {
-      grid-template-columns: 1fr;
-    }
-  }
-
-  .card-spacing {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-  }
-
-  .content-spacing {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-  }
-
-  .stack-spacing {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-  }
-
-  .stack-spacing-sm {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-  }
-
-  .surface-muted {
-    background: linear-gradient(180deg,
-        hsla(215 22% 94% / 0.85),
-        hsla(215 22% 92% / 0.9));
-  }
-
-  .surface-glow {
-    box-shadow: var(--shadow-glow);
-  }
-
-  @keyframes gradient-shift {
-
-    0%,
-    100% {
-      background-position: 0% 50%;
-    }
-
-    50% {
-      background-position: 100% 50%;
-    }
-  }
-
-  .animate-gradient-shift {
-    background-size: 160% 160%;
-    animation: gradient-shift 12s ease-in-out infinite;
-  }
-
-  @keyframes shimmer {
-    0% {
-      transform: translateX(-100%);
-    }
-
-    100% {
-      transform: translateX(100%);
-    }
-  }
-
-  .animate-shimmer {
-    background: linear-gradient(90deg,
-        transparent,
-        hsla(var(--foreground) / 0.14),
-        transparent);
-    animation: shimmer 2.2s infinite;
-  }
 
   .custom-scrollbar::-webkit-scrollbar {
     width: 10px;
@@ -1122,18 +864,5 @@
 
   .dark .custom-scrollbar::-webkit-scrollbar-thumb {
     background: hsl(var(--muted-foreground) / 0.5);
-  }
-
-  /* Tactile interaction utility */
-  .interactive-touch {
-    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.2s ease, box-shadow 0.2s ease;
-  }
-
-  .interactive-touch:hover {
-    transform: scale(1.05);
-  }
-
-  .interactive-touch:active {
-    transform: scale(0.95);
   }
 }

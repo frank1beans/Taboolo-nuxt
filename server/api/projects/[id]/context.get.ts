@@ -1,7 +1,9 @@
 import { defineEventHandler, createError, getRouterParam } from 'h3';
 import { Types } from 'mongoose';
-import { Estimate, EstimateItem, Project, Offer } from '#models';
-import { serializeDoc } from '#utils/serialize';
+import { Estimate, Project, Offer } from '#models';
+import { listEstimates } from '#services/EstimateService';
+import { listOffers } from '#services/OfferService';
+import { serializeDoc, serializeDocs } from '#utils/serialize';
 
 export default defineEventHandler(async (event) => {
   const id = getRouterParam(event, 'id');
@@ -23,11 +25,11 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 404, statusMessage: 'Project not found' });
   }
 
-  const estimates = await Estimate.find({ project_id: id }).sort({ created_at: -1 }).lean();
+  const estimates = await listEstimates(id);
   const estimateObjectIds = estimates.map((est) => new Types.ObjectId(est._id));
 
   // Fetch associated offers from the new Offer collection
-  const offers = await Offer.find({ project_id: id }).lean();
+  const offers = await listOffers(id);
 
   // Map: EstimateID -> RoundNum -> Map<CompanyName, OfferInfo>
   const hierarchyMap = new Map<string, Map<number, Map<string, { mode: string, id: string }>>>();
@@ -127,7 +129,7 @@ export default defineEventHandler(async (event) => {
 
           return {
             id: String(rNum),
-            name: `Round ${rNum}`,
+            name: `Round ${rNum} `,
             companies: companiesInRound
           };
         })
@@ -142,14 +144,14 @@ export default defineEventHandler(async (event) => {
         priceCatalog: est.price_list_id
           ? {
             id: est.price_list_id,
-            name: est.name ? `Listino ${est.name}` : `Listino ${est.price_list_id}`,
+            name: est.name ? `Listino ${est.name} ` : `Listino ${est.price_list_id} `,
           }
           : undefined,
         rounds,
         companies, // Kept for backward compat if any
         roundsCount: rounds.length,
         companiesCount: companies.length,
-        totalAmount: totalsMap.get(estimateId) || 0,
+        total_amount: totalsMap.get(estimateId) || 0,
       };
     }),
   };

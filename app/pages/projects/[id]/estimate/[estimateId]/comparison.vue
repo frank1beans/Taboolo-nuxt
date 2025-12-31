@@ -1,13 +1,22 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useCurrentContext } from '~/composables/useCurrentContext'
 import { useColorMode } from '#imports'
 import DataGridPage from '~/components/layout/DataGridPage.vue'
 import PageToolbar from '~/components/layout/PageToolbar.vue'
 import { useWbsTree } from '~/composables/useWbsTree'
+import { useSidebarModules } from '~/composables/useSidebarModules'
+import { useAppSidebar } from '~/composables/useAppSidebar'
+import WbsModule from '~/components/sidebar/modules/WbsModule.vue'
+import { formatCurrency, formatNumber } from '~/lib/formatters'
 
-definePageMeta({})
+import ImportWizard from '~/components/projects/ImportWizard.vue'
+
+definePageMeta({
+  disableDefaultSidebar: true,
+})
+
 
 const route = useRoute()
 const router = useRouter()
@@ -74,7 +83,7 @@ interface ComparisonResponse {
   all_imprese: { nome: string }[]
 }
 
-const { data: comparison, status } = await useFetch<ComparisonResponse>(apiUrl, {
+const { data: comparison, status, refresh } = await useFetch<ComparisonResponse>(apiUrl, {
   watch: [apiUrl],
   immediate: true,
 })
@@ -115,14 +124,51 @@ const { wbsNodes, selectedWbsNode, filteredRowData: filteredRows, onWbsNodeSelec
 
 const totalItems = computed(() => filteredRows.value.length)
 
+const wbsButtonTitle = computed(() => {
+  return sidebarVisible.value ? 'Nascondi WBS' : 'Mostra WBS'
+})
+
+// Toggled by button in header
+
+const { registerModule, unregisterModule, toggleVisibility, isVisible: sidebarVisible, setActiveModule, showSidebar } = useSidebarModules()
+const { showDefaultSidebar } = useAppSidebar()
+
+onMounted(() => {
+  registerModule({
+    id: 'wbs',
+    label: 'WBS',
+    icon: 'heroicons:squares-2x2',
+    component: WbsModule,
+    props: {
+      nodes: wbsNodes,
+      selectedNodeId: computed(() => selectedWbsNode.value?.id ?? null),
+      onNodeSelected: (node: typeof selectedWbsNode.value | null) => onWbsNodeSelected(node),
+    },
+  })
+  setActiveModule('wbs')
+})
+
+onUnmounted(() => {
+  unregisterModule('wbs')
+})
+
+const toggleWbsSidebar = () => {
+  if (!sidebarVisible.value) {
+    setActiveModule('wbs')
+    showSidebar()
+  } else {
+    toggleVisibility()
+  }
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // FORMATTERS
 // ─────────────────────────────────────────────────────────────────────────────
 const fmtNumber = (v: number | string | null | undefined) =>
-  new Intl.NumberFormat('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(v) || 0)
+  formatNumber(Number(v) || 0, { minimumFractionDigits: 2, maximumFractionDigits: 2, fallback: '0' })
 
 const fmtCurrency = (v: number | string | null | undefined) =>
-  new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(Number(v) || 0)
+  formatCurrency(Number(v) || 0)
 
 // ─────────────────────────────────────────────────────────────────────────────
 // COLUMN DEFINITIONS (AG Grid)
@@ -360,165 +406,208 @@ const gridConfig = computed(() => ({
 
 // Toolbar State
 const searchText = ref('')
+
+// Import Logic
+const isImportModalOpen = ref(false)
+const handleImportSuccess = async () => {
+  isImportModalOpen.value = false
+  await refresh()
+}
 </script>
 
 <template>
-  <DataGridPage
-    title="Confronto Offerte"
-    subtitle="Round e Imprese"
-    :grid-config="gridConfig"
-    :row-data="filteredRows"
-    :loading="isLoading"
-    empty-state-title="Nessuna voce"
-    empty-state-message="Carica un ritorno di gara per vedere il confronto."
-    
-    :show-toolbar="false"
-    :filter-text="searchText"
-  >
-    <!-- Actions -->
-    <template #header-meta>
-       <div class="flex items-center gap-2">
-         <span class="text-[hsl(var(--muted-foreground))] flex items-center gap-2">
-            <Icon name="heroicons:list-bullet" class="w-4 h-4" />
-            {{ totalItems }} voci
-         </span>
-       </div>
-    </template>
-
-    <!-- Toolbar Slot -->
-    <template #pre-grid>
-      <PageToolbar
-          v-model="searchText"
-          search-placeholder="Cerca voce..."
+  <div class="h-full flex flex-col">
+    <DataGridPage
+      title="Confronto Offerte"
+      subtitle="Round e Imprese"
+      :grid-config="gridConfig"
+      :row-data="filteredRows"
+      :loading="isLoading"
+      empty-state-title="Nessuna voce"
+      empty-state-message="Carica un ritorno di gara per vedere il confronto."
+      
+      :show-toolbar="false"
+      :filter-text="searchText"
+    >
+      <!-- Meta: Item Count -->
+      <template #header-meta>
+         <div class="flex items-center gap-2">
+           <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]">
+              <Icon name="heroicons:list-bullet" class="w-3.5 h-3.5" />
+              {{ totalItems }} voci
+           </span>
+         </div>
+      </template>
+      <template #actions>
+        <UButton
+          color="primary"
+          variant="solid"
+          icon="i-heroicons-arrow-up-tray"
+          size="sm"
+          @click="isImportModalOpen = true"
         >
-          <!-- Left: Search + Active Filters -->
-          <template #left>
-             <div v-if="selectedRound || selectedCompany || selectedWbsNode" class="flex items-center gap-2 ml-4">
-                <UBadge v-if="selectedRound" color="primary" variant="soft" class="gap-1">
-                  <span>Round {{ selectedRound }}</span>
-                  <UButton
-                    icon="i-heroicons-x-mark"
-                    color="primary"
-                    variant="link"
-                    size="xs"
-                    class="p-0 h-4 w-4"
-                    @click="selectedRound = null"
-                  />
-                </UBadge>
-                <UBadge v-if="selectedCompany" color="primary" variant="soft" class="gap-1">
-                  <span>{{ selectedCompany }}</span>
-                  <UButton
-                    icon="i-heroicons-x-mark"
-                    color="primary"
-                    variant="link"
-                    size="xs"
-                    class="p-0 h-4 w-4"
-                    @click="selectedCompany = null"
-                  />
-                </UBadge>
-                <UBadge v-if="selectedWbsNode" color="primary" variant="soft" class="gap-1">
-                  <span>{{ selectedWbsNode.code }}</span>
-                  <UButton
-                    icon="i-heroicons-x-mark"
-                    color="primary"
-                    variant="link"
-                    size="xs"
-                    class="p-0 h-4 w-4"
-                    @click="selectedWbsNode = null"
-                  />
-                </UBadge>
-             </div>
-          </template>
+          Importa Offerta
+        </UButton>
+        <UButton
+          :icon="sidebarVisible ? 'i-heroicons-view-columns' : 'i-heroicons-view-columns'"
+          :color="sidebarVisible ? 'primary' : 'neutral'"
+          variant="ghost"
+          size="sm"
+          :title="wbsButtonTitle"
+          label="WBS"
+          @click="toggleWbsSidebar"
+        />
+      </template>
 
-          <!-- Right: Action Toggles (Filters) -->
-          <template #right>
-            <!-- Round Filter Popover -->
-            <UPopover>
-              <UButton
-                :color="selectedRound ? 'primary' : 'neutral'"
-                :variant="selectedRound ? 'soft' : 'outline'"
-                size="sm"
-                icon="i-heroicons-funnel"
-                trailing-icon="i-heroicons-chevron-down"
-              >
-                {{ selectedRound ? `Round ${selectedRound}` : 'Round' }}
-              </UButton>
-              <template #content>
-                <div class="p-2 min-w-[160px]">
-                  <p class="text-xs font-semibold text-[hsl(var(--muted-foreground))] mb-2 px-2">Seleziona Round</p>
-                  <div class="space-y-1">
-                    <button
-                      class="filter-menu-item"
-                      :class="{ 'filter-menu-item--active': !selectedRound }"
+      <!-- Toolbar Slot -->
+      <template #pre-grid>
+        <ClientOnly>
+          <Teleport to="#topbar-actions-portal">
+        <PageToolbar
+            v-model="searchText"
+            search-placeholder="Cerca voce..."
+            class="!py-0"
+          >
+            <!-- Left: Search + Active Filters -->
+            <template #left>
+               <div v-if="selectedRound || selectedCompany || selectedWbsNode" class="flex items-center gap-2 ml-4">
+                  <UBadge v-if="selectedRound" color="primary" variant="soft" class="gap-1">
+                    <span>Round {{ selectedRound }}</span>
+                    <UButton
+                      icon="i-heroicons-x-mark"
+                      color="primary"
+                      variant="link"
+                      size="xs"
+                      class="p-0 h-4 w-4"
                       @click="selectedRound = null"
-                    >
-                      <UIcon v-if="!selectedRound" name="i-heroicons-check" class="w-4 h-4" />
-                      <span :class="{ 'ml-6': selectedRound }">Tutti i round</span>
-                    </button>
-                    <button
-                      v-for="r in roundOptions"
-                      :key="r.numero"
-                      class="filter-menu-item"
-                      :class="{ 'filter-menu-item--active': selectedRound === String(r.numero) }"
-                      @click="selectedRound = String(r.numero)"
-                    >
-                      <UIcon v-if="selectedRound === String(r.numero)" name="i-heroicons-check" class="w-4 h-4" />
-                      <span :class="{ 'ml-6': selectedRound !== String(r.numero) }">{{ r.label }}</span>
-                    </button>
-                  </div>
-                </div>
-              </template>
-            </UPopover>
-
-            <!-- Company Filter Popover -->
-            <UPopover>
-              <UButton
-                :color="selectedCompany ? 'primary' : 'neutral'"
-                :variant="selectedCompany ? 'soft' : 'outline'"
-                size="sm"
-                icon="i-heroicons-building-office-2"
-                trailing-icon="i-heroicons-chevron-down"
-              >
-                {{ selectedCompany || 'Impresa' }}
-              </UButton>
-              <template #content>
-                <div class="p-2 min-w-[180px]">
-                  <p class="text-xs font-semibold text-[hsl(var(--muted-foreground))] mb-2 px-2">Seleziona Impresa</p>
-                  <div class="space-y-1">
-                    <button
-                      class="filter-menu-item"
-                      :class="{ 'filter-menu-item--active': !selectedCompany }"
+                    />
+                  </UBadge>
+                  <UBadge v-if="selectedCompany" color="primary" variant="soft" class="gap-1">
+                    <span>{{ selectedCompany }}</span>
+                    <UButton
+                      icon="i-heroicons-x-mark"
+                      color="primary"
+                      variant="link"
+                      size="xs"
+                      class="p-0 h-4 w-4"
                       @click="selectedCompany = null"
-                    >
-                      <UIcon v-if="!selectedCompany" name="i-heroicons-check" class="w-4 h-4" />
-                      <span :class="{ 'ml-6': selectedCompany }">Tutte le imprese</span>
-                    </button>
-                    <button
-                      v-for="c in companyOptions"
-                      :key="c.nome"
-                      class="filter-menu-item"
-                      :class="{ 'filter-menu-item--active': selectedCompany === c.nome }"
-                      @click="selectedCompany = c.nome"
-                    >
-                      <UIcon v-if="selectedCompany === c.nome" name="i-heroicons-check" class="w-4 h-4" />
-                      <span :class="{ 'ml-6': selectedCompany !== c.nome }">{{ c.nome }}</span>
-                    </button>
-                  </div>
-                </div>
-              </template>
-            </UPopover>
-          </template>
-      </PageToolbar>
-    </template>
+                    />
+                  </UBadge>
+                  <UBadge v-if="selectedWbsNode" color="primary" variant="soft" class="gap-1">
+                    <span>{{ selectedWbsNode.code }}</span>
+                    <UButton
+                      icon="i-heroicons-x-mark"
+                      color="primary"
+                      variant="link"
+                      size="xs"
+                      class="p-0 h-4 w-4"
+                      @click="selectedWbsNode = null"
+                    />
+                  </UBadge>
+               </div>
+            </template>
 
-    <!-- Sidebar -->
-    <template #sidebar>
-      <WbsSidebar
-        v-if="wbsNodes.length > 0"
-        :nodes="wbsNodes"
-        :visible="true"
-        @node-selected="onWbsNodeSelected"
-      />
-    </template>
-  </DataGridPage>
+            <!-- Right: Action Toggles (Filters) -->
+            <template #right>
+              <!-- Round Filter Popover -->
+              <UPopover>
+                <UButton
+                  :color="selectedRound ? 'primary' : 'neutral'"
+                  :variant="selectedRound ? 'soft' : 'outline'"
+                  size="sm"
+                  icon="i-heroicons-funnel"
+                  trailing-icon="i-heroicons-chevron-down"
+                >
+                  {{ selectedRound ? `Round ${selectedRound}` : 'Round' }}
+                </UButton>
+                <template #content>
+                  <div class="p-2 min-w-[160px]">
+                    <p class="text-xs font-semibold text-[hsl(var(--muted-foreground))] mb-2 px-2">Seleziona Round</p>
+                    <div class="space-y-1">
+                      <button
+                        class="filter-menu-item"
+                        :class="{ 'filter-menu-item--active': !selectedRound }"
+                        @click="selectedRound = null"
+                      >
+                        <UIcon v-if="!selectedRound" name="i-heroicons-check" class="w-4 h-4" />
+                        <span :class="{ 'ml-6': selectedRound }">Tutti i round</span>
+                      </button>
+                      <button
+                        v-for="r in roundOptions"
+                        :key="r.numero"
+                        class="filter-menu-item"
+                        :class="{ 'filter-menu-item--active': selectedRound === String(r.numero) }"
+                        @click="selectedRound = String(r.numero)"
+                      >
+                        <UIcon v-if="selectedRound === String(r.numero)" name="i-heroicons-check" class="w-4 h-4" />
+                        <span :class="{ 'ml-6': selectedRound !== String(r.numero) }">{{ r.label }}</span>
+                      </button>
+                    </div>
+                  </div>
+                </template>
+              </UPopover>
+
+              <!-- Company Filter Popover -->
+              <UPopover>
+                <UButton
+                  :color="selectedCompany ? 'primary' : 'neutral'"
+                  :variant="selectedCompany ? 'soft' : 'outline'"
+                  size="sm"
+                  icon="i-heroicons-building-office-2"
+                  trailing-icon="i-heroicons-chevron-down"
+                >
+                  {{ selectedCompany || 'Impresa' }}
+                </UButton>
+                <template #content>
+                  <div class="p-2 min-w-[180px]">
+                    <p class="text-xs font-semibold text-[hsl(var(--muted-foreground))] mb-2 px-2">Seleziona Impresa</p>
+                    <div class="space-y-1">
+                      <button
+                        class="filter-menu-item"
+                        :class="{ 'filter-menu-item--active': !selectedCompany }"
+                        @click="selectedCompany = null"
+                      >
+                        <UIcon v-if="!selectedCompany" name="i-heroicons-check" class="w-4 h-4" />
+                        <span :class="{ 'ml-6': selectedCompany }">Tutte le imprese</span>
+                      </button>
+                      <button
+                        v-for="c in companyOptions"
+                        :key="c.nome"
+                        class="filter-menu-item"
+                        :class="{ 'filter-menu-item--active': selectedCompany === c.nome }"
+                        @click="selectedCompany = c.nome"
+                      >
+                        <UIcon v-if="selectedCompany === c.nome" name="i-heroicons-check" class="w-4 h-4" />
+                        <span :class="{ 'ml-6': selectedCompany !== c.nome }">{{ c.nome }}</span>
+                      </button>
+                    </div>
+                  </div>
+                </template>
+              </UPopover>
+            </template>
+        </PageToolbar>
+          </Teleport>
+        </ClientOnly>
+      </template>
+
+    </DataGridPage>
+
+    <Teleport to="body">
+      <!-- Import Wizard Modal -->
+      <div v-if="isImportModalOpen" class="fixed inset-0 z-[100] flex items-center justify-center px-4 py-6">
+        <div 
+          class="absolute inset-0 bg-black/50 dark:bg-black/60 backdrop-blur-sm transition-opacity"
+          @click="isImportModalOpen = false"
+        />
+        <div class="relative z-[105] w-full max-w-5xl h-[85vh] rounded-xl shadow-2xl overflow-hidden bg-[hsl(var(--card))] border border-[hsl(var(--border))] flex flex-col">
+           <ImportWizard 
+             :project-id="projectId"
+             :estimate-id="estimateId"
+             @success="handleImportSuccess"
+             @close="isImportModalOpen = false"
+           />
+        </div>
+      </div>
+    </Teleport>
+  </div>
 </template>

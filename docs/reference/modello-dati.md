@@ -200,8 +200,10 @@ Scopo:
 
 Campi principali:
 
-- `project_id`, `offer_id`, `offer_item_id`
+- `project_id`, `estimate_id`, `offer_id`, `offer_item_id`
 - `type`: `price_mismatch | quantity_mismatch | code_mismatch | ambiguous_match | addendum`
 - `severity`: `info | warning | error`
+- `status`: `open | resolved | ignored`
+- `resolved_at`, `resolution_note`
 - `actual`, `expected`, `delta`
 - `code`, `baseline_code`

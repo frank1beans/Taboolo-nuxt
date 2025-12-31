@@ -1,16 +1,13 @@
 
-import { defineEventHandler, getRouterParam, getQuery, createError } from 'h3';
+import { defineEventHandler, getQuery, createError } from 'h3';
 import { PriceListItem } from '#models';
+import { requireObjectIdParam, toObjectId } from '#utils/validate';
 
 export default defineEventHandler(async (event) => {
-    const id = getRouterParam(event, 'id');
+    const id = requireObjectIdParam(event, 'id', 'Project ID');
     const query = getQuery(event);
     const mode = query.mode === '3d' ? '3d' : '2d';
     const limit = Math.min(Number(query.limit ?? 8000), 20000);
-
-    if (!id) {
-        throw createError({ statusCode: 400, statusMessage: 'Project ID required' });
-    }
 
     try {
         const mapField = mode === '3d' ? 'map3d' : 'map2d';
@@ -27,7 +24,7 @@ export default defineEventHandler(async (event) => {
         };
 
         const filter = {
-            project_id: id,
+            project_id: toObjectId(id),
             [mapField]: { $exists: true }
         };
 
@@ -46,7 +43,7 @@ export default defineEventHandler(async (event) => {
         return docs.map((d: any) => ({
             id: d._id.toString(),
             cluster: d.cluster ?? -1,
-            label: d.code ? `${d.code} — ${d.description}` : (d.description ?? ""),
+            label: d.code ? `${d.code} - ${d.description}` : (d.description ?? ""),
             price: d.price ?? null,
             unit: d.unit ?? null,
             ...(mode === '3d'
@@ -64,3 +61,4 @@ export default defineEventHandler(async (event) => {
         });
     }
 });
+

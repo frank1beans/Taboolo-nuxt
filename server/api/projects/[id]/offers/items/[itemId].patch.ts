@@ -1,14 +1,11 @@
-import { defineEventHandler, createError, getRouterParam, readBody } from 'h3';
+import { defineEventHandler, createError, readBody } from 'h3';
 import { Types } from 'mongoose';
-import { OfferItem } from '#models';
+import { OfferAlert, OfferItem } from '#models';
+import { requireObjectIdParam, toObjectId } from '#utils/validate';
 
 export default defineEventHandler(async (event) => {
-  const projectId = getRouterParam(event, 'id');
-  const itemId = getRouterParam(event, 'itemId');
-
-  if (!projectId || !itemId) {
-    throw createError({ statusCode: 400, statusMessage: 'Project ID and item ID required' });
-  }
+  const projectId = requireObjectIdParam(event, 'id', 'Project ID');
+  const itemId = requireObjectIdParam(event, 'itemId', 'Item ID');
 
   const body = await readBody<{ price_list_item_id?: string }>(event);
   const pliId = body?.price_list_item_id;
@@ -17,8 +14,8 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'Valid price_list_item_id required' });
   }
 
-  const projectObjectId = new Types.ObjectId(projectId);
-  const itemObjectId = new Types.ObjectId(itemId);
+  const projectObjectId = toObjectId(projectId);
+  const itemObjectId = toObjectId(itemId);
   const pliObjectId = new Types.ObjectId(pliId);
 
   const item = await OfferItem.findOne({ _id: itemObjectId, project_id: projectObjectId });
@@ -32,6 +29,21 @@ export default defineEventHandler(async (event) => {
   item.origin = 'baseline';
 
   await item.save();
+
+  await OfferAlert.updateMany(
+    {
+      project_id: projectObjectId,
+      offer_item_id: itemObjectId,
+      status: { $in: ['open', null] },
+    },
+    {
+      $set: {
+        status: 'resolved',
+        resolved_at: new Date(),
+        resolution_note: 'Mapped to price list item',
+      },
+    },
+  );
 
   return { success: true };
 });

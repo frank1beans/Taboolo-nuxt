@@ -1,44 +1,85 @@
 <template>
-  <div class="flex flex-wrap items-center gap-4 py-4 bg-transparent w-full">
+  <div class="page-toolbar flex items-center gap-4 py-1 w-full">
     <!-- Search / Left Slot -->
-    <div class="flex items-center gap-2 flex-1 min-w-[320px]">
-      <!-- Default Search Implementation -->
-      <div v-if="showSearch" class="relative w-full max-w-lg">
+    <div class="flex items-center gap-3 flex-1">
+      
+      <!-- Desktop Search (Visible on md+) -->
+      <div v-if="showSearch" class="hidden md:block search-container relative flex-1 max-w-2xl">
         <Icon 
           name="heroicons:magnifying-glass" 
-          class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 pointer-events-none text-[hsl(var(--muted-foreground))]"
+          class="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none text-[hsl(var(--muted-foreground)/0.5)]"
         />
-        <UInput
-          :model-value="modelValue"
+        <input
+          :value="modelValue"
           :placeholder="searchPlaceholder"
-          size="xl"
-          variant="none"
-          class="w-full"
-          :ui="{
-            base: 'w-full h-9 pl-11 pr-4 bg-[hsl(var(--background))] border border-transparent hover:border-[hsl(var(--border))] focus:border-[hsl(var(--primary))] rounded-xl transition-all shadow-sm text-[hsl(var(--foreground))] placeholder-[hsl(var(--muted-foreground))]'
-          }"
-          @update:model-value="(val) => $emit('update:modelValue', val)"
+          class="w-full h-8 pl-9 pr-8 
+                 bg-transparent
+                 border-none
+                 rounded-md
+                 text-sm text-[hsl(var(--foreground))] 
+                 placeholder:text-[hsl(var(--muted-foreground)/0.5)]
+                 transition-colors duration-150
+                 hover:bg-[hsl(var(--muted)/0.3)]
+                 focus:bg-[hsl(var(--muted)/0.4)]
+                 focus:outline-none"
+          @input="$emit('update:modelValue', ($event.target as HTMLInputElement).value)"
           @keydown.enter.prevent="$emit('search')"
-          @clear="$emit('update:modelValue', '')"
         >
-          <template #trailing v-if="modelValue">
-             <UButton
-              color="neutral"
-              variant="link"
-              icon="i-heroicons-x-mark-20-solid"
-              :padded="false"
-              @click="$emit('update:modelValue', '')"
-            />
-          </template>
-        </UInput>
+        <!-- Clear button -->
+        <button
+          v-if="modelValue"
+          class="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded
+                 text-[hsl(var(--muted-foreground)/0.5)] 
+                 hover:text-[hsl(var(--foreground))]
+                 transition-colors"
+          @click="$emit('update:modelValue', '')"
+        >
+          <Icon name="heroicons:x-mark" class="w-3.5 h-3.5" />
+        </button>
       </div>
+
+       <!-- Mobile Search (Visible on < md) -->
+       <div v-if="showSearch" class="block md:hidden">
+          <UPopover mode="click" :popper="{ placement: 'bottom-start' }">
+             <UButton 
+               icon="i-heroicons-magnifying-glass" 
+               color="gray" 
+               variant="ghost" 
+               class="text-[hsl(var(--muted-foreground))]" 
+             />
+             <template #panel>
+                <div class="p-2 w-64">
+                   <div class="relative w-full">
+                      <Icon 
+                        name="heroicons:magnifying-glass" 
+                        class="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none text-[hsl(var(--muted-foreground)/0.5)]"
+                      />
+                      <input
+                        :value="modelValue"
+                        :placeholder="searchPlaceholder"
+                        class="w-full h-8 pl-9 pr-8 
+                              bg-[hsl(var(--muted)/0.3)]
+                              border-none
+                              rounded-md
+                              text-sm text-[hsl(var(--foreground))] 
+                              placeholder:text-[hsl(var(--muted-foreground)/0.5)]
+                              focus:bg-[hsl(var(--muted)/0.5)]
+                              focus:outline-none"
+                        autofocus
+                        @input="$emit('update:modelValue', ($event.target as HTMLInputElement).value)"
+                        @keydown.enter.prevent="$emit('search')"
+                      >
+                   </div>
+                </div>
+             </template>
+          </UPopover>
+       </div>
       
-      <!-- Optional Extra Left Content -->
       <slot name="left" />
     </div>
     
-    <!-- Right Actions -->
-    <div class="flex items-center gap-3 justify-end">
+    <!-- Right Actions - Notion-style minimal buttons -->
+    <div class="flex items-center gap-1.5">
       <slot name="right" />
     </div>
   </div>

@@ -1,25 +1,22 @@
-import { defineEventHandler, createError, getRouterParam, getQuery } from 'h3';
-import mongoose from 'mongoose';
+import { defineEventHandler, createError, getQuery } from 'h3';
 import { PriceListItem } from '#models';
 import { serializeDocs } from '#utils/serialize';
+import { requireObjectId, requireObjectIdParam, toObjectId } from '#utils/validate';
 
 export default defineEventHandler(async (event) => {
-  const projectId = getRouterParam(event, 'id');
-  if (!projectId) {
-    throw createError({ statusCode: 400, statusMessage: 'Project ID required' });
-  }
+  const projectId = requireObjectIdParam(event, 'id', 'Project ID');
 
   try {
     // Aggregation to join WBS nodes and extract Level 6 & 7
-    const query: Record<string, unknown> = { project_id: new mongoose.Types.ObjectId(projectId) };
+    const query: Record<string, unknown> = { project_id: toObjectId(projectId) };
 
-  const queryParams = getQuery(event);
-  const estimateId = queryParams.estimate_id?.toString();
+    const queryParams = getQuery(event);
+    const estimateId = queryParams.estimate_id?.toString();
 
-  if (!estimateId) {
-    throw createError({ statusCode: 400, statusMessage: 'Estimate ID required' });
-  }
-  query.estimate_id = new mongoose.Types.ObjectId(estimateId);
+    if (!estimateId) {
+      throw createError({ statusCode: 400, statusMessage: 'Estimate ID required' });
+    }
+    query.estimate_id = toObjectId(requireObjectId(estimateId, 'Estimate ID'));
 
     const items = await PriceListItem.aggregate([
       { $match: query },

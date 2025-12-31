@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url';
 
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
-  devtools: { enabled: true },
+  devtools: { enabled: process.env.NODE_ENV !== 'production' },
 
   // Custom Loading Indicator Color (Green)
   app: {
@@ -50,14 +50,17 @@ export default defineNuxtConfig({
 
   alias: {
     '@': fileURLToPath(new URL('./app', import.meta.url)),
+    '#types': fileURLToPath(new URL('./types', import.meta.url)),
   },
 
   nitro: {
     alias: {
       '#models': fileURLToPath(new URL('./server/models', import.meta.url)),
       '#utils': fileURLToPath(new URL('./server/utils', import.meta.url)),
-      '#importers': fileURLToPath(new URL('./server/importers', import.meta.url)),
+      '#types': fileURLToPath(new URL('./types', import.meta.url)),
+      '#repositories': fileURLToPath(new URL('./server/repositories', import.meta.url)),
       '#services': fileURLToPath(new URL('./server/services', import.meta.url)),
+      '#importers': fileURLToPath(new URL('./server/importers', import.meta.url)),
     },
     imports: {
       dirs: ['./server/models', './server/utils', './server/importers']
@@ -76,5 +79,7 @@ export default defineNuxtConfig({
     },
     mongodbUri: process.env.MONGODB_URI || '',
     pythonApiBaseUrl: process.env.PYTHON_API_URL || 'http://localhost:8000/api/v1',
+    pythonProxyMaxUploadMb: Number(process.env.PYTHON_PROXY_MAX_UPLOAD_MB || 100),
+    pythonProxyTimeoutMs: Number(process.env.PYTHON_PROXY_TIMEOUT_MS || 600000),
   },
 });

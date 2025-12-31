@@ -1,18 +1,19 @@
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount, computed } from 'vue';
 import { useRouter } from 'vue-router';
-import type { Project } from '~/types/project';
-import DataGridActions from '~/components/data-grid/DataGridActions.vue';
-import StatusBadgeRenderer from '~/components/data-grid/StatusBadgeRenderer.vue';
+import type { GridApi, GridReadyEvent } from 'ag-grid-community';
+import type { Project } from '#types';
 import { useProjectCrud } from '~/composables/useProjectCrud';
 import { useProjectForm } from '~/composables/useProjectForm';
 import ProjectFormModal from '~/components/projects/ProjectFormModal.vue';
+import { useAppSidebar } from '~/composables/useAppSidebar';
 import { useCurrentContext } from '~/composables/useCurrentContext';
-import { useProjectGridConfig } from '~/composables/projects/useProjectGridConfig';
-import DataGridPage from '~/components/layout/DataGridPage.vue';
-import PageToolbar from '~/components/layout/PageToolbar.vue';
 
-definePageMeta({});
+
+definePageMeta({
+  title: 'Progetti',
+  disableDefaultSidebar: true,
+});
 const { loading, fetchProjects } = useProjects();
 const router = useRouter();
 const { currentProject } = useCurrentContext();
@@ -34,15 +35,6 @@ const { setCurrentProject } = useCurrentContext();
 // Modal form state
 const { showModal, formMode, form, openCreateModal, openEditModal, closeModal } = useProjectForm();
 
-// Grid Config composable
-const { gridConfig } = useProjectGridConfig(rowData);
-
-// Add row highlighting for last active project
-gridConfig.rowClassRules = {
-  'font-bold bg-[hsl(var(--primary)/0.05)]': (params: { data?: Project }) =>
-    !!params.data && params.data.id === lastActiveProjectId.value,
-};
-
 const loadProjects = async () => {
   const data = await reloadProjectsApi(defaultFetchParams);
   rowData.value = data;
@@ -51,6 +43,8 @@ const loadProjects = async () => {
 // Load initial data
 onMounted(async () => {
   try {
+    // Hide default sidebar (project tree) on list page
+
     // Capture last active project before clearing
     if (currentProject.value?.id) {
       lastActiveProjectId.value = currentProject.value.id;
@@ -62,6 +56,10 @@ onMounted(async () => {
   } catch (error) {
     console.error('Failed to load projects:', error);
   }
+});
+
+onBeforeUnmount(() => {
+  clearRowClickTimeout();
 });
 
 // Debounced navigation to avoid firing alongside double-click edit
@@ -86,17 +84,6 @@ const handleRowClick = (row: Project) => {
     rowClickTimeout.value = null;
   }, 200);
 };
-
-// Row double click handler - open project detail
-const handleRowDoubleClick = (row: Project) => {
-  clearRowClickTimeout();
-  // Same behavior as single click (navigate)
-  handleRowClick(row);
-};
-
-onBeforeUnmount(() => {
-  clearRowClickTimeout();
-});
 
 const submitForm = async () => {
   try {
@@ -131,115 +118,93 @@ const deleteProject = async (row: Project) => {
   }
 };
 
-const activeCount = computed(() => rowData.value.filter(p => p.status === 'in_progress').length);
-const setupCount = computed(() => rowData.value.filter(p => p.status === 'setup').length);
+// Grid API for export
+const gridApi = ref<GridApi | null>(null);
+const { exportToXlsx } = useDataGridExport(gridApi);
 
-const contextExtras = computed(() => ({
-  rowActions: {
-    open: handleRowClick,
-    edit: openEditModal,
-    remove: deleteProject,
-  },
-}));
-
-// Toolbar State
-const searchText = ref('');
-const gridPageRef = ref<any>(null); // Ref to DataGridPage to update grid? 
-// Actually DataGridPage wraps DataGrid. We can access DataGrid via DataGridPage if we put a ref on it?
-// Or we can just bind prop filterText to DataGridPage and pass it down.
-// DataGridPage passes attrs to DataGrid. So if we pass :filter-text to DataGridPage, it should fall through to DataGrid.
-
-const dataGridRef = ref<any>(null); // We need this to call export/columns if not available via wrapper
-// Assuming DataGridPage passes through or we can access via chain.
-// Actually DataGridPage slot `pre-grid` is inside.
-// Wait, DataGridPage doesn't expose the inner DataGrid ref.
-// But we pass export-filename prop.
-// To handle "Reset", we just clear searchText.
-// To handle "Filtra", we just assume typing filters (it's quick filter).
-// To handle "Export", we need access to grid API.
-// DataGridPage emits `grid-ready`. We can capture API there.
-
-const gridApi = ref<any>(null);
-const onGridReady = (params: any) => {
+const handleGridReady = (params: GridReadyEvent<Project>) => {
   gridApi.value = params.api;
 };
 
 const handleExport = () => {
-  gridApi.value?.exportDataAsExcel({ fileName: 'progetti-commesse' });
+  exportToXlsx('progetti-commesse');
 };
 
-// Reset: Clear filter text
-const handleReset = () => {
-  searchText.value = '';
-  gridApi.value?.setFilterModel(null); // Clear other filters too?
+const handleAnalytics = (row: Project) => {
+  router.push(`/projects/${row.id}/analytics`);
 };
+
+const activeCount = computed(() => rowData.value.filter(p => p.status === 'in_progress').length);
+const setupCount = computed(() => rowData.value.filter(p => p.status === 'setup').length);
+const warningCount = computed(() => rowData.value.filter(p => !p.description || p.status === 'setup').length);
+
 </script>
 
 <template>
-  <div class="h-full flex flex-col">
-    <DataGridPage
-      title="Progetti"
-      :grid-config="gridConfig"
-      :row-data="rowData"
+  <div class="h-full flex flex-col bg-[hsl(var(--background))]">
+    <ProjectsTable
+      :projects="rowData"
       :loading="loading"
-      row-selection="single"
-      
-      :show-toolbar="false"
-      :filter-text="searchText"
-
-      empty-state-title="Nessun progetto trovato"
-      empty-state-message="Non ci sono progetti da visualizzare. Crea il tuo primo progetto per iniziare."
-      :custom-components="{ actionsRenderer: DataGridActions, statusBadgeRenderer: StatusBadgeRenderer }"
-      :context-extras="contextExtras"
-      @row-dblclick="handleRowDoubleClick"
-      @grid-ready="onGridReady"
+      :last-active-project-id="lastActiveProjectId"
+      @open="handleRowClick"
+      @edit="openEditModal"
+      @remove="deleteProject"
+      @analytics="handleAnalytics"
+      @grid-ready="(params: any) => handleGridReady(params)"
     >
+      <!-- Header Metrics -->
       <template #header-meta>
         <div class="flex items-center gap-2">
-          <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]">
-            {{ rowData.length }} progetti
-          </span>
-          <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
-            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-            {{ activeCount }} attivi
-          </span>
-          <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-500/15 text-amber-600 dark:text-amber-400">
-            <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-            {{ setupCount }} in setup
-          </span>
+          <UBadge variant="subtle" color="neutral" class="px-2 py-0.5 rounded-full ring-1 ring-[hsl(var(--border)/0.5)]">
+            <Icon name="i-heroicons-folder" class="w-3.5 h-3.5 mr-1.5 text-[hsl(var(--muted-foreground))]" />
+            <span class="font-semibold text-xs">{{ rowData.length }}</span>
+            <span class="ml-1 text-[10px] uppercase tracking-wider opacity-60 font-bold">Totali</span>
+          </UBadge>
+          <UBadge variant="subtle" color="primary" class="px-2 py-0.5 rounded-full ring-1 ring-[hsl(var(--primary)/0.2)]">
+             <Icon name="i-heroicons-play-circle" class="w-3.5 h-3.5 mr-1.5" />
+             <span class="font-semibold text-xs">{{ activeCount }}</span>
+             <span class="ml-1 text-[10px] uppercase tracking-wider opacity-60 font-bold">In corso</span>
+          </UBadge>
+          <UBadge variant="subtle" color="neutral" class="px-2 py-0.5 rounded-full ring-1 ring-[hsl(var(--border)/0.5)] text-slate-500">
+             <Icon name="i-heroicons-cog-6-tooth" class="w-3.5 h-3.5 mr-1.5" />
+             <span class="font-semibold text-xs">{{ setupCount }}</span>
+             <span class="ml-1 text-[10px] uppercase tracking-wider opacity-60 font-bold">Setup</span>
+          </UBadge>
+          <UBadge v-if="warningCount > 0" variant="subtle" color="warning" class="px-2 py-0.5 rounded-full ring-1 ring-[hsl(var(--warning)/0.2)]">
+             <Icon name="i-heroicons-exclamation-triangle" class="w-3.5 h-3.5 mr-1.5" />
+             <span class="font-semibold text-xs">{{ warningCount }}</span>
+             <span class="ml-1 text-[10px] uppercase tracking-wider opacity-60 font-bold">Attenzione</span>
+          </UBadge>
         </div>
       </template>
 
-      <!-- Unified Toolbar: Search left, ALL actions right -->
-      <template #pre-grid>
-        <PageToolbar
-          v-model="searchText"
-          search-placeholder="Filtra per codice, nome, descrizione, BU..."
-        >
-          <template #right>
-            <!-- Reset (only when filtering) -->
-            <button
-              v-if="searchText"
-              class="flex items-center justify-center h-9 px-4 rounded-full text-sm font-medium text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))] transition-colors"
-              @click="handleReset"
-            >
-              <Icon name="heroicons:arrow-path" class="w-4 h-4 mr-2" />
-              Reset
-            </button>
+      <!-- Toolbar Actions -->
+      <template #toolbar-actions>
+        <div class="flex items-center gap-2">
+          <UButton 
+            color="neutral" 
+            variant="ghost" 
+            size="sm" 
+            icon="i-heroicons-arrow-down-tray" 
+            class="text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
+            @click="handleExport"
+          >
+            Esporta
+          </UButton>
 
-            <!-- Export -->
-            <UButton color="neutral" variant="outline" size="sm" icon="i-heroicons-arrow-down-tray" @click="handleExport">
-              Esporta
-            </UButton>
-
-            <!-- Primary Action -->
-            <UButton color="primary" size="sm" icon="i-heroicons-plus" @click="openCreateModal">
-              Nuovo progetto
-            </UButton>
-          </template>
-        </PageToolbar>
+          <UButton 
+            color="primary" 
+            variant="solid"
+            size="sm" 
+            icon="i-heroicons-plus" 
+            class="shadow-sm shadow-primary/20"
+            @click="openCreateModal"
+          >
+            Nuovo progetto
+          </UButton>
+        </div>
       </template>
-    </DataGridPage>
+    </ProjectsTable>
 
     <ClientOnly>
       <ProjectFormModal

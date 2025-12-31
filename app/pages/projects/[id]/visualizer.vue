@@ -23,12 +23,12 @@
                 <label class="text-xs text-gray-600 dark:text-gray-400">Modalità vista</label>
                 <div class="bg-gray-200 dark:bg-gray-800 p-1 rounded-lg flex">
                   <button 
-                    @click="setMode('2d')"
                     :class="['flex-1 py-1 px-2 rounded-md text-xs font-semibold transition-all', mode === '2d' ? 'bg-white dark:bg-gray-700 shadow text-primary-600' : 'text-gray-500']"
+                    @click="setMode('2d')"
                   >2D</button>
                   <button 
-                    @click="setMode('3d')"
                     :class="['flex-1 py-1 px-2 rounded-md text-xs font-semibold transition-all', mode === '3d' ? 'bg-white dark:bg-gray-700 shadow text-indigo-600' : 'text-gray-500']"
+                    @click="setMode('3d')"
                   >3D <span class="text-[9px] opacity-60">beta</span></button>
                 </div>
               </div>
@@ -40,11 +40,11 @@
                   <span class="text-xs font-mono bg-gray-200 dark:bg-gray-700 px-1 rounded">{{ pointSize }}px</span>
                 </div>
                 <input 
-                  type="range" 
                   v-model.number="pointSize" 
+                  type="range" 
                   min="2" max="20" step="1"
                   class="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer dark:bg-gray-600 accent-primary-500"
-                />
+                >
               </div>
 
               <!-- Show Poles Toggle -->
@@ -72,17 +72,17 @@
       <!-- Tab Switch -->
       <div class="flex border-b border-gray-200 dark:border-gray-800">
         <button 
-          @click="activeTab = 'explore'"
           :class="['flex-1 py-2.5 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors', 
             activeTab === 'explore' ? 'border-b-2 border-primary-500 text-primary-600' : 'text-gray-500 hover:text-gray-700']"
+          @click="activeTab = 'explore'"
         >
           <UIcon name="i-heroicons-magnifying-glass" class="w-3.5 h-3.5" />
           Esplora
         </button>
         <button 
-          @click="activeTab = 'analysis'"
           :class="['flex-1 py-2.5 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors', 
             activeTab === 'analysis' ? 'border-b-2 border-primary-500 text-primary-600' : 'text-gray-500 hover:text-gray-700']"
+          @click="activeTab = 'analysis'"
         >
           <UIcon name="i-heroicons-chart-bar" class="w-3.5 h-3.5" />
           Analisi
@@ -100,11 +100,11 @@
         <div class="relative">
           <input 
             v-model="searchQuery" 
-            @keydown.enter="handleSearch"
-            type="text" 
+            type="text"
             placeholder="Cerca..." 
-            class="w-full pl-8 pr-2 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 border-none text-sm focus:ring-2 focus:ring-primary-500 placeholder-gray-400"
-          />
+            class="w-full pl-8 pr-2 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 border-none text-sm focus:ring-2 focus:ring-primary-500 placeholder-gray-400" 
+            @keydown.enter="handleSearch"
+          >
           <UIcon name="i-heroicons-magnifying-glass" class="absolute left-2.5 top-2.5 text-gray-400" />
         </div>
       </div>
@@ -126,8 +126,8 @@
           <h3 class="font-bold text-[10px] uppercase tracking-wider text-gray-400">Clusters</h3>
           <button 
             v-if="clusters.length > 5" 
-            @click="showAllClusters = !showAllClusters"
             class="text-[10px] text-primary-500 hover:underline"
+            @click="showAllClusters = !showAllClusters"
           >
             {{ showAllClusters ? 'Mostra meno' : `+${clusters.length - 5} altri` }}
           </button>
@@ -136,16 +136,17 @@
           <button 
             v-for="cluster in visibleClusters" 
             :key="cluster.id"
-            @click="toggleCluster(cluster.id)"
             class="w-full text-left group"
+            @click="toggleCluster(cluster.id)"
           >
-            <div :class="['px-2 py-1.5 rounded flex justify-between items-center text-xs transition-colors', 
+            <div
+:class="['px-2 py-1.5 rounded flex justify-between items-center text-xs transition-colors', 
                 selectedCluster === cluster.id 
                     ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400' 
                     : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400']"
             >
               <span class="flex items-center gap-2 truncate">
-                <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" :style="{ backgroundColor: getClusterColor(cluster.id) }"></span>
+                <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" :style="{ backgroundColor: getClusterColor(cluster.id) }"/>
                 <span class="truncate">Cluster {{ cluster.id }}</span>
               </span>
               <span class="text-[10px] opacity-60 bg-gray-200 dark:bg-gray-700 px-1.5 rounded-full">{{ cluster.count }}</span>
@@ -211,11 +212,11 @@
                 <span class="text-[10px] font-mono bg-gray-200 dark:bg-gray-700 px-1 rounded">{{ priceAnalysis.params.topK }}</span>
               </div>
               <input 
-                type="range" 
                 v-model.number="priceAnalysis.params.topK" 
+                type="range" 
                 min="10" max="50" step="5"
                 class="w-full h-1.5 bg-gray-300 rounded-lg appearance-none cursor-pointer dark:bg-gray-600 accent-primary-500"
-              />
+              >
             </div>
             
             <!-- Min Similarity -->
@@ -225,11 +226,11 @@
                 <span class="text-[10px] font-mono bg-gray-200 dark:bg-gray-700 px-1 rounded">{{ priceAnalysis.params.minSimilarity.toFixed(2) }}</span>
               </div>
               <input 
-                type="range" 
                 v-model.number="priceAnalysis.params.minSimilarity" 
+                type="range" 
                 min="0.3" max="0.9" step="0.05"
                 class="w-full h-1.5 bg-gray-300 rounded-lg appearance-none cursor-pointer dark:bg-gray-600 accent-primary-500"
-              />
+              >
             </div>
             
             <!-- MAD Threshold -->
@@ -239,20 +240,20 @@
                 <span class="text-[10px] font-mono bg-gray-200 dark:bg-gray-700 px-1 rounded">{{ priceAnalysis.params.madThreshold }}</span>
               </div>
               <input 
-                type="range" 
                 v-model.number="priceAnalysis.params.madThreshold" 
+                type="range" 
                 min="1" max="4" step="0.5"
                 class="w-full h-1.5 bg-gray-300 rounded-lg appearance-none cursor-pointer dark:bg-gray-600 accent-primary-500"
-              />
+              >
             </div>
             
             <!-- Run Button -->
             <UButton 
               block 
               color="primary" 
-              @click="runPriceAnalysis" 
-              :loading="priceAnalysis.isLoading.value"
+              :loading="priceAnalysis.isLoading.value" 
               icon="i-heroicons-play"
+              @click="runPriceAnalysis"
             >
               Esegui Analisi
             </UButton>
@@ -278,8 +279,8 @@
             <button 
               v-for="item in priceAnalysis.outlierItems.value.slice(0, 10)" 
               :key="item.item_id"
-              @click="navigateToOutlier(item.item_id)"
               class="w-full text-left p-2 bg-red-50 dark:bg-red-900/20 rounded-lg text-xs hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors border border-red-200 dark:border-red-800"
+              @click="navigateToOutlier(item.item_id)"
             >
               <div class="flex justify-between items-center">
                 <span class="font-mono font-medium">{{ item.code }}</span>
@@ -311,212 +312,74 @@
     <!-- Main Chart Area -->
     <div class="flex-1 relative flex flex-col h-full bg-slate-50 dark:bg-slate-950/50">
       
-      <!-- Hover Status (Top Center) -->
-      <div class="absolute top-4 left-4 right-4 z-10 pointer-events-none flex justify-center">
-        <transition 
-          enter-active-class="transition ease-out duration-200"
-          enter-from-class="opacity-0 -translate-y-2"
-          enter-to-class="opacity-100 translate-y-0"
-          leave-active-class="transition ease-in duration-150"
-          leave-from-class="opacity-100 translate-y-0"
-          leave-to-class="opacity-0 -translate-y-2"
-        >
-          <div v-show="hoveredPoint || isLoading" class="bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm shadow-lg rounded-full px-4 py-2 flex items-center gap-3 border border-gray-200 dark:border-gray-700 max-w-xl">
-            <template v-if="isLoading">
-              <UIcon name="i-heroicons-arrow-path" class="animate-spin text-primary-500" />
-              <span class="text-xs font-medium">Elaborazione...</span>
-            </template>
-            <template v-else-if="hoveredPoint">
-              <div class="w-2 h-2 rounded-full flex-shrink-0" :style="{ backgroundColor: getClusterColor(hoveredPoint.cluster) }"></div>
-              <span class="text-sm font-medium text-gray-800 dark:text-gray-100 truncate">{{ hoveredPoint.label }}</span>
-              <span v-if="hoveredPoint.price" class="text-xs text-green-600 dark:text-green-400 font-medium">{{ formatCurrency(hoveredPoint.price) }}</span>
-            </template>
-          </div>
-        </transition>
-      </div>
-
-      <!-- Selection Stats (Bottom Left) -->
-      <transition
-        enter-active-class="transition ease-out duration-200"
-        enter-from-class="opacity-0 translate-y-2"
-        enter-to-class="opacity-100 translate-y-0"
-        leave-active-class="transition ease-in duration-150"
-        leave-from-class="opacity-100 translate-y-0"
-        leave-to-class="opacity-0 translate-y-2"
-      >
-        <div v-if="analytics.selectionStats.value && analytics.selectedPointIds.value.size > 0" 
-             class="absolute bottom-4 left-4 z-10 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm shadow-lg rounded-xl p-4 border border-gray-200 dark:border-gray-700 max-w-xs">
-          <div class="flex items-center justify-between mb-3">
-            <h3 class="font-bold text-sm text-gray-900 dark:text-white">Selezione</h3>
-            <button @click="analytics.clearSelection()" class="text-gray-400 hover:text-gray-600">
-              <UIcon name="i-heroicons-x-mark" class="w-4 h-4" />
-            </button>
-          </div>
-          <div class="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
-            <div><span class="text-gray-500">Punti:</span> <span class="font-bold">{{ analytics.selectionStats.value.count }}</span></div>
-            <div v-if="analytics.selectionStats.value.sumAmount !== null"><span class="text-gray-500">Totale:</span> <span class="font-bold text-green-600">{{ formatCurrency(analytics.selectionStats.value.sumAmount) }}</span></div>
-            <div v-if="analytics.selectionStats.value.mean !== null"><span class="text-gray-500">Media:</span> <span class="font-bold">{{ formatCurrency(analytics.selectionStats.value.mean) }}</span></div>
-            <div v-if="analytics.selectionStats.value.median !== null"><span class="text-gray-500">Mediana:</span> <span class="font-bold">{{ formatCurrency(analytics.selectionStats.value.median) }}</span></div>
-          </div>
-          <div v-if="analytics.selectionStats.value.topCategories.length > 0" class="mt-3 pt-2 border-t border-gray-200 dark:border-gray-700">
-            <div class="flex flex-wrap gap-1">
-              <span v-for="cat in analytics.selectionStats.value.topCategories.slice(0, 3)" :key="cat.name" 
-                    class="text-[10px] bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full">
-                {{ cat.name }}
-              </span>
-            </div>
-          </div>
-        </div>
-      </transition>
-
-      <!-- Lasso Hint (Bottom Right) -->
-      <div v-if="mode === '2d' && !analytics.selectedPointIds.value.size" class="absolute bottom-4 right-4 z-10">
-        <div class="bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm rounded-lg px-3 py-1.5 text-[10px] text-gray-500 border border-gray-200 dark:border-gray-700">
-          <UIcon name="i-heroicons-cursor-arrow-rays" class="inline mr-1" />
-          Usa <kbd class="bg-gray-200 dark:bg-gray-700 px-1 rounded">lasso</kbd> dalla toolbar
-        </div>
-      </div>
+      <VisualizerOverlays
+        :hovered-point="hoveredPoint"
+        :is-loading="isLoading"
+        :selection-stats="analytics.selectionStats.value"
+        :selected-point-count="analytics.selectedPointIds.value.size"
+        :mode="mode"
+        :get-cluster-color="getClusterColor"
+        :format-currency="formatCurrency"
+        :on-clear-selection="analytics.clearSelection"
+      />
 
       <ClientOnly>
         <SemanticMap 
             :data="plotData" 
             :layout="plotLayout"
             :config="plotConfig"
+            class="w-full h-full"
             @click="onPointClick"
             @hover="onPointHover"
             @unhover="onPointUnhover"
             @selected="onPointSelected"
             @deselect="onPointDeselect"
-            class="w-full h-full"
         />
       </ClientOnly>
     </div>
-
     <!-- Right Detail Panel -->
-    <transition 
-        enter-active-class="transform transition ease-out duration-300" 
-        enter-from-class="translate-x-full" 
-        enter-to-class="translate-x-0"
-        leave-active-class="transform transition ease-in duration-200" 
-        leave-from-class="translate-x-0" 
-        leave-to-class="translate-x-full"
-    >
-      <div v-if="isDetailOpen && selectedPointDetails" class="absolute top-0 right-0 h-full w-80 bg-white dark:bg-gray-900 shadow-2xl border-l border-gray-200 dark:border-gray-800 z-50 flex flex-col">
-        
-        <!-- Header -->
-        <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-800 flex justify-between items-center bg-gray-50/80 dark:bg-gray-800/50">
-          <div class="flex items-center gap-2 min-w-0">
-            <span class="w-3 h-3 rounded-full flex-shrink-0" :style="{ backgroundColor: getClusterColor(selectedPointDetails.cluster) }"></span>
-            <span class="font-bold text-sm truncate">Cluster {{ selectedPointDetails.cluster }}</span>
-          </div>
-          <div class="flex items-center gap-1">
-            <!-- Copy ID Button -->
-            <UTooltip :text="selectedPointDetails.id">
-              <UButton 
-                icon="i-heroicons-clipboard-document" 
-                size="xs" 
-                variant="ghost" 
-                color="neutral"
-                @click="copyToClipboard(selectedPointDetails.id)"
-              />
-            </UTooltip>
-            <UButton 
-              icon="i-heroicons-x-mark" 
-              size="xs" 
-              variant="ghost" 
-              color="neutral"
-              @click="isDetailOpen = false"
-            />
-          </div>
-        </div>
-
-        <!-- Content -->
-        <div class="flex-1 overflow-y-auto p-4 space-y-4">
-          
-          <!-- Description -->
-          <div>
-            <p class="text-sm text-gray-700 dark:text-gray-200 leading-relaxed">
-              {{ selectedPointDetails.label }}
-            </p>
-          </div>
-
-          <!-- Key Info Cards -->
-          <div class="grid grid-cols-2 gap-2">
-            <div v-if="selectedPointDetails.price" class="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-100 dark:border-green-800">
-              <span class="text-[10px] text-green-600 dark:text-green-400 uppercase font-bold block mb-1">Prezzo</span>
-              <span class="text-lg font-bold text-green-700 dark:text-green-300">{{ formatCurrency(selectedPointDetails.price) }}</span>
-            </div>
-            <div v-if="selectedPointDetails.unit" class="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-              <span class="text-[10px] text-gray-500 uppercase font-bold block mb-1">Unità</span>
-              <span class="text-lg font-bold text-gray-700 dark:text-gray-300">{{ selectedPointDetails.unit }}</span>
-            </div>
-          </div>
-
-          <!-- Nearest Neighbors -->
-          <div v-if="currentNeighbors.length > 0">
-            <div class="flex items-center justify-between mb-2">
-              <h4 class="text-[10px] font-bold uppercase text-gray-400">Articoli simili</h4>
-              <span class="text-[10px] text-gray-400">distanza embedding</span>
-            </div>
-            <div class="space-y-1.5">
-              <button 
-                v-for="neighbor in currentNeighbors" 
-                :key="neighbor.id"
-                @click="navigateToNeighbor(neighbor.id)"
-                class="w-full text-left p-2 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-primary-300 dark:hover:border-primary-600 transition-colors group"
-              >
-                <div class="flex items-center justify-between mb-1">
-                  <span class="flex items-center gap-1.5">
-                    <span class="w-2 h-2 rounded-full" :style="{ backgroundColor: getClusterColor(neighbor.clusterId) }"></span>
-                    <span class="text-[10px] font-mono text-gray-400">{{ neighbor.id.slice(-6) }}</span>
-                  </span>
-                  <span class="text-[10px] text-gray-400">{{ neighbor.distance.toFixed(3) }}</span>
-                </div>
-                <p class="text-xs text-gray-700 dark:text-gray-300 line-clamp-2 group-hover:text-primary-600">{{ neighbor.label }}</p>
-                <span v-if="neighbor.amount" class="text-[10px] text-green-600 mt-1 block">{{ formatCurrency(neighbor.amount) }}</span>
-              </button>
-            </div>
-          </div>
-
-          <!-- Technical Details (Collapsible) -->
-          <details class="text-xs">
-            <summary class="text-gray-400 cursor-pointer hover:text-gray-600">Dettagli tecnici</summary>
-            <div class="mt-2 p-2 bg-gray-50 dark:bg-gray-800 rounded font-mono text-[10px] text-gray-500 space-y-1">
-              <div>ID: {{ selectedPointDetails.id }}</div>
-              <div>Coord: [{{ selectedPointDetails.x?.toFixed(4) }}, {{ selectedPointDetails.y?.toFixed(4) }}{{ mode === '3d' ? `, ${selectedPointDetails.z?.toFixed(4)}` : '' }}]</div>
-            </div>
-          </details>
-        </div>
-      </div>
-    </transition>
+    <VisualizerDetailPanel
+      :is-open="isDetailOpen"
+      :selected-point="selectedPointDetails"
+      :current-neighbors="currentNeighbors"
+      :mode="mode"
+      :get-cluster-color="getClusterColor"
+      :format-currency="formatCurrency"
+      :on-copy-id="copyToClipboard"
+      :on-navigate-neighbor="navigateToNeighbor"
+      @close="isDetailOpen = false"
+    />
 
   </div>
 </template>
 
 <script setup lang="ts">
-import { useSemanticMap } from '~/composables/useSemanticMap';
-import { 
-  useSemanticMapAnalytics, 
-  buildMarkerConfig, 
-  buildNeighborLinesTrace, 
-  exportToCsv,
-  type Point 
-} from '~/composables/useSemanticMapAnalytics';
-import { usePriceAnalysis } from '~/composables/usePriceAnalysis';
+import { useSemanticMap, type Point } from '~/composables/useSemanticMap';
+  import { 
+    useSemanticMapAnalytics, 
+    buildMarkerConfig, 
+    buildNeighborLinesTrace, 
+    exportToCsv
+  } from '~/composables/useSemanticMapAnalytics';
+  import { usePriceAnalysis } from '~/composables/usePriceAnalysis';
+  import { formatCurrency } from '~/lib/formatters';
 
 const route = useRoute();
 const projectId = route.params.id as string;
 const toast = useToast();
+  type Neighbor = Point & { distance: number; clusterId?: number };
+  const { copyToClipboard: copyToClipboardBase } = useCopyToClipboard();
 
 // UI State
 const activeTab = ref<'explore' | 'analysis'>('explore');
 const pointSize = ref(6);
 const showGrid = ref(false);
 const isDetailOpen = ref(false);
-const selectedPointDetails = ref<any>(null);
-const hoveredPoint = ref<any>(null);
+const selectedPointDetails = ref<Point | null>(null);
+const hoveredPoint = ref<Point | null>(null);
 const zoomRange = ref<{ x: number[] | null, y: number[] | null }>({ x: null, y: null });
 const showAllClusters = ref(false);
+const showPoles = ref(true); // Default enabled, but toggleable
 
 const { 
     mode, 
@@ -527,7 +390,7 @@ const {
     searchQuery, 
     searchResults,
     performSearch, 
-    triggerCompute,
+    triggerCompute: _triggerCompute,
     isLoading
 } = useSemanticMap(projectId);
 
@@ -557,6 +420,7 @@ const visibleClusters = computed(() => {
 
 const filteredPoints = computed(() => {
     if (!points.value) return [];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let subset = (points.value as any[]);
     if (selectedCluster.value !== null) {
         subset = subset.filter(p => p.cluster === selectedCluster.value);
@@ -564,20 +428,22 @@ const filteredPoints = computed(() => {
     return subset;
 });
 
-const currentNeighbors = computed(() => {
+const currentNeighbors = computed<Neighbor[]>(() => {
   if (!analytics.clickedPointId.value || !points.value) return [];
-  return analytics.getClickedPointNeighbors(points.value as Point[], mode.value);
+  return analytics.getClickedPointNeighbors(points.value as Point[], mode.value) as Neighbor[];
 });
 
 // --- Poles Integration ---
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const poles = ref<any[]>([]);
 
-// Fetch poles when project changes or status changes
-// Explicit fetch function
+// Fetch poles when project changes or status changes.
+// Keep this explicit to avoid implicit fetches when the toggle is off.
 const fetchPoles = async () => {
     if (!projectId) return;
     try {
         console.log('[Visualizer] Fetching poles explicit...');
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const { poles: fetchedPoles } = await $fetch<any>('/api/analytics/global-map', {
             method: 'POST',
             body: { project_ids: [projectId] }
@@ -586,7 +452,6 @@ const fetchPoles = async () => {
         console.log(`[Visualizer] Poles set: ${poles.value.length}`);
         
         // Visual feedback
-        const toast = useToast();
         toast.add({
             title: 'Poli Caricati',
             description: `Trovati ${poles.value.length} poli gravitazionali.`,
@@ -594,7 +459,6 @@ const fetchPoles = async () => {
         });
     } catch (e) {
         console.error("Failed to fetch poles", e);
-        const toast = useToast();
         toast.add({ title: 'Errore', description: 'Impossibile caricare i poli.', color: 'red' });
     }
 };
@@ -614,18 +478,17 @@ watch(showPoles, (val) => {
 });
 
 onMounted(() => {
-    // Retry fetch after a short delay to ensure everything is ready
+    // Retry once after mount to cover slow map hydration.
     setTimeout(() => {
         if (poles.value.length === 0) fetchPoles();
     }, 1000);
 });
 
-const showPoles = ref(true); // Default enabled, but toggleable
-
 const plotData = computed(() => {
     const subset = filteredPoints.value;
     const currentPoles = showPoles.value ? poles.value : [];
     
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const traces: any[] = [];
     
     // 1. Points Trace
@@ -675,7 +538,7 @@ const plotData = computed(() => {
         const px = currentPoles.map(p => p.x);
         const py = currentPoles.map(p => p.y);
         const pz = currentPoles.map(p => p.z);
-        const pids = currentPoles.map(p => `POLE_${p.wbs6}`);
+        const _pids = currentPoles.map(p => `POLE_${p.wbs6}`);
         const plabels = currentPoles.map(p => `Polo: ${p.wbs6}`);
         
         const poleMarker = {
@@ -737,6 +600,7 @@ const plotLayout = computed(() => {
         return { ...common, scene: { xaxis: axisStyle, yaxis: axisStyle, zaxis: axisStyle, camera: { eye: { x: 1.5, y: 1.5, z: 1.5 } } } };
     } else {
         const axisStyle = { visible: showGrid.value, showgrid: showGrid.value, gridcolor: 'rgba(148, 163, 184, 0.15)', zeroline: false, showticklabels: false };
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const layout: any = { ...common, xaxis: { ...axisStyle, fixedrange: false }, yaxis: { ...axisStyle, fixedrange: false }, hovermode: 'closest' };
         if (zoomRange.value.x && zoomRange.value.y) {
             layout.xaxis.range = zoomRange.value.x;
@@ -757,25 +621,28 @@ const plotConfig = computed(() => ({
 
 // --- Helpers ---
 
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR', minimumFractionDigits: 2 }).format(value);
-}
+  function getClusterColor(clusterId: number): string {
+    const palette = analytics.clusterPalette.value;
+    return palette[Math.abs(clusterId) % palette.length];
+  }
+  
+  async function copyToClipboard(text: string) {
+    await copyToClipboardBase(text, {
+      title: 'Copiato!',
+      description: 'ID copiato negli appunti',
+      color: 'success',
+      icon: 'i-heroicons-clipboard-document-check',
+    });
+  }
 
-function getClusterColor(clusterId: number): string {
-  const palette = analytics.clusterPalette.value;
-  return palette[Math.abs(clusterId) % palette.length];
-}
-
-async function copyToClipboard(text: string) {
-  await navigator.clipboard.writeText(text);
-  toast.add({ title: 'Copiato!', description: 'ID copiato negli appunti', color: 'success', icon: 'i-heroicons-clipboard-document-check' });
-}
-
-async function copySelectedIds() {
-  const ids = Array.from(analytics.selectedPointIds.value).join('\n');
-  await navigator.clipboard.writeText(ids);
-  toast.add({ title: 'Copiato!', description: `${analytics.selectedPointIds.value.size} ID copiati`, color: 'success' });
-}
+  async function copySelectedIds() {
+    const ids = Array.from(analytics.selectedPointIds.value).join('\n');
+    await copyToClipboardBase(ids, {
+      title: 'Copiato!',
+      description: `${analytics.selectedPointIds.value.size} ID copiati`,
+      color: 'success',
+    });
+  }
 
 // --- Actions ---
 
@@ -795,9 +662,11 @@ function resetView() {
     isDetailOpen.value = false;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function onPointClick(data: any) {
     if(!data?.points?.[0]) return;
     const id = data.points[0].customdata;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const fullPoint = (points.value as any[])?.find(p => p.id === id);
     if (fullPoint) {
         selectedPointDetails.value = fullPoint;
@@ -806,9 +675,11 @@ function onPointClick(data: any) {
     }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function onPointHover(data: any) {
     if(!data?.points?.[0]) return;
     const id = data.points[0].customdata;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     hoveredPoint.value = (points.value as any[])?.find(p => p.id === id);
 }
 
@@ -816,8 +687,10 @@ function onPointUnhover() {
     hoveredPoint.value = null;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function onPointSelected(data: any) {
   if (!data?.points?.length) { analytics.clearSelection(); return; }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const ids = data.points.map((p: any) => p.customdata).filter(Boolean);
   if (ids.length && points.value) analytics.setSelection(ids, points.value as Point[]);
 }
@@ -832,6 +705,7 @@ function toggleCluster(id: number) {
         zoomRange.value = { x: null, y: null };
     } else {
         selectedCluster.value = id;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const clusterPoints = (points.value as any[]).filter(p => p.cluster === id);
         updateZoomToPoints(clusterPoints);
     }
@@ -840,6 +714,7 @@ function toggleCluster(id: number) {
 async function handleSearch() {
     await performSearch(searchQuery.value);
     if (searchResults.value.length > 0) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const matching = (points.value as any[]).filter(p => searchResults.value.includes(p.id));
         if (matching.length) updateZoomToPoints(matching);
     } else if (!searchQuery.value) {
@@ -847,6 +722,7 @@ async function handleSearch() {
     }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function updateZoomToPoints(targetPoints: any[]) {
     if (mode.value === '3d' || !targetPoints.length) return;
     const xs = targetPoints.map(p => p.x);
@@ -865,6 +741,7 @@ function handleExportCsv() {
 }
 
 function navigateToNeighbor(id: string) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const point = (points.value as any[])?.find(p => p.id === id);
   if (point) {
     selectedPointDetails.value = point;
@@ -892,6 +769,7 @@ async function runPriceAnalysis() {
 }
 
 function navigateToOutlier(itemId: string) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const point = (points.value as any[])?.find(p => p.id === itemId);
   if (point) {
     selectedPointDetails.value = point;
@@ -909,3 +787,4 @@ function navigateToOutlier(itemId: string) {
   }
 }
 </script>
+

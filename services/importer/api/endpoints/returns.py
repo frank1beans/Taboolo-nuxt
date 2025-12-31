@@ -57,6 +57,8 @@ def _build_computo_payload(
                 "progressivo": item.progressive,
                 "codice": item.code,
                 "descrizione": item.description,
+                "descrizione_estesa": item.long_description,
+                "long_description": item.long_description,
                 "unita_misura": item.unit,
                 "quantita": item.quantity,
                 "prezzo_unitario": item.unit_price,
@@ -289,12 +291,14 @@ async def import_ritorni_single(
     request: Request,
     file: UploadFile = File(...),
     mode: str = Form(default="lx"),  # lx | mx | excel
-    sheet_name: str | None = Form(default=None),
-    code_columns: str | None = Form(default=None),
-    description_columns: str | None = Form(default=None),
+    sheetName: str | None = Form(default=None),
+    code_columns: list[str] | None = Form(default=None),
+    description_columns: list[str] | None = Form(default=None),
     price_column: str | None = Form(default=None),
     quantity_column: str | None = Form(default=None),
     progressive_column: str | None = Form(default=None),
+    header_row_index: int | None = Form(default=None),
+    long_description_columns: list[str] | None = Form(default=None),
 ) -> dict[str, Any]:
     client_ip = request.client.host if request.client else "anonymous"
     enforce_rate_limit(returns_rate_limiter, client_ip)
@@ -311,12 +315,14 @@ async def import_ritorni_single(
         parsed = parser_fn(
             file_bytes=payload,
             filename=file.filename,
-            sheet_name=sheet_name,
-            code_columns=(code_columns or "").split(",") if code_columns else None,
-            description_columns=(description_columns or "").split(",") if description_columns else None,
+            sheet_name=sheetName,
+            code_columns=code_columns,
+            description_columns=description_columns,
             price_column=price_column,
             quantity_column=quantity_column,
             progressive_column=progressive_column,
+            header_row_index=header_row_index,
+            long_description_columns=long_description_columns,
         )
     except Exception as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))

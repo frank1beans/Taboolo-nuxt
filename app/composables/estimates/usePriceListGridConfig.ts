@@ -2,16 +2,9 @@
 import type { Ref } from 'vue';
 import type { DataGridConfig } from '~/types/data-grid';
 import type { ApiPriceListItem } from '~/types/api';
+import { formatCurrency, formatNumber } from '~/lib/formatters';
 
 export const usePriceListGridConfig = (_rowData: Ref<ApiPriceListItem[]>) => {
-    const formatCurrency = (value: number | null | undefined) => {
-        if (value === null || value === undefined) return '-';
-        return new Intl.NumberFormat('it-IT', {
-            style: 'currency',
-            currency: 'EUR',
-        }).format(value);
-    };
-
     const gridConfig: DataGridConfig = {
         columns: [
             {
@@ -30,12 +23,14 @@ export const usePriceListGridConfig = (_rowData: Ref<ApiPriceListItem[]>) => {
                 field: 'wbs6_code',
                 headerName: 'WBS 06 (Codice)',
                 width: 120,
+                filterMode: 'multi',
                 hide: true
             },
             {
                 field: 'wbs6_description',
                 headerName: 'WBS 06',
                 width: 150,
+                filterMode: 'multi',
                 hide: false
             },
             // WBS 7
@@ -43,12 +38,14 @@ export const usePriceListGridConfig = (_rowData: Ref<ApiPriceListItem[]>) => {
                 field: 'wbs7_code',
                 headerName: 'WBS 07 (Codice)',
                 width: 120,
+                filterMode: 'multi',
                 hide: true
             },
             {
                 field: 'wbs7_description',
                 headerName: 'WBS 07',
                 width: 150,
+                filterMode: 'multi',
                 hide: false
             },
             {
@@ -57,6 +54,7 @@ export const usePriceListGridConfig = (_rowData: Ref<ApiPriceListItem[]>) => {
                 flex: 2,
                 minWidth: 300,
                 // Prioritize extended > long > description
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 valueGetter: (params: any) => {
                     const data = params.data;
                     if (!data) return '';
@@ -68,10 +66,6 @@ export const usePriceListGridConfig = (_rowData: Ref<ApiPriceListItem[]>) => {
                         data.item_description ||
                         '';
                 },
-                cellRenderer: (params: any) => {
-                    // Optional: tooltip for full text if truncated
-                    return params.value;
-                }
             },
             {
                 field: 'unit',
@@ -83,7 +77,8 @@ export const usePriceListGridConfig = (_rowData: Ref<ApiPriceListItem[]>) => {
                 headerName: 'Prezzo Unit.',
                 width: 130,
                 cellClass: 'ag-right-aligned-cell',
-                valueFormatter: (params: any) => formatCurrency(params.value),
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                valueFormatter: (params: any) => formatCurrency(params.value, { fallback: '-' }),
                 filter: 'agNumberColumnFilter',
             },
             {
@@ -91,7 +86,9 @@ export const usePriceListGridConfig = (_rowData: Ref<ApiPriceListItem[]>) => {
                 headerName: 'Quantità Tot.',
                 width: 120,
                 cellClass: 'ag-right-aligned-cell font-bold text-blue-600 dark:text-blue-400',
-                valueFormatter: (params: any) => params.value ? new Intl.NumberFormat('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(params.value) : '-',
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                valueFormatter: (params: any) =>
+                    formatNumber(params.value, { minimumFractionDigits: 2, maximumFractionDigits: 2, fallback: '-' }),
                 filter: 'agNumberColumnFilter',
             },
             {
@@ -99,7 +96,8 @@ export const usePriceListGridConfig = (_rowData: Ref<ApiPriceListItem[]>) => {
                 headerName: 'Importo Tot.',
                 width: 140,
                 cellClass: 'ag-right-aligned-cell font-bold text-emerald-600 dark:text-emerald-400',
-                valueFormatter: (params: { value: number }) => formatCurrency(params.value),
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                valueFormatter: (params: any) => formatCurrency(params.value, { fallback: '-' }),
                 filter: 'agNumberColumnFilter',
             },
         ],
@@ -110,8 +108,8 @@ export const usePriceListGridConfig = (_rowData: Ref<ApiPriceListItem[]>) => {
         },
         enableQuickFilter: true,
         enableExport: true,
-        headerHeight: 48,
-        rowHeight: 40,
+        headerHeight: 44,
+        rowHeight: 44,
         animateRows: true,
     };
 

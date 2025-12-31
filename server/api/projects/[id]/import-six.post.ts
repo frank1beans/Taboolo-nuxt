@@ -1,6 +1,7 @@
-import { defineEventHandler, createError, getQuery, getRouterParam } from 'h3';
+import { defineEventHandler, createError, getQuery } from 'h3';
 import { Types } from 'mongoose';
 import { runSixImportRaw } from '#importers/python-six/client';
+import { requireObjectIdParam } from '#utils/validate';
 
 type RawImportPayload = {
   estimate?: unknown;
@@ -10,10 +11,7 @@ type RawImportPayload = {
 };
 
 export default defineEventHandler(async (event) => {
-  const projectId = getRouterParam(event, 'id');
-  if (!projectId) {
-    throw createError({ statusCode: 400, statusMessage: 'Project ID required' });
-  }
+  const projectId = requireObjectIdParam(event, 'id', 'Project ID');
   const query = getQuery(event);
   const isRaw = query?.mode === 'raw' || query?.raw === 'true' || query?.raw === '1';
 

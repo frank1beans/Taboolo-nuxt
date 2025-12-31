@@ -9,6 +9,7 @@ from fastapi import APIRouter, File, UploadFile, HTTPException, Form
 from application.process_file import process_file_content
 from loader import LoaderService
 from api.endpoints.shared import ImportResult, compute_embeddings_for_items, get_used_pli_ids
+from core import settings
 
 router = APIRouter()
 
@@ -34,6 +35,8 @@ async def import_six(
         raise HTTPException(400, "File must be .six or .xml")
     
     content = await file.read()
+    if len(content) > settings.max_upload_size_mb * 1024 * 1024:
+        raise HTTPException(413, "File too large")
     
     try:
         # 1. Parse using Domain Logic (SixParser)
@@ -94,6 +97,8 @@ async def preview_six(
         raise HTTPException(400, "File must be .six or .xml")
     
     content = await file.read()
+    if len(content) > settings.max_upload_size_mb * 1024 * 1024:
+        raise HTTPException(413, "File too large")
     
     try:
         # Parse using Domain Logic

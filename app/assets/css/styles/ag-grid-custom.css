@@ -8,13 +8,13 @@
   --ag-secondary-border-color: transparent;
   --ag-border-radius: var(--radius-xl);
   --ag-card-radius: var(--radius-xl);
-  --ag-header-height: 48px;
-  --ag-row-height: 48px;
+  --ag-header-height: 44px;
+  --ag-row-height: 44px;
 
   /* Header - Light mode: soft blue-gray */
   --ag-header-background-color: hsl(228 20% 97%);
   --ag-header-foreground-color: hsl(var(--foreground));
-  --ag-header-column-separator-color: transparent;
+  --ag-header-column-separator-color: hsl(var(--border) / 0.15);
 
   /* Rows - Light mode hover */
   --ag-row-hover-color: hsl(228 25% 96%);
@@ -31,11 +31,11 @@
 
   /* Font */
   --ag-font-family: var(--font-sans);
-  --ag-font-size: 14px;
+  --ag-font-size: 13px;
 
-  /* Spacing */
-  --ag-grid-size: 6px;
-  --ag-cell-horizontal-padding: 16px;
+  /* Spacing - More compact */
+  --ag-grid-size: 4px;
+  --ag-cell-horizontal-padding: 12px;
 
   /* Grid dimensions */
   min-height: 520px;
@@ -49,42 +49,43 @@
   --ag-popup-shadow: var(--shadow-lg);
 }
 
-/* Dark theme overrides */
+/* Dark theme overrides - Enhanced contrast */
 .ag-theme-quartz-dark {
-  --ag-background-color: hsl(var(--card));
-  --ag-foreground-color: hsl(var(--foreground));
-  --ag-border-color: hsl(var(--border) / 0.3);
+  /* Background slightly lighter than page for contrast */
+  --ag-background-color: hsl(220 15% 14%);
+  --ag-foreground-color: hsl(0 0% 95%);
+  --ag-border-color: hsl(var(--border) / 0.5);
   --ag-secondary-border-color: transparent;
   --ag-border-radius: var(--radius-xl);
   --ag-card-radius: var(--radius-xl);
-  --ag-header-height: 48px;
-  --ag-row-height: 48px;
+  --ag-header-height: 44px;
+  --ag-row-height: 44px;
 
-  /* Header - Dark mode: use card background */
-  --ag-header-background-color: hsl(var(--muted));
-  --ag-header-foreground-color: hsl(var(--foreground));
-  --ag-header-column-separator-color: transparent;
+  /* Header - Dark mode: noticeably lighter for contrast */
+  --ag-header-background-color: hsl(220 15% 20%);
+  --ag-header-foreground-color: hsl(0 0% 90%);
+  --ag-header-column-separator-color: hsl(var(--border) / 0.3);
 
   /* Rows - Dark mode hover */
-  --ag-row-hover-color: hsl(var(--muted) / 0.5);
-  --ag-selected-row-background-color: hsl(var(--primary) / 0.15);
+  --ag-row-hover-color: hsl(220 15% 22%);
+  --ag-selected-row-background-color: hsl(var(--primary) / 0.2);
   --ag-odd-row-background-color: transparent;
 
-  /* Cell - No borders */
+  /* Cell - Visible borders for structure */
   --ag-cell-horizontal-border: none;
-  --ag-row-border-color: hsl(var(--border) / 0.15);
+  --ag-row-border-color: hsl(var(--border) / 0.35);
 
   /* Inputs */
-  --ag-input-border-color: hsl(var(--border) / 0.3);
+  --ag-input-border-color: hsl(var(--border) / 0.4);
   --ag-input-focus-border-color: hsl(var(--ring));
 
   /* Font */
   --ag-font-family: var(--font-sans);
-  --ag-font-size: 14px;
+  --ag-font-size: 13px;
 
-  /* Spacing */
-  --ag-grid-size: 6px;
-  --ag-cell-horizontal-padding: 16px;
+  /* Spacing - More compact */
+  --ag-grid-size: 4px;
+  --ag-cell-horizontal-padding: 12px;
 
   /* Grid dimensions */
   min-height: 520px;
@@ -92,7 +93,7 @@
 
   /* Scrollbar */
   --ag-scrollbar-size: 8px;
-  --ag-control-panel-background-color: hsl(var(--card));
+  --ag-control-panel-background-color: hsl(220 15% 14%);
   --ag-widget-container-horizontal-padding: 12px;
   --ag-card-shadow: none;
   --ag-popup-shadow: var(--shadow-lg);
@@ -137,11 +138,11 @@
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
 }
 
-/* Header styling - Dark mode */
+/* Header styling - Dark mode with better contrast */
 .ag-theme-quartz-dark .ag-header {
-  border-bottom: none;
+  border-bottom: 1px solid hsl(var(--border) / 0.3);
   font-weight: 600;
-  background: hsl(var(--muted));
+  background: hsl(220 15% 18%);
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
 }
 
@@ -163,32 +164,40 @@
 }
 
 .ag-theme-quartz-dark {
-  background-color: hsl(var(--card));
-  color: hsl(var(--foreground));
+  background-color: hsl(220 15% 14%);
+  color: hsl(0 0% 95%);
 }
 
+/* Light mode backgrounds */
 .ag-theme-quartz .ag-root-wrapper,
-.ag-theme-quartz-dark .ag-root-wrapper,
 .ag-theme-quartz .ag-body-viewport,
-.ag-theme-quartz-dark .ag-body-viewport,
 .ag-theme-quartz .ag-center-cols-viewport,
-.ag-theme-quartz-dark .ag-center-cols-viewport,
 .ag-theme-quartz .ag-pinned-left-cols-container,
-.ag-theme-quartz-dark .ag-pinned-left-cols-container,
 .ag-theme-quartz .ag-pinned-right-cols-container,
-.ag-theme-quartz-dark .ag-pinned-right-cols-container,
 .ag-theme-quartz .ag-center-cols-container,
-.ag-theme-quartz-dark .ag-center-cols-container,
-.ag-theme-quartz .ag-body-horizontal-scroll-viewport,
-.ag-theme-quartz-dark .ag-body-horizontal-scroll-viewport {
+.ag-theme-quartz .ag-body-horizontal-scroll-viewport {
   background-color: hsl(var(--card));
 }
 
-.ag-theme-quartz .ag-center-cols-viewport,
-.ag-theme-quartz .ag-pinned-right-cols-viewport,
+/* Dark mode backgrounds - slightly lighter for contrast */
+.ag-theme-quartz-dark .ag-root-wrapper,
+.ag-theme-quartz-dark .ag-body-viewport,
 .ag-theme-quartz-dark .ag-center-cols-viewport,
-.ag-theme-quartz-dark .ag-center-cols-viewport {
+.ag-theme-quartz-dark .ag-pinned-left-cols-container,
+.ag-theme-quartz-dark .ag-pinned-right-cols-container,
+.ag-theme-quartz-dark .ag-center-cols-container,
+.ag-theme-quartz-dark .ag-body-horizontal-scroll-viewport {
+  background-color: hsl(220 15% 14%);
+}
+
+.ag-theme-quartz .ag-center-cols-viewport,
+.ag-theme-quartz .ag-pinned-right-cols-viewport {
   background: hsl(var(--card)) !important;
+}
+
+.ag-theme-quartz-dark .ag-center-cols-viewport,
+.ag-theme-quartz-dark .ag-pinned-right-cols-viewport {
+  background: hsl(220 15% 14%) !important;
 }
 
 
@@ -197,11 +206,27 @@
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  padding: 0 12px;
+  padding: 0 16px;
   height: 100%;
 }
 
-.ag-theme-quartz .ag-header-cell-label,
+.ag-theme-quartz .ag-header-cell-label {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  font-weight: 600;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: hsl(var(--muted-foreground));
+  white-space: normal;
+  line-height: 1.3;
+  text-align: left;
+  justify-content: flex-start;
+  gap: 6px;
+}
+
+/* Dark mode header labels - Higher contrast */
 .ag-theme-quartz-dark .ag-header-cell-label {
   display: flex;
   align-items: center;
@@ -210,7 +235,8 @@
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: hsl(var(--muted-foreground) / 0.85);
+  color: hsl(0 0% 70%);
+  /* More visible in dark mode */
   white-space: normal;
   line-height: 1.3;
   text-align: left;
@@ -229,14 +255,13 @@
   background: transparent;
 }
 
-/* Cell styling */
-.ag-theme-quartz .ag-cell,
-.ag-theme-quartz-dark .ag-cell {
+/* Cell styling - Light mode */
+.ag-theme-quartz .ag-cell {
   display: flex;
   align-items: center;
   justify-content: flex-start;
   line-height: 1.3;
-  padding: 0 14px;
+  padding: 0 12px;
   border-right: none;
   font-size: 13px;
   font-weight: 400;
@@ -248,31 +273,66 @@
   min-width: 0;
 }
 
+/* Cell styling - Dark mode with higher contrast */
+.ag-theme-quartz-dark .ag-cell {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  line-height: 1.3;
+  padding: 0 12px;
+  border-right: none;
+  font-size: 13px;
+  font-weight: 400;
+  color: hsl(0 0% 92%);
+  /* Brighter text for dark mode */
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
 /* Force value color to be visible */
-.ag-theme-quartz .ag-cell-value,
-.ag-theme-quartz-dark .ag-cell-value {
+.ag-theme-quartz .ag-cell-value {
   color: hsl(var(--foreground));
 }
 
-/* Row styling - Soft hover, minimal borders */
-.ag-theme-quartz .ag-row,
-.ag-theme-quartz-dark .ag-row {
-  border-bottom: 1px solid hsl(var(--border) / 0.08);
+.ag-theme-quartz-dark .ag-cell-value {
+  color: hsl(0 0% 92%);
+}
+
+/* Row styling - Light mode */
+.ag-theme-quartz .ag-row {
+  border-bottom: 1px solid hsl(var(--border) / 0.12);
   background-color: hsl(var(--card));
-  transition: all 0.15s ease;
+  transition: background-color 0.12s ease;
 }
 
-.ag-theme-quartz .ag-row:hover,
-.ag-theme-quartz-dark .ag-row:hover {
-  background-color: hsl(var(--muted) / 0.7) !important;
-  box-shadow: 0 4px 16px -4px rgba(0, 0, 0, 0.15), inset 0 0 0 1px hsl(var(--border) / 0.2);
+.ag-theme-quartz .ag-row:hover {
+  background-color: hsl(228 25% 96%) !important;
   cursor: pointer;
-  z-index: 5;
 }
 
-.ag-theme-quartz .ag-row-selected,
+/* Row styling - Dark mode with better visibility */
+.ag-theme-quartz-dark .ag-row {
+  border-bottom: 1px solid hsl(var(--border) / 0.25);
+  background-color: hsl(220 15% 14%);
+  transition: background-color 0.12s ease;
+}
+
+.ag-theme-quartz-dark .ag-row:hover {
+  background-color: hsl(220 15% 22%) !important;
+  cursor: pointer;
+}
+
+/* Selected row styling */
+.ag-theme-quartz .ag-row-selected {
+  background-color: hsl(var(--primary) / 0.08) !important;
+  border-left: 2px solid hsl(var(--primary));
+}
+
 .ag-theme-quartz-dark .ag-row-selected {
-  background-color: hsl(var(--primary) / 0.1) !important;
+  background-color: hsl(var(--primary) / 0.15) !important;
   border-left: 2px solid hsl(var(--primary));
 }
 
@@ -491,4 +551,32 @@
 .ag-theme-quartz-dark .ag-header-cell-resize {
   cursor: col-resize;
   width: 8px;
+}
+
+/* ============= Row Actions - Hover to Reveal ============= */
+/* Only apply on devices with hover capability (not touch) */
+@media (hover: hover) {
+
+  .ag-theme-quartz .ag-row .actions-cell>div,
+  .ag-theme-quartz-dark .ag-row .actions-cell>div {
+    opacity: 0;
+    transition: opacity 0.15s ease;
+  }
+
+  .ag-theme-quartz .ag-row:hover .actions-cell>div,
+  .ag-theme-quartz-dark .ag-row:hover .actions-cell>div {
+    opacity: 1;
+  }
+
+  /* Also handle pinned right columns container */
+  .ag-theme-quartz .ag-row .ag-cell[col-id="actions"]>div,
+  .ag-theme-quartz-dark .ag-row .ag-cell[col-id="actions"]>div {
+    opacity: 0;
+    transition: opacity 0.15s ease;
+  }
+
+  .ag-theme-quartz .ag-row:hover .ag-cell[col-id="actions"]>div,
+  .ag-theme-quartz-dark .ag-row:hover .ag-cell[col-id="actions"]>div {
+    opacity: 1;
+  }
 }

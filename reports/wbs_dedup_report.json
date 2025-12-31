@@ -1,0 +1,912 @@
+{
+  "summary": {
+    "level6_total": 387,
+    "level6_codes_not_in_ontology": 137,
+    "level7_total": 648,
+    "level7_codes_not_in_ontology": 199,
+    "safe_mapping_count": 98,
+    "ambiguous_groups": 1,
+    "unmatched_groups": 0
+  },
+  "safe_mappings": [
+    {
+      "level": 6,
+      "description_key": "cantierizzazioni",
+      "description_sample": "Cantierizzazioni",
+      "canonical_code": "A001",
+      "alias_code": "L001",
+      "alias_count": 3,
+      "alias_sample_id": "694863e1865e3b0469148c07"
+    },
+    {
+      "level": 6,
+      "description_key": "assistenze murarie",
+      "description_sample": "Assistenze murarie",
+      "canonical_code": "A004",
+      "alias_code": "L004",
+      "alias_count": 3,
+      "alias_sample_id": "694863e1865e3b0469148c09"
+    },
+    {
+      "level": 6,
+      "description_key": "opere di pavimentazione",
+      "description_sample": "Opere di pavimentazione",
+      "canonical_code": "A019",
+      "alias_code": "L019",
+      "alias_count": 3,
+      "alias_sample_id": "694863e1865e3b0469148c15"
+    },
+    {
+      "level": 6,
+      "description_key": "controsoffitti",
+      "description_sample": "Controsoffitti",
+      "canonical_code": "A020",
+      "alias_code": "L020",
+      "alias_count": 3,
+      "alias_sample_id": "694863e1865e3b0469148c16"
+    },
+    {
+      "level": 6,
+      "description_key": "sistemi oscuranti per facciate",
+      "description_sample": "Sistemi oscuranti per facciate",
+      "canonical_code": "A022",
+      "alias_code": "L022",
+      "alias_count": 3,
+      "alias_sample_id": "694863e1865e3b0469148c18"
+    },
+    {
+      "level": 6,
+      "description_key": "opere da serramentista",
+      "description_sample": "Opere da serramentista",
+      "canonical_code": "A025",
+      "alias_code": "L025",
+      "alias_count": 3,
+      "alias_sample_id": "694863e1865e3b0469148c1b"
+    },
+    {
+      "level": 6,
+      "description_key": "opere da falegname",
+      "description_sample": "Opere da falegname",
+      "canonical_code": "A027",
+      "alias_code": "L027",
+      "alias_count": 3,
+      "alias_sample_id": "694863e1865e3b0469148c1c"
+    },
+    {
+      "level": 6,
+      "description_key": "opere da verniciatore",
+      "description_sample": "Opere da verniciatore",
+      "canonical_code": "A032",
+      "alias_code": "L032",
+      "alias_count": 3,
+      "alias_sample_id": "694863e1865e3b0469148c1f"
+    },
+    {
+      "level": 6,
+      "description_key": "apparecchi sanitari e accessori",
+      "description_sample": "Apparecchi sanitari e accessori",
+      "canonical_code": "A034",
+      "alias_code": "L034",
+      "alias_count": 3,
+      "alias_sample_id": "694863e1865e3b0469148c20"
+    },
+    {
+      "level": 6,
+      "description_key": "arredi su misura",
+      "description_sample": "Arredi su misura",
+      "canonical_code": "A039",
+      "alias_code": "L039",
+      "alias_count": 3,
+      "alias_sample_id": "694863e1865e3b0469148c25"
+    },
+    {
+      "level": 6,
+      "description_key": "demolizioni e rimozioni",
+      "description_sample": "Demolizioni e rimozioni",
+      "canonical_code": "A005",
+      "alias_code": "L005",
+      "alias_count": 1,
+      "alias_sample_id": "694870df9343b40ef865bdec"
+    },
+    {
+      "level": 7,
+      "description_key": "noli",
+      "description_sample": "Noli",
+      "canonical_code": "A001.010",
+      "alias_code": "L001.010",
+      "alias_count": 2,
+      "alias_sample_id": "694863e1865e3b0469148c2b"
+    },
+    {
+      "level": 7,
+      "description_key": "installazione cantiere",
+      "description_sample": "Installazione cantiere",
+      "canonical_code": "A001.020",
+      "alias_code": "L001.020",
+      "alias_count": 2,
+      "alias_sample_id": "694863e1865e3b0469148c2c"
+    },
+    {
+      "level": 7,
+      "description_key": "pulizie di cantiere",
+      "description_sample": "Pulizie di cantiere",
+      "canonical_code": "A001.040",
+      "alias_code": "L001.040",
+      "alias_count": 2,
+      "alias_sample_id": "694863e1865e3b0469148c2e"
+    },
+    {
+      "level": 7,
+      "description_key": "assistenze murarie alla posa di impianti",
+      "description_sample": "Assistenze murarie alla posa di impianti",
+      "canonical_code": "A004.010",
+      "alias_code": "L004.010",
+      "alias_count": 2,
+      "alias_sample_id": "694863e1865e3b0469148c30"
+    },
+    {
+      "level": 7,
+      "description_key": "demolizione elementi civili",
+      "description_sample": "Demolizione elementi civili",
+      "canonical_code": "A005.030",
+      "alias_code": "L005.030",
+      "alias_count": 2,
+      "alias_sample_id": "694863e1865e3b0469148c33"
+    },
+    {
+      "level": 7,
+      "description_key": "murature in altri materiali",
+      "description_sample": "Murature in altri materiali",
+      "canonical_code": "A012.040",
+      "alias_code": "L012.040",
+      "alias_count": 2,
+      "alias_sample_id": "694863e1865e3b0469148c3b"
+    },
+    {
+      "level": 7,
+      "description_key": "pareti in cartongesso strandard e idrorepellente",
+      "description_sample": "Pareti in cartongesso strandard e idrorepellente",
+      "canonical_code": "A013.070",
+      "alias_code": "L013.070",
+      "alias_count": 2,
+      "alias_sample_id": "694863e1865e3b0469148c41"
+    },
+    {
+      "level": 7,
+      "description_key": "accessori per cartongessi",
+      "description_sample": "Accessori per cartongessi",
+      "canonical_code": "A013.100",
+      "alias_code": "L013.100",
+      "alias_count": 2,
+      "alias_sample_id": "694863e1865e3b0469148c43"
+    },
+    {
+      "level": 7,
+      "description_key": "isolanti acustici",
+      "description_sample": "Isolanti acustici",
+      "canonical_code": "A014.030",
+      "alias_code": "L014.030",
+      "alias_count": 2,
+      "alias_sample_id": "694863e1865e3b0469148c46"
+    },
+    {
+      "level": 6,
+      "description_key": "opere murarie",
+      "description_sample": "Opere murarie",
+      "canonical_code": "A012",
+      "alias_code": "L012",
+      "alias_count": 3,
+      "alias_sample_id": "694863e1865e3b0469148c0e"
+    },
+    {
+      "level": 7,
+      "description_key": "impermeabilizzazioni bituminose",
+      "description_sample": "Impermeabilizzazioni bituminose",
+      "canonical_code": "A015.020",
+      "alias_code": "L015.020",
+      "alias_count": 2,
+      "alias_sample_id": "694863e1865e3b0469148c48"
+    },
+    {
+      "level": 7,
+      "description_key": "sottofondi pavimentazioni",
+      "description_sample": "Sottofondi pavimentazioni",
+      "canonical_code": "A016.020",
+      "alias_code": "L016.020",
+      "alias_count": 2,
+      "alias_sample_id": "694863e1865e3b0469148c4c"
+    },
+    {
+      "level": 7,
+      "description_key": "rivestimenti in gres e ceramica",
+      "description_sample": "Rivestimenti in gres e ceramica",
+      "canonical_code": "A018.010",
+      "alias_code": "L018.010",
+      "alias_count": 2,
+      "alias_sample_id": "694863e1865e3b0469148c51"
+    },
+    {
+      "level": 7,
+      "description_key": "altri rivestimenti",
+      "description_sample": "Altri rivestimenti",
+      "canonical_code": "A018.040",
+      "alias_code": "L018.040",
+      "alias_count": 2,
+      "alias_sample_id": "694863e1865e3b0469148c53"
+    },
+    {
+      "level": 7,
+      "description_key": "pavimenti in gres e ceramica",
+      "description_sample": "Pavimenti in gres e ceramica",
+      "canonical_code": "A019.010",
+      "alias_code": "L019.010",
+      "alias_count": 2,
+      "alias_sample_id": "694863e1865e3b0469148c55"
+    },
+    {
+      "level": 7,
+      "description_key": "pavimenti in gomma o pvc",
+      "description_sample": "Pavimenti in gomma o pvc",
+      "canonical_code": "A019.020",
+      "alias_code": "L019.020",
+      "alias_count": 2,
+      "alias_sample_id": "694863e1865e3b0469148c56"
+    },
+    {
+      "level": 7,
+      "description_key": "pavimenti in moquette e zerbini",
+      "description_sample": "Pavimenti in moquette e zerbini",
+      "canonical_code": "A019.050",
+      "alias_code": "L019.050",
+      "alias_count": 2,
+      "alias_sample_id": "694863e1865e3b0469148c57"
+    },
+    {
+      "level": 6,
+      "description_key": "opere da cartongessista",
+      "description_sample": "Opere da cartongessista",
+      "canonical_code": "A013",
+      "alias_code": "L013",
+      "alias_count": 3,
+      "alias_sample_id": "694863e1865e3b0469148c0f"
+    },
+    {
+      "level": 7,
+      "description_key": "pavimenti sopraelevati e flottanti",
+      "description_sample": "Pavimenti sopraelevati e flottanti",
+      "canonical_code": "A019.060",
+      "alias_code": "L019.060",
+      "alias_count": 2,
+      "alias_sample_id": "694863e1865e3b0469148c58"
+    },
+    {
+      "level": 7,
+      "description_key": "pavimenti in altri materiali",
+      "description_sample": "Pavimenti in altri materiali",
+      "canonical_code": "A019.080",
+      "alias_code": "L019.080",
+      "alias_count": 2,
+      "alias_sample_id": "694863e1865e3b0469148c59"
+    },
+    {
+      "level": 7,
+      "description_key": "zoccolini e accessori per pavimentazioni",
+      "description_sample": "Zoccolini e accessori per pavimentazioni",
+      "canonical_code": "A019.090",
+      "alias_code": "L019.090",
+      "alias_count": 2,
+      "alias_sample_id": "694863e1865e3b0469148c5a"
+    },
+    {
+      "level": 7,
+      "description_key": "controsoffitti in cartongesso",
+      "description_sample": "Controsoffitti in cartongesso",
+      "canonical_code": "A020.010",
+      "alias_code": "L020.010",
+      "alias_count": 2,
+      "alias_sample_id": "694863e1865e3b0469148c5b"
+    },
+    {
+      "level": 7,
+      "description_key": "controsoffitti metallici",
+      "description_sample": "Controsoffitti metallici",
+      "canonical_code": "A020.030",
+      "alias_code": "L020.030",
+      "alias_count": 2,
+      "alias_sample_id": "694863e1865e3b0469148c5d"
+    },
+    {
+      "level": 7,
+      "description_key": "controsoffitti in altri materiali",
+      "description_sample": "Controsoffitti in altri materiali",
+      "canonical_code": "A020.070",
+      "alias_code": "L020.070",
+      "alias_count": 2,
+      "alias_sample_id": "694863e1865e3b0469148c5e"
+    },
+    {
+      "level": 7,
+      "description_key": "tende da sole e alla veneziana",
+      "description_sample": "Tende da sole e alla veneziana",
+      "canonical_code": "A022.030",
+      "alias_code": "L022.030",
+      "alias_count": 2,
+      "alias_sample_id": "694863e1865e3b0469148c62"
+    },
+    {
+      "level": 7,
+      "description_key": "serramenti metallici",
+      "description_sample": "Serramenti metallici",
+      "canonical_code": "A025.030",
+      "alias_code": "L025.030",
+      "alias_count": 2,
+      "alias_sample_id": "694863e1865e3b0469148c66"
+    },
+    {
+      "level": 6,
+      "description_key": "opere di coibentazione",
+      "description_sample": "Opere di coibentazione",
+      "canonical_code": "A014",
+      "alias_code": "L014",
+      "alias_count": 3,
+      "alias_sample_id": "694863e1865e3b0469148c10"
+    },
+    {
+      "level": 7,
+      "description_key": "porte tagliafuoco",
+      "description_sample": "Porte tagliafuoco",
+      "canonical_code": "A025.060",
+      "alias_code": "L025.060",
+      "alias_count": 2,
+      "alias_sample_id": "694863e1865e3b0469148c67"
+    },
+    {
+      "level": 7,
+      "description_key": "porte in legno",
+      "description_sample": "Porte in legno",
+      "canonical_code": "A027.010",
+      "alias_code": "L027.010",
+      "alias_count": 2,
+      "alias_sample_id": "694863e1865e3b0469148c69"
+    },
+    {
+      "level": 7,
+      "description_key": "tinteggiature su agglometari edili (murature, cartongessi ecc.)",
+      "description_sample": "Tinteggiature su agglometari edili (Murature, cartongessi ecc.)",
+      "canonical_code": "A032.020",
+      "alias_code": "L032.020",
+      "alias_count": 2,
+      "alias_sample_id": "694863e1865e3b0469148c72"
+    },
+    {
+      "level": 7,
+      "description_key": "apparecchi sanitari",
+      "description_sample": "Apparecchi sanitari",
+      "canonical_code": "A034.010",
+      "alias_code": "L034.010",
+      "alias_count": 2,
+      "alias_sample_id": "694863e1865e3b0469148c73"
+    },
+    {
+      "level": 7,
+      "description_key": "arredi su misura in altri materiali",
+      "description_sample": "Arredi su misura in altri materiali",
+      "canonical_code": "A039.020",
+      "alias_code": "L039.020",
+      "alias_count": 2,
+      "alias_sample_id": "694863e1865e3b0469148c83"
+    },
+    {
+      "level": 6,
+      "description_key": "opere di impermeabilizzazione",
+      "description_sample": "Opere di impermeabilizzazione",
+      "canonical_code": "A015",
+      "alias_code": "L015",
+      "alias_count": 3,
+      "alias_sample_id": "694863e1865e3b0469148c11"
+    },
+    {
+      "level": 6,
+      "description_key": "massetti, sottofondi, drenaggi, vespai",
+      "description_sample": "Massetti, sottofondi, drenaggi, vespai",
+      "canonical_code": "A016",
+      "alias_code": "L016",
+      "alias_count": 3,
+      "alias_sample_id": "694863e1865e3b0469148c12"
+    },
+    {
+      "level": 6,
+      "description_key": "opere da intonacatore e stuccatore",
+      "description_sample": "Opere da intonacatore e stuccatore",
+      "canonical_code": "A017",
+      "alias_code": "L017",
+      "alias_count": 3,
+      "alias_sample_id": "694863e1865e3b0469148c13"
+    },
+    {
+      "level": 6,
+      "description_key": "opere di rivestimento",
+      "description_sample": "Opere di rivestimento",
+      "canonical_code": "A018",
+      "alias_code": "L018",
+      "alias_count": 3,
+      "alias_sample_id": "694863e1865e3b0469148c14"
+    },
+    {
+      "level": 7,
+      "description_key": "serramenti in legno e alluminio",
+      "description_sample": "Serramenti in legno e alluminio",
+      "canonical_code": "A025.020",
+      "alias_code": "L025.020",
+      "alias_count": 2,
+      "alias_sample_id": "694863e1865e3b0469148c65"
+    },
+    {
+      "level": 7,
+      "description_key": "porte blindate, portoni e bussole",
+      "description_sample": "Porte blindate, portoni e bussole",
+      "canonical_code": "A025.070",
+      "alias_code": "L025.070",
+      "alias_count": 2,
+      "alias_sample_id": "694863e1865e3b0469148c68"
+    },
+    {
+      "level": 7,
+      "description_key": "boiserie in legno",
+      "description_sample": "Boiserie in legno",
+      "canonical_code": "A027.030",
+      "alias_code": "L027.030",
+      "alias_count": 2,
+      "alias_sample_id": "694863e1865e3b0469148c6a"
+    },
+    {
+      "level": 7,
+      "description_key": "opere in legno custom",
+      "description_sample": "Opere in legno custom",
+      "canonical_code": "A027.040",
+      "alias_code": "L027.040",
+      "alias_count": 2,
+      "alias_sample_id": "694863e1865e3b0469148c6b"
+    },
+    {
+      "level": 7,
+      "description_key": "scossaline",
+      "description_sample": "Scossaline",
+      "canonical_code": "A028.030",
+      "alias_code": "L028.030",
+      "alias_count": 2,
+      "alias_sample_id": "694863e1865e3b0469148c6d"
+    },
+    {
+      "level": 6,
+      "description_key": "movimenti terra",
+      "description_sample": "Movimenti Terra",
+      "canonical_code": "A006",
+      "alias_code": "L006",
+      "alias_count": 2,
+      "alias_sample_id": "694863e1865e3b0469148c0b"
+    },
+    {
+      "level": 7,
+      "description_key": "grigliati",
+      "description_sample": "Grigliati",
+      "canonical_code": "A029.030",
+      "alias_code": "L029.030",
+      "alias_count": 2,
+      "alias_sample_id": "694863e1865e3b0469148c6e"
+    },
+    {
+      "level": 7,
+      "description_key": "cancelli e recinzioni",
+      "description_sample": "Cancelli e recinzioni",
+      "canonical_code": "A029.040",
+      "alias_code": "L029.040",
+      "alias_count": 2,
+      "alias_sample_id": "694863e1865e3b0469148c6f"
+    },
+    {
+      "level": 7,
+      "description_key": "parapetti metallici, ringhiere e inferriate",
+      "description_sample": "Parapetti metallici, ringhiere e inferriate",
+      "canonical_code": "A029.050",
+      "alias_code": "L029.050",
+      "alias_count": 2,
+      "alias_sample_id": "694863e1865e3b0469148c70"
+    },
+    {
+      "level": 7,
+      "description_key": "accessori per l'allestimento di servizi igienici",
+      "description_sample": "Accessori per l'allestimento di servizi igienici",
+      "canonical_code": "A034.030",
+      "alias_code": "L034.030",
+      "alias_count": 2,
+      "alias_sample_id": "694863e1865e3b0469148c74"
+    },
+    {
+      "level": 7,
+      "description_key": "alberature (prima seconda e terza grandezza)",
+      "description_sample": "Alberature (prima seconda e terza grandezza)",
+      "canonical_code": "A036.010",
+      "alias_code": "L036.010",
+      "alias_count": 2,
+      "alias_sample_id": "694863e1865e3b0469148c76"
+    },
+    {
+      "level": 7,
+      "description_key": "segnaletica orizzontale e verticale",
+      "description_sample": "Segnaletica orizzontale e verticale",
+      "canonical_code": "A037.010",
+      "alias_code": "L037.010",
+      "alias_count": 2,
+      "alias_sample_id": "694863e1865e3b0469148c78"
+    },
+    {
+      "level": 7,
+      "description_key": "manti stradali in asfalto e bitumi",
+      "description_sample": "Manti stradali in asfalto e bitumi",
+      "canonical_code": "A037.020",
+      "alias_code": "L037.020",
+      "alias_count": 2,
+      "alias_sample_id": "694863e1865e3b0469148c79"
+    },
+    {
+      "level": 7,
+      "description_key": "sistema di raccolta e smaltimento acque meteoriche",
+      "description_sample": "Sistema di raccolta e smaltimento acque meteoriche",
+      "canonical_code": "A037.040",
+      "alias_code": "L037.040",
+      "alias_count": 2,
+      "alias_sample_id": "694863e1865e3b0469148c7b"
+    },
+    {
+      "level": 7,
+      "description_key": "marciapiedi e accessori",
+      "description_sample": "Marciapiedi e accessori",
+      "canonical_code": "A037.050",
+      "alias_code": "L037.050",
+      "alias_count": 2,
+      "alias_sample_id": "694863e1865e3b0469148c7c"
+    },
+    {
+      "level": 7,
+      "description_key": "ghiaie sabbie e aggregati",
+      "description_sample": "Ghiaie sabbie e aggregati",
+      "canonical_code": "A037.070",
+      "alias_code": "L037.070",
+      "alias_count": 2,
+      "alias_sample_id": "694863e1865e3b0469148c7e"
+    },
+    {
+      "level": 7,
+      "description_key": "arredi per esterno",
+      "description_sample": "Arredi per esterno",
+      "canonical_code": "A038.040",
+      "alias_code": "L038.040",
+      "alias_count": 2,
+      "alias_sample_id": "694863e1865e3b0469148c80"
+    },
+    {
+      "level": 7,
+      "description_key": "altri arredi standard",
+      "description_sample": "Altri arredi standard",
+      "canonical_code": "A038.050",
+      "alias_code": "L038.050",
+      "alias_count": 2,
+      "alias_sample_id": "694863e1865e3b0469148c81"
+    },
+    {
+      "level": 7,
+      "description_key": "arredi su misura insegne e simboli",
+      "description_sample": "Arredi su misura insegne e simboli",
+      "canonical_code": "A039.030",
+      "alias_code": "L039.030",
+      "alias_count": 2,
+      "alias_sample_id": "694863e1865e3b0469148c84"
+    },
+    {
+      "level": 7,
+      "description_key": "impianti ascensori",
+      "description_sample": "Impianti ascensori",
+      "canonical_code": "A040.010",
+      "alias_code": "L040.010",
+      "alias_count": 2,
+      "alias_sample_id": "694863e1865e3b0469148c85"
+    },
+    {
+      "level": 7,
+      "description_key": "altri presidi antincendio",
+      "description_sample": "Altri presidi antincendio",
+      "canonical_code": "A041.050",
+      "alias_code": "L041.050",
+      "alias_count": 2,
+      "alias_sample_id": "694863e1865e3b0469148c89"
+    },
+    {
+      "level": 6,
+      "description_key": "opere da facciatista e da cappottista",
+      "description_sample": "Opere Da Facciatista E Da Cappottista",
+      "canonical_code": "A021",
+      "alias_code": "L021",
+      "alias_count": 3,
+      "alias_sample_id": "694863e1865e3b0469148c17"
+    },
+    {
+      "level": 6,
+      "description_key": "tetti, manti di copertura e opere accessorie",
+      "description_sample": "Tetti, Manti Di Copertura E Opere Accessorie",
+      "canonical_code": "A023",
+      "alias_code": "L023",
+      "alias_count": 3,
+      "alias_sample_id": "694863e1865e3b0469148c19"
+    },
+    {
+      "level": 6,
+      "description_key": "condotti e canne fumarie",
+      "description_sample": "Condotti E Canne Fumarie",
+      "canonical_code": "A024",
+      "alias_code": "L024",
+      "alias_count": 3,
+      "alias_sample_id": "694863e1865e3b0469148c1a"
+    },
+    {
+      "level": 6,
+      "description_key": "opere da lattoniere",
+      "description_sample": "Opere Da Lattoniere",
+      "canonical_code": "A028",
+      "alias_code": "L028",
+      "alias_count": 3,
+      "alias_sample_id": "694863e1865e3b0469148c1d"
+    },
+    {
+      "level": 6,
+      "description_key": "opere da fabbro",
+      "description_sample": "Opere Da Fabbro",
+      "canonical_code": "A029",
+      "alias_code": "L029",
+      "alias_count": 3,
+      "alias_sample_id": "694863e1865e3b0469148c1e"
+    },
+    {
+      "level": 6,
+      "description_key": "opere da florovivaista",
+      "description_sample": "Opere Da Florovivaista",
+      "canonical_code": "A036",
+      "alias_code": "L036",
+      "alias_count": 3,
+      "alias_sample_id": "694863e1865e3b0469148c22"
+    },
+    {
+      "level": 6,
+      "description_key": "opere stradali, fognature e sistemazioni esterne",
+      "description_sample": "Opere Stradali, Fognature E Sistemazioni Esterne",
+      "canonical_code": "A037",
+      "alias_code": "L037",
+      "alias_count": 3,
+      "alias_sample_id": "694863e1865e3b0469148c23"
+    },
+    {
+      "level": 6,
+      "description_key": "arredi standard",
+      "description_sample": "Arredi Standard",
+      "canonical_code": "A038",
+      "alias_code": "L038",
+      "alias_count": 3,
+      "alias_sample_id": "694863e1865e3b0469148c24"
+    },
+    {
+      "level": 6,
+      "description_key": "impianti elevatori",
+      "description_sample": "Impianti Elevatori",
+      "canonical_code": "A040",
+      "alias_code": "L040",
+      "alias_count": 3,
+      "alias_sample_id": "694863e1865e3b0469148c26"
+    },
+    {
+      "level": 6,
+      "description_key": "presidi antincendio",
+      "description_sample": "Presidi Antincendio",
+      "canonical_code": "A041",
+      "alias_code": "L041",
+      "alias_count": 3,
+      "alias_sample_id": "694863e1865e3b0469148c27"
+    },
+    {
+      "level": 7,
+      "description_key": "impianti di cantiere",
+      "description_sample": "Impianti di cantiere",
+      "canonical_code": "A001.030",
+      "alias_code": "L001.030",
+      "alias_count": 2,
+      "alias_sample_id": "694863e1865e3b0469148c2d"
+    },
+    {
+      "level": 7,
+      "description_key": "demolizione elementi strutturali",
+      "description_sample": "Demolizione elementi strutturali",
+      "canonical_code": "A005.020",
+      "alias_code": "L005.020",
+      "alias_count": 2,
+      "alias_sample_id": "694863e1865e3b0469148c32"
+    },
+    {
+      "level": 7,
+      "description_key": "rimozione di impianti tecnologici",
+      "description_sample": "Rimozione di impianti tecnologici",
+      "canonical_code": "A005.040",
+      "alias_code": "L005.040",
+      "alias_count": 2,
+      "alias_sample_id": "694863e1865e3b0469148c34"
+    },
+    {
+      "level": 7,
+      "description_key": "scavi e trasporti a discarica",
+      "description_sample": "Scavi e trasporti a discarica",
+      "canonical_code": "A006.010",
+      "alias_code": "L006.010",
+      "alias_count": 2,
+      "alias_sample_id": "694863e1865e3b0469148c35"
+    },
+    {
+      "level": 7,
+      "description_key": "contropareti in cartongesso strandard e idrorepellente",
+      "description_sample": "Contropareti in cartongesso strandard e idrorepellente",
+      "canonical_code": "A013.010",
+      "alias_code": "L013.010",
+      "alias_count": 2,
+      "alias_sample_id": "694863e1865e3b0469148c3c"
+    },
+    {
+      "level": 7,
+      "description_key": "contropareti in cartongesso resistente al fuoco",
+      "description_sample": "Contropareti in cartongesso resistente al fuoco",
+      "canonical_code": "A013.020",
+      "alias_code": "L013.020",
+      "alias_count": 2,
+      "alias_sample_id": "694863e1865e3b0469148c3d"
+    },
+    {
+      "level": 7,
+      "description_key": "pareti in cartongesso resistente al fuoco",
+      "description_sample": "Pareti in cartongesso resistente al fuoco",
+      "canonical_code": "A013.080",
+      "alias_code": "L013.080",
+      "alias_count": 2,
+      "alias_sample_id": "694863e1865e3b0469148c42"
+    },
+    {
+      "level": 7,
+      "description_key": "isolanti termici in copertura",
+      "description_sample": "Isolanti termici in copertura",
+      "canonical_code": "A014.010",
+      "alias_code": "L014.010",
+      "alias_count": 2,
+      "alias_sample_id": "694863e1865e3b0469148c44"
+    },
+    {
+      "level": 7,
+      "description_key": "isolanti termici su solai e pareti",
+      "description_sample": "Isolanti termici su solai e pareti",
+      "canonical_code": "A014.020",
+      "alias_code": "L014.020",
+      "alias_count": 2,
+      "alias_sample_id": "694863e1865e3b0469148c45"
+    },
+    {
+      "level": 7,
+      "description_key": "barriere al vapore",
+      "description_sample": "Barriere al vapore",
+      "canonical_code": "A015.010",
+      "alias_code": "L015.010",
+      "alias_count": 2,
+      "alias_sample_id": "694863e1865e3b0469148c47"
+    },
+    {
+      "level": 7,
+      "description_key": "impermeabilizzazioni liquide",
+      "description_sample": "Impermeabilizzazioni liquide",
+      "canonical_code": "A015.050",
+      "alias_code": "L015.050",
+      "alias_count": 2,
+      "alias_sample_id": "694863e1865e3b0469148c49"
+    },
+    {
+      "level": 7,
+      "description_key": "vespai areati",
+      "description_sample": "Vespai areati",
+      "canonical_code": "A016.050",
+      "alias_code": "L016.050",
+      "alias_count": 2,
+      "alias_sample_id": "694863e1865e3b0469148c4d"
+    },
+    {
+      "level": 7,
+      "description_key": "teli di separazione",
+      "description_sample": "Teli di separazione",
+      "canonical_code": "A016.060",
+      "alias_code": "L016.060",
+      "alias_count": 2,
+      "alias_sample_id": "694863e1865e3b0469148c4e"
+    },
+    {
+      "level": 7,
+      "description_key": "intonaco per interno",
+      "description_sample": "Intonaco per interno",
+      "canonical_code": "A017.010",
+      "alias_code": "L017.010",
+      "alias_count": 2,
+      "alias_sample_id": "694863e1865e3b0469148c4f"
+    },
+    {
+      "level": 6,
+      "description_key": "opere di bonifica e analisi di laboratorio",
+      "description_sample": "Opere Di Bonifica E Analisi Di Laboratorio",
+      "canonical_code": "G002",
+      "alias_code": "L002",
+      "alias_count": 3,
+      "alias_sample_id": "694863e1865e3b0469148c08"
+    },
+    {
+      "level": 7,
+      "description_key": "controsoffitti in fibre minerali e acustici",
+      "description_sample": "Controsoffitti in fibre minerali e acustici",
+      "canonical_code": "A020.020",
+      "alias_code": "L020.020",
+      "alias_count": 2,
+      "alias_sample_id": "694863e1865e3b0469148c5c"
+    },
+    {
+      "level": 7,
+      "description_key": "sistemi di facciata ventilata",
+      "description_sample": "Sistemi di facciata ventilata",
+      "canonical_code": "A021.040",
+      "alias_code": "L021.040",
+      "alias_count": 2,
+      "alias_sample_id": "694863e1865e3b0469148c60"
+    },
+    {
+      "level": 7,
+      "description_key": "cappotti termici finiti a intonachino",
+      "description_sample": "Cappotti termici finiti a intonachino",
+      "canonical_code": "A021.050",
+      "alias_code": "L021.050",
+      "alias_count": 2,
+      "alias_sample_id": "694863e1865e3b0469148c61"
+    },
+    {
+      "level": 7,
+      "description_key": "dispositivi anticaduta e di protezione",
+      "description_sample": "Dispositivi anticaduta e di protezione",
+      "canonical_code": "A023.040",
+      "alias_code": "L023.040",
+      "alias_count": 2,
+      "alias_sample_id": "694863e1865e3b0469148c63"
+    },
+    {
+      "level": 6,
+      "description_key": "opere da vetraio",
+      "description_sample": "Opere Da Vetraio",
+      "canonical_code": "A031",
+      "alias_code": "L031",
+      "alias_count": 1,
+      "alias_sample_id": "694870df9343b40ef865be02"
+    }
+  ],
+  "ambiguous_groups": [
+    {
+      "level": 7,
+      "description_key": "botole d'ispezione e accessori",
+      "description_sample": "Botole d'ispezione e accessori",
+      "ontology_codes": [
+        "A013.110",
+        "A020.090"
+      ],
+      "wbs_codes": [
+        "A020.090",
+        "L020.090"
+      ],
+      "count": 12
+    }
+  ],
+  "unmatched_groups": []
+}

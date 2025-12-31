@@ -1,18 +1,37 @@
 <template>
-  <div class="flex items-center gap-2 h-full">
-    <div class="flex items-center gap-1.5 text-[11px] font-semibold whitespace-nowrap">
+  <!-- Root container with group class for hover detection -->
+  <div class="flex items-center gap-2 h-full group/header">
+    <div class="flex items-center gap-1 text-[11px] font-semibold whitespace-nowrap">
+      <!-- Column Label -->
       <span class="text-[11px] font-semibold uppercase tracking-wide text-[hsl(var(--muted-foreground))]">
         {{ params.displayName }}
       </span>
       
+      <!-- Active Filter Indicator Dot - Always visible when filter is active -->
+      <span
+        v-if="isFilterActive"
+        class="w-1.5 h-1.5 rounded-full bg-[hsl(var(--acc-primary,152_60%_45%))] flex-shrink-0"
+        :title="filterTooltip"
+      />
+      
+      <!-- Active Sort Indicator Dot - Always visible when sorted -->
+      <span
+        v-if="sortState && !isFilterActive"
+        class="w-1.5 h-1.5 rounded-full bg-[hsl(var(--primary))] flex-shrink-0"
+        :title="`Ordinato: ${sortState === 'asc' ? 'A-Z' : 'Z-A'}`"
+      />
+    </div>
+
+    <!-- Hover-only controls container -->
+    <div class="flex items-center gap-0.5 opacity-0 group-hover/header:opacity-100 transition-opacity duration-150">
       <!-- Sort Button -->
       <button
         v-if="isSortable"
         :class="[
-          'inline-flex items-center justify-center w-6 h-6 rounded-md transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring)/0.6)] border',
+          'inline-flex items-center justify-center w-5 h-5 rounded transition-all duration-100 focus:outline-none',
           sortState
-            ? 'bg-[hsl(var(--primary)/0.12)] text-[hsl(var(--primary))] border-[hsl(var(--primary)/0.4)]'
-            : 'bg-[hsl(var(--card))] text-[hsl(var(--muted-foreground))] border-[hsl(var(--border))] hover:bg-[hsl(var(--muted)/0.6)] hover:text-[hsl(var(--foreground))]'
+            ? 'text-[hsl(var(--primary))] hover:bg-[hsl(var(--primary)/0.1)]'
+            : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted)/0.5)]'
         ]"
         type="button"
         :aria-label="`Ordina per ${params.displayName}`"
@@ -21,7 +40,7 @@
       >
         <Icon 
           :name="sortIconName" 
-          :class="iconSize"
+          class="w-3.5 h-3.5"
         />
       </button>
       
@@ -29,10 +48,10 @@
       <button
         v-if="isFilterable"
         :class="[
-          'relative inline-flex items-center justify-center w-6 h-6 rounded-md transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring)/0.6)] border',
+          'inline-flex items-center justify-center w-5 h-5 rounded transition-all duration-100 focus:outline-none',
           isFilterActive
-            ? 'bg-[hsl(var(--success)/0.14)] text-[hsl(var(--success))] border-[hsl(var(--success)/0.4)]'
-            : 'bg-[hsl(var(--card))] text-[hsl(var(--muted-foreground))] border-[hsl(var(--border))] hover:bg-[hsl(var(--muted)/0.6)] hover:text-[hsl(var(--foreground))]'
+            ? 'text-[hsl(var(--acc-primary,152_60%_45%))] hover:bg-[hsl(var(--acc-primary,152_60%_45%)/0.1)]'
+            : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted)/0.5)]'
         ]"
         type="button"
         :aria-label="filterTooltip"
@@ -41,11 +60,7 @@
       >
         <Icon 
           :name="isFilterActive ? 'heroicons:funnel-solid' : 'heroicons:funnel'" 
-          :class="iconSize"
-        />
-        <span
-          v-if="isFilterActive"
-          class="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-[hsl(var(--success))] ring-2 ring-[hsl(var(--card))]"
+          class="w-3.5 h-3.5"
         />
       </button>
     </div>
@@ -68,8 +83,6 @@ type HeaderParams = IHeaderParams & {
 const props = defineProps<{
   params: HeaderParams;
 }>();
-
-const iconSize = 'w-4 h-4';
 
 const sortState = ref<'asc' | 'desc' | null>((props.params.column?.getSort() as 'asc' | 'desc' | null) || null);
 const isSortable = computed(() => props.params.column?.getColDef?.()?.sortable !== false);
@@ -128,8 +141,14 @@ const filterTooltip = computed(() => {
     not_contains: 'Non contiene',
     is_empty: 'Vuoto',
     is_not_empty: 'Non vuoto',
+    in: 'Selezionati',
   };
-  const suffix = operator === 'is_empty' || operator === 'is_not_empty' ? '' : `${value ? `: ${value}` : ''}`;
+  const valueLabel = Array.isArray(value)
+    ? (value.length <= 2 ? value.join(', ') : `${value.length}`)
+    : value;
+  const suffix = operator === 'is_empty' || operator === 'is_not_empty'
+    ? ''
+    : `${valueLabel ? `: ${valueLabel}` : ''}`;
   return `Filtro attivo: ${labels[operator] || 'Filtro'}${suffix}`;
 });
 
@@ -137,7 +156,9 @@ const openFilter = (event: MouseEvent) => {
   const options = props.params?.valuesGetter?.() ?? [];
   const target = (event.currentTarget as HTMLElement) || null;
   const colDef = props.params.column?.getColDef?.();
-  const filterType = colDef?.filter === 'agNumberColumnFilter' ? 'number' : 'text';
+  const filterMode = (colDef?.context as { filterMode?: string } | undefined)?.filterMode;
+  const isMulti = filterMode === 'multi' || colDef?.filter === 'agSetColumnFilter';
+  const filterType = isMulti ? 'set' : (colDef?.filter === 'agNumberColumnFilter' ? 'number' : 'text');
 
   props.params.context?.openFilterPanel?.({
     field: props.params.column?.getColId?.(),
@@ -145,6 +166,7 @@ const openFilter = (event: MouseEvent) => {
     options,
     triggerEl: target,
     filterType,
+    multiSelect: isMulti,
   });
 };
 </script>

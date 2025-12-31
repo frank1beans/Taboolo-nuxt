@@ -1,5 +1,5 @@
 import { computed, ref, watch } from 'vue'
-import type { Estimate, Project } from '~/types/project'
+import type { Estimate, Project } from '#types'
 
 import { persistClient as persistClientStorage, restoreFromClient as restoreFromClientStorage } from '~/composables/context/useContextPersistence'
 

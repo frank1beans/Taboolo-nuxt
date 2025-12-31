@@ -65,6 +65,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import type { WbsNode as WbsNodeType } from '~/types/wbs';
+import { formatCurrencyCompact } from '~/lib/formatters';
 
 const props = withDefaults(
   defineProps<{
@@ -98,12 +99,5 @@ const handleClick = () => {
   emit('select', props.node);
 };
 
-const formatAmount = (amount: number): string => {
-  return new Intl.NumberFormat('it-IT', {
-    style: 'currency',
-    currency: 'EUR',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
-};
+const formatAmount = (amount: number): string => formatCurrencyCompact(amount);
 </script>

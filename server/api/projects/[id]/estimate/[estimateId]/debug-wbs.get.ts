@@ -1,13 +1,13 @@
-import { defineEventHandler, getRouterParam } from 'h3';
-import { Types } from 'mongoose';
+import { defineEventHandler } from 'h3';
 import { EstimateItem } from '#models';
+import { requireObjectIdParam, toObjectId } from '#utils/validate';
 
 export default defineEventHandler(async (event) => {
-    const projectId = getRouterParam(event, 'id');
-    const estimateId = getRouterParam(event, 'estimateId');
+    const projectId = requireObjectIdParam(event, 'id', 'Project ID');
+    const estimateId = requireObjectIdParam(event, 'estimateId', 'Estimate ID');
 
-    const validProjectId = new Types.ObjectId(projectId!);
-    const validEstimateId = new Types.ObjectId(estimateId!);
+    const validProjectId = toObjectId(projectId);
+    const validEstimateId = toObjectId(estimateId);
 
     // Get one sample item with full WBS details
     const sample = await EstimateItem.aggregate([

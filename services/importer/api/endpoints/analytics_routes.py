@@ -305,9 +305,19 @@ class GlobalComputeMapRequest(BaseModel):
     """Request for global UMAP computation."""
     project_ids: Optional[List[str]] = None  # None = all projects
     force: bool = False
+    n_neighbors: int = 30
+    min_dist: float = 0.0
+    metric: str = "cosine"
+    min_cluster_size: int = 5 
 
 
-def _run_global_compute_map_job(project_ids: Optional[List[str]] = None):
+def _run_global_compute_map_job(
+    project_ids: Optional[List[str]] = None,
+    n_neighbors: int = 30,
+    min_dist: float = 0.0,
+    metric: str = "cosine",
+    min_cluster_size: int = 5
+):
     """
     Background job to compute UMAP (2D/3D) and Clusters on ALL items across ALL projects.
     This ensures all points are placed in the same semantic space for proper comparison.
@@ -320,6 +330,7 @@ def _run_global_compute_map_job(project_ids: Optional[List[str]] = None):
 
     start_time = time.time()
     logger.info(f"Starting GLOBAL Semantic Map computation for projects: {project_ids or 'ALL'}")
+    logger.info(f"UMAP Params: neighbors={n_neighbors}, min_dist={min_dist}, metric={metric}. HDBSCAN min_cluster_size={min_cluster_size}")
 
     # 1. Connect to DB
     mongo_uri = os.getenv("MONGODB_URI") 
@@ -393,21 +404,26 @@ def _run_global_compute_map_job(project_ids: Optional[List[str]] = None):
     logger.info(f"Processing {n_samples} vectors for global UMAP")
     
     # 4. Clustering (HDBSCAN) on all data
-    min_size = max(5, int(n_samples / 50))
-    logger.info(f"Running HDBSCAN (min_cluster_size={min_size})...")
-    clusterer = hdbscan_module.HDBSCAN(min_cluster_size=min_size, min_samples=1)
+    # Use user provided min_cluster_size if reasonable for dataset, else fallback to dynamic or provided
+    # Logic: if user provided > n_samples, clamp it? Hdbscan handles it but let's be safe.
+    safe_min_cluster_size = min(min_cluster_size, n_samples)
+    
+    logger.info(f"Running HDBSCAN (min_cluster_size={safe_min_cluster_size})...")
+    clusterer = hdbscan_module.HDBSCAN(min_cluster_size=safe_min_cluster_size, min_samples=1)
     clusters = clusterer.fit_predict(X)
     n_clusters = len(set(clusters)) - (1 if -1 in clusters else 0)
     logger.info(f"Found {n_clusters} clusters")
     
     # 5. UMAP 2D on all data
     logger.info("Running UMAP 2D on all embeddings...")
-    n_neighbors = min(30, n_samples - 1)
+    # Clamp neighbors
+    safe_n_neighbors = min(n_neighbors, n_samples - 1)
+    
     reducer_2d = umap_module.UMAP(
         n_components=2, 
-        n_neighbors=n_neighbors, 
-        min_dist=0.0,
-        metric="cosine", 
+        n_neighbors=safe_n_neighbors, 
+        min_dist=min_dist,
+        metric=metric, 
         random_state=42
     )
     embedding_2d = reducer_2d.fit_transform(X)
@@ -416,9 +432,9 @@ def _run_global_compute_map_job(project_ids: Optional[List[str]] = None):
     logger.info("Running UMAP 3D on all embeddings...")
     reducer_3d = umap_module.UMAP(
         n_components=3, 
-        n_neighbors=n_neighbors, 
-        min_dist=0.0, 
-        metric="cosine", 
+        n_neighbors=safe_n_neighbors, 
+        min_dist=min_dist, 
+        metric=metric, 
         random_state=42
     )
     embedding_3d = reducer_3d.fit_transform(X)
@@ -881,8 +897,14 @@ async def trigger_global_compute_map(payload: GlobalComputeMapRequest, backgroun
     
     project_ids = [str(p["_id"]) for p in projects]
     
-    # Single background task that processes ALL projects together
-    background_tasks.add_task(_run_global_compute_map_job, project_ids)
+    background_tasks.add_task(
+        _run_global_compute_map_job, 
+        project_ids=project_ids,
+        n_neighbors=payload.n_neighbors,
+        min_dist=payload.min_dist,
+        metric=payload.metric,
+        min_cluster_size=payload.min_cluster_size
+    )
     
     return {
         "status": "accepted", 
@@ -1188,21 +1210,30 @@ async def get_global_map_data(params: GlobalAnalysisRequest = GlobalAnalysisRequ
                     "project_id": 1,
                     "code": 1,
                     "description": 1,
+                    "long_description": 1,
+                    "extended_description": 1,
                     "price": 1,
                     "unit": 1,
                     "map2d": 1,
                     "map3d": 1,
                     "cluster": 1,
+                    "map_version": 1,
+                    "map_updated_at": 1,
                     "wbs06_node": {
                         "$filter": {
                             "input": "$wbs_nodes",
                             "as": "wbs",
                             "cond": {
-                                "$regexMatch": {
-                                    "input": {"$ifNull": ["$$wbs.type", ""]},
-                                    "regex": "WBS 0?6",
-                                    "options": "i"
-                                }
+                                "$or": [
+                                    {
+                                        "$regexMatch": {
+                                            "input": {"$ifNull": ["$$wbs.type", ""]},
+                                            "regex": "WBS 0?6",
+                                            "options": "i"
+                                        }
+                                    },
+                                    { "$eq": ["$$wbs.level", 6] }
+                                ]
                             }
                         }
                     }
@@ -1233,6 +1264,14 @@ async def get_global_map_data(params: GlobalAnalysisRequest = GlobalAnalysisRequ
         ]
         
         items = list(coll.aggregate(pipeline))
+
+        latest_map_updated = None
+        latest_map_version = None
+        for item in items:
+            updated_at = item.get("map_updated_at")
+            if updated_at and (latest_map_updated is None or updated_at > latest_map_updated):
+                latest_map_updated = updated_at
+                latest_map_version = item.get("map_version")
         
         analyzer.close()
         
@@ -1258,6 +1297,7 @@ async def get_global_map_data(params: GlobalAnalysisRequest = GlobalAnalysisRequ
                 "z": map3d.get("z", 0) if map3d else 0,
                 "cluster": item.get("cluster", 0),
                 "label": item.get("description", "")[:100],
+                "long_description": item.get("long_description") or item.get("extended_description") or "",
                 "code": item.get("code", ""),
                 "price": item.get("price"),
                 "unit": item.get("unit", ""),
@@ -1281,7 +1321,11 @@ async def get_global_map_data(params: GlobalAnalysisRequest = GlobalAnalysisRequ
         
         return {
             "points": points,
-            "projects": project_info
+            "projects": project_info,
+            "map_meta": {
+                "version": latest_map_version,
+                "updated_at": latest_map_updated.isoformat() if latest_map_updated else None,
+            },
         }
         
     except Exception as e:
@@ -1356,11 +1400,16 @@ async def get_global_property_map_data(params: GlobalAnalysisRequest = GlobalAna
                             "input": "$wbs_nodes",
                             "as": "wbs",
                             "cond": {
-                                "$regexMatch": {
-                                    "input": {"$ifNull": ["$$wbs.type", ""]},
-                                    "regex": "WBS 0?6",
-                                    "options": "i",
-                                }
+                                "$or": [
+                                    {
+                                        "$regexMatch": {
+                                            "input": {"$ifNull": ["$$wbs.type", ""]},
+                                            "regex": "WBS 0?6",
+                                            "options": "i",
+                                        }
+                                    },
+                                    { "$eq": ["$$wbs.level", 6] }
+                                ]
                             },
                         }
                     },

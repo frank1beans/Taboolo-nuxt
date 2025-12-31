@@ -1,12 +1,10 @@
-import { defineEventHandler, createError, getRouterParam, getQuery } from 'h3';
+import { defineEventHandler, getQuery } from 'h3';
 import { proxyMultipartToPython } from '#utils/python-proxy';
 import { mapWbsImportStats } from '#utils/python-mappers';
+import { requireObjectIdParam } from '#utils/validate';
 
 export default defineEventHandler(async (event) => {
-  const projectId = getRouterParam(event, 'id');
-  if (!projectId) {
-    throw createError({ statusCode: 400, statusMessage: 'Project ID required' });
-  }
+  const projectId = requireObjectIdParam(event, 'id', 'Project ID');
 
   const query = getQuery(event);
   const method = (query.mode === 'update' || event.node.req.method === 'PUT') ? 'PUT' : 'POST';

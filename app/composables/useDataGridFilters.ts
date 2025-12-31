@@ -16,9 +16,28 @@ type GridApiLike = {
   addEventListener: (event: string, handler: () => void) => void;
 };
 
+const SET_FILTER_PREFIX = '__set__:';
+
+const encodeSetFilter = (values: string[]) => `${SET_FILTER_PREFIX}${JSON.stringify(values)}`;
+
+const decodeSetFilter = (raw: unknown): string[] | null => {
+  if (typeof raw !== 'string' || !raw.startsWith(SET_FILTER_PREFIX)) return null;
+  try {
+    const parsed = JSON.parse(raw.slice(SET_FILTER_PREFIX.length));
+    if (!Array.isArray(parsed)) return null;
+    return parsed.map((val) => String(val));
+  } catch {
+    return null;
+  }
+};
+
 export function useDataGridFilters(
   gridApi: Ref<GridApiLike | null>,
-  columns: DataGridColumn[]
+  columns: DataGridColumn[],
+  options?: {
+    serverSide?: boolean;
+    onQuickFilterChange?: (value: string) => void;
+  }
 ) {
   const quickFilterText = ref('');
   const activeFilters = ref<ActiveFilter[]>([]);
@@ -35,6 +54,7 @@ export function useDataGridFilters(
       'less_than',
       'greater_than_or_equal',
       'less_than_or_equal',
+      'in',
     ].includes(operator);
 
   const parseNumber = (raw: string) => {
@@ -51,6 +71,18 @@ export function useDataGridFilters(
 
   const toAgFilterModel = (filter: ColumnFilter | null, isNumericColumn = false) => {
     if (!filter) return null;
+    if (filter.operator === 'in') {
+      const values = Array.isArray(filter.value)
+        ? filter.value
+        : filter.value
+          ? [String(filter.value)]
+          : [];
+      const normalized = values.map((val) => String(val));
+      return normalized.length
+        ? { filterType: 'text', type: 'equals', filter: encodeSetFilter(normalized) }
+        : null;
+    }
+
     const trimmed = (filter.value ?? '').toString().trim();
     const hasValue = trimmed.length > 0;
 
@@ -114,8 +146,15 @@ export function useDataGridFilters(
     }
   };
 
-  const fromAgFilterModel = (model: { type?: string; filter?: unknown; filterType?: string } | null): ColumnFilter | null => {
+  const fromAgFilterModel = (model: { type?: string; filter?: unknown; filterType?: string; values?: unknown } | null): ColumnFilter | null => {
     if (!model) return null;
+    if (model.filterType === 'set' && Array.isArray(model.values)) {
+      return { columnKey: '', operator: 'in', value: model.values.map((v) => String(v)) };
+    }
+    const decoded = decodeSetFilter(model.filter);
+    if (decoded) {
+      return { columnKey: '', operator: 'in', value: decoded };
+    }
     const type = model.type as string | undefined;
     const value = model.filter;
 
@@ -161,6 +200,10 @@ export function useDataGridFilters(
   };
 
   const applyQuickFilter = () => {
+    if (options?.serverSide) {
+      options.onQuickFilterChange?.(quickFilterText.value);
+      return;
+    }
     if (!gridApi.value) return;
     gridApi.value.setGridOption('quickFilterText', quickFilterText.value);
   };
@@ -235,6 +278,11 @@ export function useDataGridFilters(
               return 'Vuoto';
             case 'is_not_empty':
               return 'Non vuoto';
+            case 'in': {
+              const values = Array.isArray(parsed.value) ? parsed.value : [];
+              if (values.length <= 2) return values.join(', ');
+              return `${values.length}`;
+            }
             default:
               return (parsed.value ?? '').toString();
           }
@@ -261,7 +309,7 @@ export function useDataGridFilters(
     return { ...parsed, columnKey: field };
   };
 
-  const openFilterPanel = ({ field, label, options, triggerEl, filterType }: FilterPanelConfig) => {
+  const openFilterPanel = ({ field, label, options, triggerEl, filterType, multiSelect }: FilterPanelConfig) => {
     if (!field) return;
     const rect = triggerEl?.getBoundingClientRect?.();
     filterPanel.value = {
@@ -272,6 +320,7 @@ export function useDataGridFilters(
       triggerEl: triggerEl ?? null,
       currentFilter: getCurrentFilter(field),
       filterType,
+      multiSelect: multiSelect ?? false,
     };
   };
 

@@ -9,6 +9,7 @@ export const usePriceAnalysis = (projectId: string) => {
     // State
     const isLoading = ref(false);
     const error = ref<string | null>(null);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const analysisResult = ref<any>(null);
 
     // Derived
@@ -18,6 +19,7 @@ export const usePriceAnalysis = (projectId: string) => {
     });
 
     const outlierIds = computed(() => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         return new Set(outlierItems.value.map((i: any) => i.item_id));
     });
 
@@ -35,6 +37,7 @@ export const usePriceAnalysis = (projectId: string) => {
                 body: { ...params }
             });
             analysisResult.value = data;
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (e: any) {
             console.error('Price analysis failed', e);
             error.value = e.message;

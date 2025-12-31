@@ -1,31 +1,32 @@
-import { defineEventHandler, createError, getRouterParam, getQuery } from 'h3';
-import { Types } from 'mongoose';
+import { defineEventHandler, createError, getQuery } from 'h3';
 import { Offer } from '#models';
 import { serializeDocs } from '#utils/serialize';
+import { requireObjectId, requireObjectIdParam, toObjectId } from '#utils/validate';
 
 export default defineEventHandler(async (event) => {
-    const projectId = getRouterParam(event, 'id');
+    const projectId = requireObjectIdParam(event, 'id', 'Project ID');
     const query = getQuery(event);
     const estimateId = query.estimate_id as string | undefined;
 
-    if (!projectId) {
-        throw createError({ statusCode: 400, statusMessage: 'Project ID required' });
-    }
-
     try {
-        const filter: Record<string, unknown> = { project_id: new Types.ObjectId(projectId) };
+        const filter: Record<string, unknown> = { project_id: toObjectId(projectId) };
 
         if (estimateId) {
-            filter.estimate_id = new Types.ObjectId(estimateId);
+            filter.estimate_id = toObjectId(requireObjectId(estimateId, 'Estimate ID'));
         }
 
         const offers = await Offer.find(filter)
-            .select('_id round_number company_name name status total_amount mode')
+            .select('_id estimate_id round_number company_name name status total_amount mode')
             .sort({ round_number: 1, company_name: 1 })
             .lean();
 
+        const serialized = serializeDocs(offers).map((offer) => ({
+            ...offer,
+            estimate_id: offer.estimate_id ? String(offer.estimate_id) : undefined,
+        }));
+
         return {
-            offers: serializeDocs(offers),
+            offers: serialized,
         };
     } catch (error) {
         throw createError({

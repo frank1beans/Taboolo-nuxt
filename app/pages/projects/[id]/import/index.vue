@@ -2,32 +2,35 @@
 import { ref, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { api } from '~/lib/api-client';
-import type { ApiSixEstimatesPreview, ApiEstimate, ApiXpweEstimatesPreview, ApiSixImportReport } from '~/types/api';
+import type { ApiSixEstimatesPreview, ApiEstimate, ApiXpweEstimatesPreview, ApiSixImportReport, ApiSixEstimateOption, ApiRawPreventivo } from '~/types/api';
 import FileDropZone from '~/components/ui/FileDropZone.vue';
 import ImportStatusCard from '~/components/ui/ImportStatusCard.vue';
 import ImportWizard from '~/components/projects/ImportWizard.vue';
+import PageHeader from '~/components/layout/PageHeader.vue';
+import MainPage from '~/components/layout/MainPage.vue';
 
 const route = useRoute();
 const router = useRouter();
 const projectId = route.params.id as string;
 
-definePageMeta({
-  breadcrumb: 'Importazione'
-});
+definePageMeta({});
 
 const activeTab = ref(0);
 const items = [{
-  label: 'Import Computo (SIX/XML)',
+  label: 'Computo SIX',
   icon: 'i-heroicons-document-text',
   slot: 'six',
+  description: 'File .six o .xml da STR Vision'
 }, {
-  label: 'Import Computo (XPWE/PriMus)',
-  icon: 'i-heroicons-document-text',
+  label: 'Computo XPWE',
+  icon: 'i-heroicons-document-duplicate',
   slot: 'xpwe',
+  description: 'File .xpwe da PriMus/ACCA'
 }, {
-  label: 'Import Offerta (Excel)',
+  label: 'Offerta Excel',
   icon: 'i-heroicons-table-cells',
   slot: 'excel',
+  description: 'Listino o offerte da foglio Excel'
 }];
 
 // --- PROCESSO SIX/XML ---
@@ -60,28 +63,49 @@ type RawImportResult = {
   estimate?: { items?: unknown[] };
   groups?: unknown[];
   rilevazioni?: Record<string, unknown>;
+  estimateId?: string;
 };
+
+type PreviewSource = ApiSixEstimateOption | ApiRawPreventivo;
 
 interface PreviewEstimate {
   id: string;
   label: string;
   count: number;
+  totalAmount?: number;
   version?: string;
   author?: string;
   original: unknown;
 }
 
+const toPreviewEstimate = (item: PreviewSource): PreviewEstimate => {
+  const stats = 'stats' in item && isRecord(item.stats) ? item.stats : undefined;
+  const statsItems = stats?.items;
+  const count = typeof statsItems === 'number'
+    ? statsItems
+    : ('items' in item && typeof item.items === 'number' ? item.items : 0);
+  const statsTotal = stats?.total_amount;
+  const totalAmount = typeof statsTotal === 'number'
+    ? statsTotal
+    : ('total_amount' in item && typeof item.total_amount === 'number' ? item.total_amount : undefined);
+  const extra = item as Record<string, unknown>;
+  const importo = typeof extra.importo === 'number' ? extra.importo : undefined;
+
+  return {
+    id: 'preventivoId' in item ? item.preventivoId : item.internal_id,
+    label: item.description || item.code || 'Senza nome',
+    count,
+    totalAmount: totalAmount ?? importo,
+    version: 'version' in item ? item.version : undefined,
+    author: 'author' in item ? item.author : undefined,
+    original: item
+  };
+};
+
 const previewEstimates = computed<PreviewEstimate[]>(() => {
   if (!sixPreview.value) return [];
-  const list = sixPreview.value.preventivi || sixPreview.value.estimates || [];
-  return list.map((item: any) => ({
-    id: item.preventivoId || item.internal_id,
-    label: item.description || item.code || 'Senza nome',
-    count: item.stats?.items || item.items || 0,
-    version: item.version,
-    author: item.author,
-    original: item
-  }));
+  const list = (sixPreview.value.preventivi || sixPreview.value.estimates || []) as PreviewSource[];
+  return list.map(toPreviewEstimate);
 });
 
 const handleSixFileSelect = async (file: File) => {
@@ -153,17 +177,17 @@ const confirmSixImport = async () => {
     } else if (useRawParser.value && isRecord(result) && 'estimate' in result) {
       // NEW ImportResult Schema
       // result = { project, groups, price_list, estimate }
-      const estimate = (result as any).estimate;
-      const estimateItems = Array.isArray(estimate?.items) ? estimate?.items.length : 0;
+      const rawResult = result as RawImportResult;
+      const estimateItems = Array.isArray(rawResult.estimate?.items) ? rawResult.estimate?.items.length : 0;
       totalItems = estimateItems;
-      wbsNodes = Array.isArray((result as any).groups) ? (result as any).groups.length : 0;
+      wbsNodes = Array.isArray(rawResult.groups) ? rawResult.groups.length : 0;
     } else if (useRawParser.value && isRecord(result) && 'rilevazioni' in result) {
       // Raw Payload (Legacy fallback if needed, but we removed it)
-      const detections = (result as any).rilevazioni;
+      const rawResult = result as RawImportResult;
+      const detections = rawResult.rilevazioni;
       const values = isRecord(detections) ? Object.values(detections) : [];
       totalItems = values.reduce((acc: number, value) => (Array.isArray(value) ? acc + value.length : acc), 0);
-      wbsNodes = Array.isArray((result as any).groups) ? (result as any).groups.length : 0;
-      wbsNodes = Array.isArray((result as any).groups) ? (result as any).groups.length : 0;
+      wbsNodes = Array.isArray(rawResult.groups) ? rawResult.groups.length : 0;
     } else {
       // Legacy Report
       totalItems = 0;
@@ -171,7 +195,7 @@ const confirmSixImport = async () => {
     }
     
     // Extract estimateId if available (added in recent backend update)
-    const estimateId = (result as any).estimateId;
+    const estimateId = isRecord(result) ? (result as RawImportResult).estimateId : undefined;
     
     sixImportResult.value = {
       totalItems: totalItems,
@@ -209,15 +233,8 @@ const xpweUseRawParser = ref(true);
 
 const previewXpweEstimates = computed<PreviewEstimate[]>(() => {
   if (!xpwePreview.value) return [];
-  const list = xpwePreview.value.preventivi || xpwePreview.value.estimates || [];
-  return list.map((item: any) => ({
-    id: item.preventivoId || item.internal_id,
-    label: item.description || item.code || 'Senza nome',
-    count: item.stats?.items || item.items || 0,
-    version: item.version,
-    author: item.author,
-    original: item
-  }));
+  const list = (xpwePreview.value.preventivi || xpwePreview.value.estimates || []) as PreviewSource[];
+  return list.map(toPreviewEstimate);
 });
 
 const handleXpweFileSelect = async (file: File) => {
@@ -320,10 +337,10 @@ const confirmXpweImport = async () => {
        totalItems = result.items ?? 0;
        wbsNodes = (result.wbs6 ?? 0) + (result.wbs7 ?? 0) + (result.spatial_wbs ?? 0);
     } else if (xpweUseRawParser.value && isRecord(result) && 'estimate' in result) {
-      const estimate = (result as any).estimate;
-      const estimateItems = Array.isArray(estimate?.items) ? estimate?.items.length : 0;
+      const rawResult = result as RawImportResult;
+      const estimateItems = Array.isArray(rawResult.estimate?.items) ? rawResult.estimate?.items.length : 0;
       totalItems = estimateItems;
-      wbsNodes = Array.isArray((result as any).groups) ? (result as any).groups.length : 0;
+      wbsNodes = Array.isArray(rawResult.groups) ? rawResult.groups.length : 0;
     }
 
     xpweImportResult.value = {
@@ -362,158 +379,175 @@ const navigateToProject = () => {
 </script>
 
 <template>
-  <div class="space-y-6">
-    <!-- Header -->
-    <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-      <div>
-        <div class="flex items-center gap-2 mb-1">
-           <UButton
+  <MainPage :loading="false">
+    <template #header>
+      <PageHeader title="Importazione Dati" :divider="false">
+        <template #leftSlot>
+          <UButton
             icon="i-heroicons-arrow-left"
             color="neutral"
             variant="ghost"
-            size="xs"
+            size="sm"
             @click="navigateToProject"
-          >
-            Torna al progetto
-          </UButton>
-        </div>
-        <p class="text-xs uppercase tracking-wide font-medium text-[hsl(var(--muted-foreground))]">
-          Importazione Dati
-        </p>
-        <h1 class="text-lg font-semibold text-[hsl(var(--foreground))]">
-          Importazione Progetto
-        </h1>
-      </div>
-    </div>
+          />
+        </template>
+      </PageHeader>
+    </template>
 
-    <!-- Main Content -->
-     <UCard class="border-[hsl(var(--border))] bg-[hsl(var(--card))]">
-       <UTabs 
-        v-model="activeTab" 
-        :items="items" 
-        class="w-full" 
-        :ui="{ list: { background: 'bg-[hsl(var(--secondary))]' } }"
-      >
+    <template #default>
+      <div class="flex-1 min-h-0 flex flex-col">
+        <UTabs 
+          v-model="activeTab" 
+          :items="items" 
+          class="w-full flex-1 flex flex-col min-h-0" 
+          :ui="{ list: { background: 'bg-[hsl(var(--secondary))]' } }"  
+          :content="{ class: 'flex-1 min-h-0' }"
+        >
          
          <!-- TAB 1: SIX/XML -->
          <template #six>
-            <div class="pt-6 space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-              <div class="max-w-xl mx-auto space-y-6">
+            <div class="pt-4 pb-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <div class="max-w-3xl mx-auto space-y-5">
                  
-                 <!-- Raw Mode Switch (REMOVED - Enforced Raw) -->
-                 <!-- <div class="flex items-center justify-end">
-                   <UToggle v-model="useRawParser" label="Usa Nuovo Parser (Sperimentale)" />
-                   <span class="ml-2 text-sm text-gray-500">Usa Nuovo Parser (Sperimentale)</span>
-                 </div> -->
+                 <!-- Intro Section -->
+                 <div class="text-center space-y-2">
+                   <h2 class="text-xl font-semibold text-[hsl(var(--foreground))]">
+                     Importa Computo da STR Vision
+                   </h2>
+                   <p class="text-sm text-[hsl(var(--muted-foreground))] max-w-lg mx-auto">
+                     Carica un file <strong>.six</strong> o <strong>.xml</strong> esportato da STR Vision. 
+                     Verranno estratti i preventivi con voci, quantità e struttura WBS.
+                   </p>
+                 </div>
 
                  <!-- Step 1: Upload -->
                  <div v-if="!sixFile || sixStatus === 'processing'">
                     <FileDropZone
                       accept=".six,.xml"
-                      icon="i-heroicons-document-duplicate"
-                      label="Carica Computo (SIX/XML)"
-                      sublabel="Trascina qui il file .six o .xml esportato da STR Vision"
+                      icon="i-heroicons-document-text"
+                      label="Carica file .six o .xml"
+                      sublabel="Trascina qui o clicca per selezionare"
                       :disabled="sixStatus === 'processing'"
                       @file-selected="handleSixFileSelect"
                       @error="(msg) => { sixError = msg; sixStatus = 'error'; }"
                     />
+                    <div class="flex items-center justify-center gap-4 mt-4 text-xs text-[hsl(var(--muted-foreground))]">
+                      <span class="flex items-center gap-1">
+                        <UIcon name="i-heroicons-check-circle" class="w-4 h-4 text-emerald-500" />
+                        Formati: .six, .xml
+                      </span>
+                      <span class="flex items-center gap-1">
+                        <UIcon name="i-heroicons-arrow-path" class="w-4 h-4" />
+                        Estrazione automatica
+                      </span>
+                    </div>
                  </div>
 
                  <!-- Step 2: Preview & Confirm -->
-                 <div v-if="sixFile && sixStatus === 'idle'" class="bg-[hsl(var(--secondary))/50] rounded-lg p-6 border border-[hsl(var(--border))]">
-                    <div class="flex items-center justify-between mb-4">
-                      <h3 class="text-sm font-semibold flex items-center gap-2">
-                        <UIcon name="i-heroicons-document-check" class="w-5 h-5 text-emerald-500" />
-                        {{ sixFile.name }}
-                      </h3>
-                       <UButton color="neutral" variant="ghost" icon="i-heroicons-x-mark" size="xs" label="Annulla" @click="resetSix" />
-                    </div>
-
-                     <!-- ESTIMATE SELECTION (Dropdown) -->
-                     <div v-if="sixPreview && previewEstimates.length > 0" class="space-y-4">
-                       <UFormField label="Seleziona Preventivo" description="Scegli quale preventivo importare dal file.">
-                         <USelectMenu
-                           v-model="selectedEstimateId"
-                           :items="previewEstimates"
-                           value-key="id"
-                           placeholder="Seleziona un preventivo..."
-                           searchable
-                           searchable-placeholder="Cerca preventivo..."
-                           color="neutral"
-                           :ui="{
-                             trigger: {
-                               trailingIcon: null,
-                               class: 'w-full justify-between'
-                             }
-                           }"
-                         >
-                           <template #item="{ item }">
-                              <div class="flex items-center justify-between w-full truncate">
-                                <span>{{ item.label }}</span>
-                                <div class="flex items-center gap-2">
-                                  <UBadge color="neutral" variant="subtle" size="xs">
-                                    {{ item.count }} Voci
-                                  </UBadge>
-                                  <span v-if="item.version" class="text-xs text-[hsl(var(--muted-foreground))]]">v{{ item.version }}</span>
-                                </div>
-                              </div>
-                           </template>
-                           <template #default>
-                             <UButton
-                             color="neutral"
-                               class="w-full justify-between"
-                               :icon="undefined"
-                               variant="solid"
-                             >
-                               <span v-if="selectedEstimateId" class="truncate">
-                                 {{ previewEstimates.find(e => e.id === selectedEstimateId)?.label || 'Selezionato' }}
-                               </span>
-                               <span v-else class="text-gray-500 truncate">Seleziona...</span>
-                             </UButton>
-                           </template>
-                         </USelectMenu>
-                       </UFormField>
-                       
-                       <div v-if="selectedEstimateId" class="text-sm text-green-600 flex items-center gap-2">
-                          <UIcon name="i-heroicons-check-circle" />
-                          Preventivo selezionato: {{ previewEstimates.find(e => e.id === selectedEstimateId)?.label }}
-                       </div>
-                     </div>
+                 <div v-if="sixFile && sixStatus === 'idle'" class="space-y-6">
                     
-                    <!-- RAW MODE MESSAGE -->
-                     <div v-else-if="useRawParser" class="space-y-4">
-                        <UAlert
-                          icon="i-heroicons-beaker"
-                          color="primary"
-                          variant="soft"
-                          title="Modalità Nuova Importazione"
-                          description="Verranno importati i dati grezzi. La selezione del preventivo è automatica."
-                        />
-                     </div>
-
-                     <div v-else class="text-center py-4 text-orange-500">
-                        Nessun preventivo trovato nel file.
-                     </div>
-
-                     <!-- Embedding Toggle (Always visible if Raw Parser is on and we have data) -->
-                     <div v-if="useRawParser && sixPreview" class="info-card-row mt-4">
-                        <div class="flex flex-col gap-1">
-                          <span class="text-sm font-medium">Genera Embedding AI (Jina)</span>
-                          <span class="text-xs text-[hsl(var(--muted-foreground))]">Arricchisce i dati per ricerca semantica. Richiede più tempo.</span>
+                    <!-- File Info Card -->
+                    <div class="bg-[hsl(var(--secondary))] rounded-xl p-5 border border-[hsl(var(--border))]">
+                      <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                          <div class="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                            <UIcon name="i-heroicons-document-check" class="w-5 h-5 text-emerald-600" />
+                          </div>
+                          <div>
+                            <p class="font-medium text-[hsl(var(--foreground))]">{{ sixFile.name }}</p>
+                            <p class="text-xs text-[hsl(var(--muted-foreground))]">
+                              File caricato correttamente
+                            </p>
+                          </div>
                         </div>
-                        <UCheckbox v-model="enableEmbeddings" color="primary" />
-                     </div>
-
-                    <div v-if="selectedEstimateId || (useRawParser && previewEstimates.length > 0)" class="flex justify-end pt-4">
-                       <UButton 
-                         color="primary" 
-                         icon="i-heroicons-arrow-down-tray" 
-                         :disabled="!selectedEstimateId"
-                         @click="confirmSixImport"
-                       >
-                         Conferma Importazione
-                       </UButton>
+                        <UButton color="neutral" variant="ghost" icon="i-heroicons-x-mark" size="sm" @click="resetSix" />
+                      </div>
                     </div>
+
+                    <!-- Estimate Selection -->
+                    <div v-if="sixPreview && previewEstimates.length > 0" class="space-y-4">
+                      <div class="flex items-center justify-between">
+                        <h3 class="text-sm font-semibold text-[hsl(var(--foreground))]">
+                          Seleziona il preventivo da importare
+                        </h3>
+                        <UBadge color="primary" variant="soft" size="sm">
+                          {{ previewEstimates.length }} {{ previewEstimates.length === 1 ? 'preventivo trovato' : 'preventivi trovati' }}
+                        </UBadge>
+                      </div>
+                      
+                      <!-- Estimate Cards -->
+                      <div class="grid gap-3">
+                        <button
+                          v-for="estimate in previewEstimates"
+                          :key="estimate.id"
+                          type="button"
+                          class="w-full text-left p-4 rounded-xl border-2 transition-all duration-200"
+                          :class="[
+                            selectedEstimateId === estimate.id 
+                              ? 'border-[hsl(var(--primary))] bg-[hsl(var(--primary)/0.05)]' 
+                              : 'border-[hsl(var(--border))] hover:border-[hsl(var(--primary)/0.5)] bg-[hsl(var(--card))]'
+                          ]"
+                          @click="selectedEstimateId = estimate.id"
+                        >
+                          <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                              <div 
+                                class="w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors"
+                                :class="selectedEstimateId === estimate.id ? 'border-[hsl(var(--primary))] bg-[hsl(var(--primary))]' : 'border-[hsl(var(--muted-foreground))]'"
+                              >
+                                <UIcon v-if="selectedEstimateId === estimate.id" name="i-heroicons-check" class="w-3 h-3 text-white" />
+                              </div>
+                              <div>
+                                <p class="font-medium text-[hsl(var(--foreground))]">{{ estimate.label }}</p>
+                                <p v-if="estimate.version" class="text-xs text-[hsl(var(--muted-foreground))]">
+                                  Versione {{ estimate.version }}
+                                </p>
+                              </div>
+                            </div>
+                            <div class="flex items-center gap-3 text-right">
+                              <div>
+                                <p class="text-sm font-semibold text-[hsl(var(--foreground))]">
+                                  {{ estimate.count.toLocaleString('it-IT') }} voci
+                                </p>
+                                <p v-if="estimate.totalAmount" class="text-xs text-[hsl(var(--muted-foreground))]">
+                                  € {{ estimate.totalAmount.toLocaleString('it-IT', { minimumFractionDigits: 2 }) }}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        </button>
+                      </div>
+                    </div>
+                   
+                   <!-- No estimates found -->
+                   <div v-else-if="sixPreview" class="text-center py-8">
+                      <UIcon name="i-heroicons-exclamation-triangle" class="w-12 h-12 text-amber-500 mx-auto mb-3" />
+                      <p class="text-[hsl(var(--foreground))] font-medium">Nessun preventivo trovato</p>
+                      <p class="text-sm text-[hsl(var(--muted-foreground))]">Il file non contiene preventivi validi.</p>
+                   </div>
+
+                   <!-- Options -->
+                   <div v-if="selectedEstimateId && sixPreview" class="bg-[hsl(var(--muted))] rounded-xl p-4">
+                     <label class="flex items-center justify-between cursor-pointer">
+                       <div>
+                         <p class="text-sm font-medium text-[hsl(var(--foreground))]">Genera Embedding AI</p>
+                         <p class="text-xs text-[hsl(var(--muted-foreground))]">Abilita la ricerca semantica (richiede più tempo)</p>
+                       </div>
+                       <UToggle v-model="enableEmbeddings" color="primary" />
+                     </label>
+                   </div>
+
+                   <!-- Action Button -->
+                   <div v-if="selectedEstimateId" class="flex justify-end pt-2">
+                      <UButton 
+                        color="primary" 
+                        size="lg"
+                        icon="i-heroicons-arrow-down-tray" 
+                        @click="confirmSixImport"
+                      >
+                        Importa Preventivo
+                      </UButton>
+                   </div>
                  </div>
 
                  <!-- Status Card -->
@@ -535,144 +569,189 @@ const navigateToProject = () => {
 
          <!-- TAB XPWE -->
          <template #xpwe>
-            <div class="pt-6 space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-              <div class="max-w-xl mx-auto space-y-6">
+            <div class="pt-4 pb-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <div class="max-w-3xl mx-auto space-y-5">
+
+                 <!-- Intro Section -->
+                 <div class="text-center space-y-2">
+                   <h2 class="text-xl font-semibold text-[hsl(var(--foreground))]">
+                     Importa Computo da PriMus/ACCA
+                   </h2>
+                   <p class="text-sm text-[hsl(var(--muted-foreground))] max-w-lg mx-auto">
+                     Carica un file <strong>.xpwe</strong> esportato da PriMus o software ACCA. 
+                     Potrai mappare i livelli WBS alla struttura standard.
+                   </p>
+                 </div>
 
                  <!-- Step 1: Upload -->
                  <div v-if="!xpweFile || xpweStatus === 'processing'">
                     <FileDropZone
                       accept=".xpwe,.xml"
                       icon="i-heroicons-document-duplicate"
-                      label="Carica Computo (XPWE/PriMus)"
-                      sublabel="Trascina qui il file .xpwe o .xml"
+                      label="Carica file .xpwe"
+                      sublabel="Trascina qui o clicca per selezionare"
                       :disabled="xpweStatus === 'processing'"
                       @file-selected="handleXpweFileSelect"
                       @error="(msg) => { xpweError = msg; xpweStatus = 'error'; }"
                     />
+                    <div class="flex items-center justify-center gap-4 mt-4 text-xs text-[hsl(var(--muted-foreground))]">
+                      <span class="flex items-center gap-1">
+                        <UIcon name="i-heroicons-check-circle" class="w-4 h-4 text-emerald-500" />
+                        Formato: .xpwe, .xml
+                      </span>
+                      <span class="flex items-center gap-1">
+                        <UIcon name="i-heroicons-arrows-right-left" class="w-4 h-4" />
+                        Mappatura WBS inclusa
+                      </span>
+                    </div>
                  </div>
 
                  <!-- Step 2: Preview & Confirm -->
-                 <div v-if="xpweFile && xpweStatus === 'idle'" class="bg-[hsl(var(--secondary))/50] rounded-lg p-6 border border-[hsl(var(--border))]">
-                    <div class="flex items-center justify-between mb-4">
-                      <h3 class="text-sm font-semibold flex items-center gap-2">
-                        <UIcon name="i-heroicons-document-check" class="w-5 h-5 text-emerald-500" />
-                        {{ xpweFile.name }}
-                      </h3>
-                       <UButton color="neutral" variant="ghost" icon="i-heroicons-x-mark" size="xs" label="Annulla" @click="resetXpwe" />
-                    </div>
-
-                     <!-- ESTIMATE SELECTION (Dropdown) -->
-                     <div v-if="xpwePreview && previewXpweEstimates.length > 0" class="space-y-4">
-                       <UFormField label="Seleziona Preventivo" description="Scegli quale preventivo importare dal file.">
-                         <USelectMenu
-                           v-model="selectedXpweEstimateId"
-                           :items="previewXpweEstimates"
-                           value-key="id"
-                           placeholder="Seleziona un preventivo..."
-                           searchable
-                           searchable-placeholder="Cerca preventivo..."
-                           color="neutral"
-                           :ui="{
-                             trigger: {
-                               trailingIcon: null,
-                               class: 'w-full justify-between'
-                             }
-                           }"
-                         >
-                           <template #item="{ item }">
-                              <div class="flex items-center justify-between w-full truncate">
-                                <span>{{ item.label }}</span>
-                                <div class="flex items-center gap-2">
-                                  <UBadge color="neutral" variant="subtle" size="xs">
-                                    {{ item.count }} Voci
-                                  </UBadge>
-                                  <span v-if="item.version" class="text-xs text-[hsl(var(--muted-foreground))]]">v{{ item.version }}</span>
-                                </div>
-                              </div>
-                           </template>
-                           <template #default>
-                             <UButton
-                             color="neutral"
-                               class="w-full justify-between"
-                               :icon="undefined"
-                               variant="solid"
-                             >
-                               <span v-if="selectedXpweEstimateId" class="truncate">
-                                 {{ previewXpweEstimates.find(e => e.id === selectedXpweEstimateId)?.label || 'Selezionato' }}
-                               </span>
-                               <span v-else class="text-gray-500 truncate">Seleziona...</span>
-                             </UButton>
-                           </template>
-                         </USelectMenu>
-                       </UFormField>
-
-                       <div v-if="selectedXpweEstimateId" class="text-sm text-green-600 flex items-center gap-2">
-                          <UIcon name="i-heroicons-check-circle" />
-                          Preventivo selezionato: {{ previewXpweEstimates.find(e => e.id === selectedXpweEstimateId)?.label }}
-                       </div>
-
-                       <!-- WBS MAPPING SECTION -->
-                        <div v-if="xpweAvailableKinds.length > 0" class="pt-4 border-t border-[hsl(var(--border))]">
-                          <h4 class="text-sm font-semibold mb-2">Mappatura Livelli WBS</h4>
-                          <p class="text-xs text-[hsl(var(--muted-foreground))] mb-4">
-                            Associa le categorie rilevate nel file XPWE ai livelli standard di Taboolo.
-                          </p>
-                          
-                          <div class="space-y-3">
-                             <div v-for="kindItem in xpweAvailableKinds" :key="kindItem.kind" class="grid grid-cols-2 gap-4 items-center">
-                                <div class="text-sm font-medium truncate" :title="kindItem.kind">
-                                   {{ kindItem.kind }} 
-                                   <span class="text-xs font-normal text-[hsl(var(--muted-foreground))]">({{ kindItem.count }} nodi)</span>
-                                </div>
-                                <!-- DEBUG -->
-                                <div class="text-[10px] text-red-500 hidden">{{ canonicalSelectOptions.length }} opzioni</div>
-                                <USelectMenu 
-                                  v-model="xpweWbsMapping[kindItem.kind]" 
-                                  :items="canonicalSelectOptions" 
-                                  value-attribute="value"
-                                  option-attribute="label"
-                                  placeholder="Seleziona (v3)..."
-                                  size="xs"
-                                  :searchable="false"
-                                />
-                             </div>
+                 <div v-if="xpweFile && xpweStatus === 'idle'" class="space-y-6">
+                    
+                    <!-- File Info Card -->
+                    <div class="bg-[hsl(var(--secondary))] rounded-xl p-5 border border-[hsl(var(--border))]">
+                      <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                          <div class="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                            <UIcon name="i-heroicons-document-check" class="w-5 h-5 text-blue-600" />
+                          </div>
+                          <div>
+                            <p class="font-medium text-[hsl(var(--foreground))]">{{ xpweFile.name }}</p>
+                            <p class="text-xs text-[hsl(var(--muted-foreground))]">
+                              File XPWE caricato correttamente
+                            </p>
                           </div>
                         </div>
-
-                     </div>
-
-                    <div v-else-if="xpweUseRawParser" class="space-y-4">
-                        <UAlert
-                          icon="i-heroicons-beaker"
-                          color="primary"
-                          variant="soft"
-                          title="Modalità Importazione XPWE"
-                          description="Verranno importati i dati e strutturati automaticamente."
-                        />
-
-                        <div class="info-card-row">
-                           <div class="flex flex-col gap-1">
-                             <span class="text-sm font-medium">Genera Embedding AI (Jina)</span>
-                             <span class="text-xs text-[hsl(var(--muted-foreground))]">Arricchisce i dati per ricerca semantica. Richiede più tempo.</span>
-                           </div>
-                           <UToggle v-model="enableEmbeddings" />
-                         </div>
+                        <UButton color="neutral" variant="ghost" icon="i-heroicons-x-mark" size="sm" @click="resetXpwe" />
+                      </div>
                     </div>
 
-                    <div v-else class="text-center py-4 text-orange-500">
-                       Nessun preventivo trovato nel file.
+                    <!-- Estimate Selection -->
+                    <div v-if="xpwePreview && previewXpweEstimates.length > 0" class="space-y-4">
+                      <div class="flex items-center justify-between">
+                        <h3 class="text-sm font-semibold text-[hsl(var(--foreground))]">
+                          Seleziona il preventivo da importare
+                        </h3>
+                        <UBadge color="primary" variant="soft" size="sm">
+                          {{ previewXpweEstimates.length }} {{ previewXpweEstimates.length === 1 ? 'preventivo' : 'preventivi' }}
+                        </UBadge>
+                      </div>
+                      
+                      <!-- Estimate Cards -->
+                      <div class="grid gap-3">
+                        <button
+                          v-for="estimate in previewXpweEstimates"
+                          :key="estimate.id"
+                          type="button"
+                          class="w-full text-left p-4 rounded-xl border-2 transition-all duration-200"
+                          :class="[
+                            selectedXpweEstimateId === estimate.id 
+                              ? 'border-[hsl(var(--primary))] bg-[hsl(var(--primary)/0.05)]' 
+                              : 'border-[hsl(var(--border))] hover:border-[hsl(var(--primary)/0.5)] bg-[hsl(var(--card))]'
+                          ]"
+                          @click="selectedXpweEstimateId = estimate.id"
+                        >
+                          <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                              <div 
+                                class="w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors"
+                                :class="selectedXpweEstimateId === estimate.id ? 'border-[hsl(var(--primary))] bg-[hsl(var(--primary))]' : 'border-[hsl(var(--muted-foreground))]'"
+                              >
+                                <UIcon v-if="selectedXpweEstimateId === estimate.id" name="i-heroicons-check" class="w-3 h-3 text-white" />
+                              </div>
+                              <div>
+                                <p class="font-medium text-[hsl(var(--foreground))]">{{ estimate.label }}</p>
+                                <p v-if="estimate.version" class="text-xs text-[hsl(var(--muted-foreground))]">
+                                  Versione {{ estimate.version }}
+                                </p>
+                              </div>
+                            </div>
+                            <div>
+                              <p class="text-sm font-semibold text-[hsl(var(--foreground))]">
+                                {{ estimate.count.toLocaleString('it-IT') }} voci
+                              </p>
+                            </div>
+                          </div>
+                        </button>
+                      </div>
                     </div>
 
-                    <div v-if="selectedXpweEstimateId || (xpweUseRawParser && previewXpweEstimates.length > 0)" class="flex justify-end pt-4">
-                       <UButton
-                         color="primary"
-                         icon="i-heroicons-arrow-down-tray"
-                         :disabled="!selectedXpweEstimateId"
-                         @click="confirmXpweImport"
-                       >
-                         Conferma Importazione
-                       </UButton>
+                    <!-- WBS MAPPING SECTION - Now more prominent -->
+                    <div v-if="selectedXpweEstimateId && xpweAvailableKinds.length > 0" class="space-y-4">
+                      <div class="bg-[hsl(var(--muted))] rounded-xl p-5">
+                        <div class="flex items-center gap-3 mb-4">
+                          <div class="w-8 h-8 rounded-lg bg-[hsl(var(--primary)/0.15)] flex items-center justify-center">
+                            <UIcon name="i-heroicons-arrows-right-left" class="w-4 h-4 text-[hsl(var(--primary))]" />
+                          </div>
+                          <div>
+                            <h4 class="text-sm font-semibold text-[hsl(var(--foreground))]">Mappatura Livelli WBS</h4>
+                            <p class="text-xs text-[hsl(var(--muted-foreground))]">
+                              Associa le categorie del file XPWE alla struttura WBS di Taboolo
+                            </p>
+                          </div>
+                        </div>
+                        
+                        <div class="space-y-3">
+                          <div 
+                            v-for="kindItem in xpweAvailableKinds" 
+                            :key="kindItem.kind" 
+                            class="flex items-center justify-between gap-4 p-3 bg-[hsl(var(--card))] rounded-lg"
+                          >
+                            <div class="flex-1 min-w-0">
+                              <p class="text-sm font-medium text-[hsl(var(--foreground))] truncate">
+                                {{ kindItem.kind }}
+                              </p>
+                              <p class="text-xs text-[hsl(var(--muted-foreground))]">
+                                {{ kindItem.count }} {{ kindItem.count === 1 ? 'nodo' : 'nodi' }}
+                              </p>
+                            </div>
+                            <UIcon name="i-heroicons-arrow-right" class="w-4 h-4 text-[hsl(var(--muted-foreground))] flex-shrink-0" />
+                            <div class="w-48 flex-shrink-0">
+                              <USelectMenu 
+                                v-model="xpweWbsMapping[kindItem.kind]" 
+                                :items="canonicalSelectOptions" 
+                                value-attribute="value"
+                                option-attribute="label"
+                                placeholder="Livello WBS..."
+                                size="sm"
+                                :searchable="false"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     </div>
+                   
+                   <!-- No estimates found -->
+                   <div v-else-if="xpwePreview && previewXpweEstimates.length === 0" class="text-center py-8">
+                      <UIcon name="i-heroicons-exclamation-triangle" class="w-12 h-12 text-amber-500 mx-auto mb-3" />
+                      <p class="text-[hsl(var(--foreground))] font-medium">Nessun preventivo trovato</p>
+                      <p class="text-sm text-[hsl(var(--muted-foreground))]">Il file non contiene preventivi validi.</p>
+                   </div>
+
+                   <!-- Options -->
+                   <div v-if="selectedXpweEstimateId && xpwePreview" class="bg-[hsl(var(--secondary))] rounded-xl p-4">
+                     <label class="flex items-center justify-between cursor-pointer">
+                       <div>
+                         <p class="text-sm font-medium text-[hsl(var(--foreground))]">Genera Embedding AI</p>
+                         <p class="text-xs text-[hsl(var(--muted-foreground))]">Abilita la ricerca semantica (richiede più tempo)</p>
+                       </div>
+                       <UToggle v-model="enableEmbeddings" color="primary" />
+                     </label>
+                   </div>
+
+                   <!-- Action Button -->
+                   <div v-if="selectedXpweEstimateId" class="flex justify-end pt-2">
+                      <UButton 
+                        color="primary" 
+                        size="lg"
+                        icon="i-heroicons-arrow-down-tray" 
+                        @click="confirmXpweImport"
+                      >
+                        Importa Preventivo
+                      </UButton>
+                   </div>
                  </div>
 
                  <!-- Status Card -->
@@ -690,19 +769,34 @@ const navigateToProject = () => {
             </div>
          </template>
 
-         <!-- TAB 2: EXCEL -->
+         <!-- TAB 3: EXCEL -->
          <template #excel>
-            <div class="pt-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-               <div class="h-[600px]">
-                 <ImportWizard 
-                    :project-id="projectId" 
-                    @success="handleExcelSuccess"
-                    @close="() => {}"
-                 />
-               </div>
+            <div class="pt-4 pb-4 h-full flex flex-col animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <div class="max-w-4xl mx-auto w-full flex-1 flex flex-col min-h-0 space-y-4">
+                 
+                 <!-- Intro Section -->
+                 <div class="text-center space-y-1">
+                   <h2 class="text-lg font-semibold text-[hsl(var(--foreground))]">
+                     Importa Offerta da Excel
+                   </h2>
+                   <p class="text-sm text-[hsl(var(--muted-foreground))]">
+                     Carica un file <strong>.xlsx</strong> contenente listino prezzi o offerte.
+                   </p>
+                 </div>
+
+                 <!-- Wizard Component -->
+                 <div class="flex-1 min-h-0">
+                   <ImportWizard 
+                      :project-id="projectId" 
+                      @success="handleExcelSuccess"
+                      @close="() => {}"
+                   />
+                 </div>
+              </div>
             </div>
          </template>
-       </UTabs>
-     </UCard>
-  </div>
+        </UTabs>
+      </div>
+    </template>
+  </MainPage>
 </template>

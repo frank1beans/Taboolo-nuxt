@@ -1,13 +1,10 @@
-import { defineEventHandler, createError, getRouterParam, getQuery } from 'h3';
-import { Types } from 'mongoose';
+import { defineEventHandler, createError, getQuery } from 'h3';
 import { Offer, OfferItem } from '#models';
 import { serializeDocs } from '#utils/serialize';
+import { requireObjectId, requireObjectIdParam, toObjectId } from '#utils/validate';
 
 export default defineEventHandler(async (event) => {
-  const projectId = getRouterParam(event, 'id');
-  if (!projectId) {
-    throw createError({ statusCode: 400, statusMessage: 'Project ID required' });
-  }
+  const projectId = requireObjectIdParam(event, 'id', 'Project ID');
 
   const query = getQuery(event);
   const estimateId = query.estimate_id as string | undefined;
@@ -18,8 +15,8 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'estimate_id is required' });
   }
 
-  const projectObjectId = new Types.ObjectId(projectId);
-  const estimateObjectId = new Types.ObjectId(estimateId);
+  const projectObjectId = toObjectId(projectId);
+  const estimateObjectId = toObjectId(requireObjectId(estimateId, 'Estimate ID'));
 
   // Find offers matching filters
   const offerMatch: Record<string, unknown> = {

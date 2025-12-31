@@ -52,6 +52,7 @@ export const useSemanticMap = (projectId: string) => {
                 })).sort((a, b) => a.id - b.id);
             }
             status.value = 'success';
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (e: any) {
             console.error('Failed to fetch map data', e);
             error.value = e.message;
@@ -85,6 +86,7 @@ export const useSemanticMap = (projectId: string) => {
         try {
             await $fetch(`/api/projects/${projectId}/analytics/compute-umap`, { method: 'POST' });
             await fetchData();
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (e: any) {
             error.value = e.message;
             status.value = 'error';

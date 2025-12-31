@@ -78,14 +78,14 @@ export const useSemanticMapAnalytics = () => {
         if (selectedPointIds.value.size === 0) return;
         const selected = points.filter(p => selectedPointIds.value.has(p.id));
 
-        let sum = 0;
-        let prices: number[] = [];
+        let _sum = 0;
+        const prices: number[] = [];
         const categories: Record<string, number> = {};
 
         selected.forEach(p => {
             if (p.price || p.amount) {
                 const val = p.price || p.amount || 0;
-                sum += val;
+                _sum += val;
                 prices.push(val);
             }
             if (p.category) {
@@ -95,15 +95,15 @@ export const useSemanticMapAnalytics = () => {
 
         // Median
         prices.sort((a, b) => a - b);
-        let median = 0;
+        let _median = 0;
         if (prices.length > 0) {
             const mid = Math.floor(prices.length / 2);
             const midVal = prices[mid] ?? 0;
             const prevVal = prices[mid - 1] ?? 0;
-            median = prices.length % 2 !== 0 ? midVal : (prevVal + midVal) / 2;
+            _median = prices.length % 2 !== 0 ? midVal : (prevVal + midVal) / 2;
         }
 
-        const topCategories = Object.entries(categories)
+        const _topCategories = Object.entries(categories)
             .map(([name, count]) => ({ name, count }))
             .sort((a, b) => b.count - a.count);
 

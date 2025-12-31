@@ -1,5 +1,6 @@
 import type { Ref } from 'vue';
 import type { DataGridConfig } from '~/types/data-grid';
+import { formatCurrency, formatNumber } from '~/lib/formatters';
 
 export interface EstimateItem {
     _id: string;
@@ -26,17 +27,6 @@ export interface EstimateItem {
 }
 
 export const useEstimateGridConfig = (_rowData: Ref<EstimateItem[]>) => {
-    const formatCurrency = (value: number) => {
-        return new Intl.NumberFormat('it-IT', {
-            style: 'currency',
-            currency: 'EUR',
-        }).format(value);
-    };
-
-    const formatNumber = (value: number) => {
-        return new Intl.NumberFormat('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
-    };
-
     const gridConfig: DataGridConfig = {
         columns: [
             {
@@ -69,66 +59,77 @@ export const useEstimateGridConfig = (_rowData: Ref<EstimateItem[]>) => {
                 headerName: 'Q.tà',
                 width: 100,
                 cellClass: 'ag-right-aligned-cell',
-                valueFormatter: (params: { value: number }) => formatNumber(params.value),
-                filter: 'number',
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                valueFormatter: (params: any) =>
+                    formatNumber(params.value, { minimumFractionDigits: 2, maximumFractionDigits: 2, fallback: '-' }),
+                filter: 'agNumberColumnFilter',
             },
             {
                 field: 'project.unit_price',
                 headerName: 'Prezzo Unitario',
                 width: 140,
                 cellClass: 'ag-right-aligned-cell',
-                valueFormatter: (params: { value: number }) => formatCurrency(params.value),
-                filter: 'number',
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                valueFormatter: (params: any) => formatCurrency(params.value, { fallback: '-' }),
+                filter: 'agNumberColumnFilter',
             },
             {
                 field: 'project.amount',
                 headerName: 'Importo',
                 width: 140,
                 cellClass: 'ag-right-aligned-cell font-bold',
-                valueFormatter: (params: { value: number }) => formatCurrency(params.value),
-                filter: 'number',
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                valueFormatter: (params: any) => formatCurrency(params.value, { fallback: '-' }),
+                filter: 'agNumberColumnFilter',
             },
             // WBS Hierarchy Columns (wbs01-wbs07) - Moved to end
             {
                 field: 'wbs_hierarchy.wbs01',
                 headerName: 'WBS 01',
                 width: 150,
+                filterMode: 'multi',
                 hide: true,
             },
             {
                 field: 'wbs_hierarchy.wbs02',
                 headerName: 'WBS 02',
                 width: 150,
+                filterMode: 'multi',
                 hide: true,
             },
             {
                 field: 'wbs_hierarchy.wbs03',
                 headerName: 'WBS 03',
                 width: 150,
+                filterMode: 'multi',
                 hide: true,
             },
             {
                 field: 'wbs_hierarchy.wbs04',
                 headerName: 'WBS 04',
                 width: 150,
+                filterMode: 'multi',
                 hide: true,
             },
             {
                 field: 'wbs_hierarchy.wbs05',
                 headerName: 'WBS 05',
                 width: 150,
+                filterMode: 'multi',
                 hide: true,
             },
             {
                 field: 'wbs_hierarchy.wbs06',
                 headerName: 'WBS 06',
                 width: 150,
+                filterMode: 'multi',
                 hide: true,
             },
             {
                 field: 'wbs_hierarchy.wbs07',
                 headerName: 'WBS 07',
                 width: 150,
+                filterMode: 'multi',
                 hide: true,
             },
         ],
@@ -139,8 +140,8 @@ export const useEstimateGridConfig = (_rowData: Ref<EstimateItem[]>) => {
         },
         enableQuickFilter: true,
         enableExport: true,
-        headerHeight: 48,
-        rowHeight: 40,
+        headerHeight: 44,
+        rowHeight: 44,
         animateRows: true,
     };
 

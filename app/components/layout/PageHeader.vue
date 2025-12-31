@@ -9,67 +9,65 @@
  * [Divider?]
  * [Toolbar Slot?]
  */
-import { useSlots } from 'vue'
 
-const props = withDefaults(defineProps<{
+withDefaults(defineProps<{
   title: string
   meta?: string
   divider?: boolean
 }>(), {
+  meta: undefined,
   divider: true
 })
 
 defineSlots<{
-  default?: (props: {}) => any
-  leftSlot?: (props: {}) => any
-  rightSlot?: (props: {}) => any
-  meta?: (props: {}) => any // Optional slot for complex meta content
-  toolbar?: (props: {}) => any // Optional slot below divider
+  default?: (props: Record<string, never>) => unknown
+  leftSlot?: (props: Record<string, never>) => unknown
+  rightSlot?: (props: Record<string, never>) => unknown
+  meta?: (props: Record<string, never>) => unknown
+  toolbar?: (props: Record<string, never>) => unknown
 }>()
 </script>
 
 <template>
-  <div class="page-header w-full flex flex-col">
-    <!-- Main Row -->
-    <div class="flex flex-row items-center gap-4 min-h-[40px]">
+  <div class="page-header w-full">
+    <!-- Main Row - Notion style: clean, minimal -->
+    <div class="flex items-center gap-3 min-h-[36px]">
       
       <!-- Optional Left Column (Back button, etc) -->
       <div v-if="$slots.leftSlot" class="flex-shrink-0">
         <slot name="leftSlot" />
       </div>
 
-      <!-- Title & Meta Column (Left Aligned, Grows) -->
-      <div class="flex flex-col flex-1 min-w-0 justify-center gap-[var(--gap-title-meta)]">
-        
+      <!-- Title & Meta - Notion style: simple, not heavy -->
+      <div class="flex items-center gap-3 flex-1 min-w-0">
         <!-- Title -->
-        <h1 class="text-2xl font-bold tracking-tight text-[hsl(var(--foreground))] leading-tight truncate">
+        <h1 class="text-base font-semibold text-[hsl(var(--foreground))] truncate">
           {{ title }}
         </h1>
 
-        <!-- Meta Line -->
-        <div v-if="meta || $slots.meta" class="text-xs font-medium text-[hsl(var(--muted-foreground))] flex items-center gap-2 truncate min-h-[16px]">
+        <!-- Meta Line - inline, subtle -->
+        <div v-if="meta || $slots.meta" class="text-[11px] text-[hsl(var(--muted-foreground))] leading-tight flex items-center gap-2 truncate">
           <slot name="meta">
             {{ meta }}
           </slot>
         </div>
       </div>
 
-      <!-- Right Actions Column (Right Aligned, No Shrink) -->
-      <div v-if="$slots.rightSlot" class="flex-shrink-0 flex items-center gap-3 ml-4">
+      <!-- Right Actions -->
+      <div v-if="$slots.rightSlot" class="flex-shrink-0 flex items-center gap-1.5">
         <slot name="rightSlot" />
       </div>
 
     </div>
 
-    <!-- Divider -->
+    <!-- Divider - very subtle or none -->
     <div 
         v-if="divider" 
-        class="w-full border-b border-[hsl(var(--border))]" 
-        style="margin-top: var(--gap-after); margin-bottom: var(--gap-after);"
-    ></div>
+        class="w-full border-b border-[hsl(var(--border)/0.3)] mt-3 mb-2"
+    />
 
-    <!-- Optional Toolbar (Below Divider) -->
-     <div v-if="$slots.toolbar" class="w-full mb-4">
+    <!-- Optional Toolbar -->
+     <div v-if="$slots.toolbar" class="w-full mt-2">
         <slot name="toolbar" />
     </div>
 
@@ -78,8 +76,8 @@ defineSlots<{
 
 <style scoped>
 .page-header {
-  /* Use global variables or defaults */
-  --gap-title-meta: var(--header-gap-title-meta, 6px);
-  --gap-after: var(--header-gap-after, 16px);
+  /* Use global variables or defaults - more compact */
+  --gap-title-meta: var(--header-gap-title-meta, 4px);
+  --gap-after: var(--header-gap-after, 8px);
 }
 </style>

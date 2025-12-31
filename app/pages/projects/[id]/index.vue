@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { useRoute } from 'vue-router';
+import type { GridApi, GridReadyEvent } from 'ag-grid-community';
 import { computed, onMounted, ref, watch } from 'vue';
 import type { DataGridConfig } from '~/types/data-grid';
 import { useCurrentContext } from '~/composables/useCurrentContext';
 import DataGridActions from '~/components/data-grid/DataGridActions.vue';
 import DataGridPage from '~/components/layout/DataGridPage.vue';
 import PageToolbar from '~/components/layout/PageToolbar.vue';
-import type { Estimate, Project } from '~/types/project';
+import type { ApiOfferSummary } from '~/types/api';
+import type { Estimate, Project } from '#types';
 import { formatCurrency as formatCurrencyLib, formatDelta } from '~/lib/formatters';
 
 const route = useRoute();
@@ -17,6 +19,14 @@ const { data: context, status, refresh } = await useFetch<Project>(`/api/project
     key: `project-context-dashboard-${projectId}`
 });
 
+const { data: alertSummary, status: alertStatus, refresh: refreshAlertSummary } = await useFetch(
+  `/api/projects/${projectId}/offers/alerts/summary`,
+  {
+    key: `project-${projectId}-alert-summary`,
+    query: { group_by: 'estimate', status: 'open' },
+  },
+);
+
 const loading = computed(() => status.value === 'pending');
 const project = computed(() => context.value);
 
@@ -26,23 +36,10 @@ const estimates = computed(() => project.value?.estimates || []);
 const { setProjectState, currentEstimate } = useCurrentContext();
 const activeEstimateId = computed(() => currentEstimate.value?.id);
 
-interface OfferStats {
-  round_number?: number | null;
-  total_amount?: number | null;
-  company?: string | null;
-}
-
-interface EstimateStatsResponse {
-  project_total?: number | null;
-  offers?: {
-    per_company_round?: OfferStats[];
-    latest_round?: number | null;
-  };
-}
-
 type EstimateRow = Estimate & {
   bestOffer: number | null;
   deltaPerc: number | null;
+  alertCount?: number;
 };
 
 // Enforce project context (clears active estimate) using direct hydration
@@ -60,6 +57,19 @@ const statsMap = ref<Record<string, {
   deltaPerc?: number | null;
 }>>({});
 const statsLoading = ref(false);
+const alertsLoading = computed(() => alertStatus.value === 'pending');
+
+const alertSummaryItems = computed(() => alertSummary.value?.items || []);
+const alertSummaryTotal = computed(() => alertSummary.value?.total ?? 0);
+const alertSummaryMap = computed<Record<string, number>>(() => {
+  const map: Record<string, number> = {};
+  alertSummaryItems.value.forEach((item: { estimate_id?: string; total?: number }) => {
+    if (item.estimate_id) {
+      map[item.estimate_id] = Number(item.total || 0);
+    }
+  });
+  return map;
+});
 
 const formatCurrency = (value?: number | null) => formatCurrencyLib(value ?? 0);
 const formatDeltaPerc = (value?: number | null) => (value === null || value === undefined ? '-' : formatDelta(value));
@@ -67,44 +77,66 @@ const formatDeltaPerc = (value?: number | null) => (value === null || value === 
 const fetchStatsForEstimates = async () => {
   if (!import.meta.client || !estimates.value.length) return;
   statsLoading.value = true;
-  const entries = await Promise.all(
-    estimates.value.map(async (est) => {
-      try {
-        const stats = await $fetch<EstimateStatsResponse>(`/api/projects/${projectId}/analytics/stats`, {
-          params: { estimate_id: est.id },
-        });
-        const projectTotal = stats?.project_total ?? 0;
-        const offers = stats?.offers?.per_company_round ?? [];
-        const latestRound = stats?.offers?.latest_round
-          ?? offers.reduce((max, o) => Math.max(max, o.round_number ?? 0), 0);
-        const latestOffers = offers.filter((o) => (o.round_number ?? 0) === latestRound);
-        const best = latestOffers.reduce<OfferStats | null>((acc, cur) => {
-          if (cur.total_amount === undefined || cur.total_amount === null) return acc;
-          if (!acc || cur.total_amount < (acc.total_amount ?? Number.POSITIVE_INFINITY)) return cur;
-          return acc;
-        }, latestOffers[0] ?? null);
-        const bestOffer = best?.total_amount ?? null;
-        const deltaAbs = bestOffer !== null ? bestOffer - projectTotal : null;
-        const deltaPerc = bestOffer !== null && projectTotal ? (deltaAbs / projectTotal) * 100 : null;
+  try {
+    const offersResponse = await $fetch<{ offers: ApiOfferSummary[] }>(`/api/projects/${projectId}/offers`);
+    const offers = offersResponse?.offers ?? [];
+    const offersByEstimate = new Map<string, ApiOfferSummary[]>();
 
-        return [
-          est.id,
-          {
-            bestOffer,
-            bestCompany: best?.company || null,
-            bestRound: latestRound || null,
-            deltaAbs,
-            deltaPerc,
-          },
-        ];
-      } catch (e) {
-        console.error('Failed to fetch stats for estimate', est.id, e);
-        return [est.id, {}];
+    offers.forEach((offer) => {
+      const estimateId = offer.estimate_id;
+      if (!estimateId) return;
+      const list = offersByEstimate.get(estimateId);
+      if (list) {
+        list.push(offer);
+      } else {
+        offersByEstimate.set(estimateId, [offer]);
       }
-    }),
-  );
-  statsMap.value = Object.fromEntries(entries);
-  statsLoading.value = false;
+    });
+
+    const entries = estimates.value.map((est) => {
+      const list = offersByEstimate.get(est.id) ?? [];
+      const projectTotal = Number(est.total_amount ?? 0);
+      const latestRound = list.length
+        ? list.reduce((max, offer) => Math.max(max, offer.round_number ?? 1), 0)
+        : null;
+      const latestOffers = latestRound === null
+        ? []
+        : list.filter((offer) => (offer.round_number ?? 1) === latestRound);
+
+      let bestOffer: ApiOfferSummary | null = null;
+      let bestAmount: number | null = null;
+
+      for (const offer of latestOffers) {
+        const amount = typeof offer.total_amount === 'number' ? offer.total_amount : 0;
+        if (bestAmount === null || amount < bestAmount) {
+          bestAmount = amount;
+          bestOffer = offer;
+        }
+      }
+
+      const bestValue = bestAmount !== null ? bestAmount : null;
+      const deltaAbs = bestValue !== null ? bestValue - projectTotal : null;
+      const deltaPerc = bestValue !== null && projectTotal && deltaAbs !== null ? (deltaAbs / projectTotal) * 100 : null;
+
+      return [
+        est.id,
+        {
+          bestOffer: bestValue,
+          bestCompany: bestOffer?.company_name || null,
+          bestRound: latestRound,
+          deltaAbs,
+          deltaPerc,
+        },
+      ];
+    });
+
+    statsMap.value = Object.fromEntries(entries);
+  } catch (e) {
+    console.error('Failed to fetch offers for stats', e);
+    statsMap.value = {};
+  } finally {
+    statsLoading.value = false;
+  }
 };
 
 watch(estimates, () => {
@@ -132,25 +164,36 @@ const gridConfig: DataGridConfig = {
       cellClass: 'ag-right-aligned-cell',
     },
     {
-      field: 'totalAmount',
+      field: 'total_amount',
       headerName: 'Totale progetto',
       width: 150,
       cellClass: 'ag-right-aligned-cell font-bold',
-      valueFormatter: (params: { value: unknown }) => formatCurrency(typeof params.value === 'number' ? params.value : Number(params.value ?? 0)),
+      valueFormatter: (params: any) => formatCurrency(typeof params.value === 'number' ? params.value : Number(params.value ?? 0)),
     },
     {
       field: 'bestOffer',
       headerName: 'Migliore offerta (ultimo round)',
       width: 200,
       cellClass: 'ag-right-aligned-cell',
-      valueFormatter: (params: { value: unknown }) => formatCurrency(typeof params.value === 'number' ? params.value : Number(params.value ?? 0)),
+      valueFormatter: (params: any) => formatCurrency(typeof params.value === 'number' ? params.value : Number(params.value ?? 0)),
     },
     {
       field: 'deltaPerc',
       headerName: 'Delta vs progetto',
       width: 150,
       cellClass: 'ag-right-aligned-cell',
-      valueFormatter: (params: { value: unknown }) => formatDeltaPerc(typeof params.value === 'number' ? params.value : Number(params.value ?? 0)),
+      valueFormatter: (params: any) => formatDeltaPerc(typeof params.value === 'number' ? params.value : Number(params.value ?? 0)),
+    },
+    {
+      field: 'alertCount',
+      headerName: 'Alert',
+      width: 110,
+      cellClass: 'ag-right-aligned-cell',
+      cellRenderer: ((params: { value?: number }) => {
+        const count = Number(params.value || 0);
+        if (!count) return '-';
+        return `<span class="stat-pill stat-pill--warning">${count}</span>`;
+      }) as any,
     },
     {
       field: 'actions',
@@ -186,6 +229,8 @@ const navigateToEstimate = (estimate?: Estimate) => {
 };
 
 const deleteEstimate = async (estimate?: Estimate) => {
+  if (!estimate?.id) return;
+  
   if (!confirm(`Sei sicuro di voler eliminare il preventivo "${estimate.name}"? Questa azione è irreversibile.`)) {
     return;
   }
@@ -196,6 +241,7 @@ const deleteEstimate = async (estimate?: Estimate) => {
     });
     // Refresh data
     await refresh(); // assuming refresh function is available from useFetch result
+    await refreshAlertSummary();
   } catch (error) {
     console.error('Error deleting estimate:', error);
     alert('Errore durante l\'eliminazione del preventivo.');
@@ -209,6 +255,7 @@ const gridRows = computed<EstimateRow[]>(() =>
       ...est,
       bestOffer: stats.bestOffer ?? null,
       deltaPerc: stats.deltaPerc ?? null,
+      alertCount: alertSummaryMap.value[est.id] ?? 0,
     };
   }),
 );
@@ -218,16 +265,30 @@ const activeEstimateStats = computed(() => {
   return statsMap.value[activeEstimateId.value] || null;
 });
 
+const navigateToPricelist = (estimate?: Estimate) => {
+  if (!estimate?.id) return;
+  navigateTo(`/projects/${projectId}/pricelist?estimateId=${estimate.id}`);
+};
+
+const resolveConflicts = (estimate?: Estimate) => {
+  if (!estimate?.id) return;
+  navigateTo(`/projects/${projectId}/conflicts?estimateId=${estimate.id}`);
+};
+
 const gridContext = computed(() => ({
   rowActions: {
     open: (row?: Estimate) => navigateToEstimate(row),
+    viewPricelist: (row?: Estimate) => navigateToPricelist(row),
+    resolve: (row?: Estimate) => resolveConflicts(row),
     remove: (row?: Estimate) => deleteEstimate(row),
   },
+  hasAlerts: (row?: Estimate) => (alertSummaryMap.value[row?.id || ''] || 0) > 0,
 }));
 
 // Toolbar Props & Methods
 const searchText = ref('');
-const gridApi = ref<any>(null);
+const gridApi = ref<GridApi | null>(null);
+const { exportToXlsx } = useDataGridExport(gridApi);
 
 const onGridReady = (params: any) => {
   gridApi.value = params.api;
@@ -239,7 +300,7 @@ const handleReset = () => {
 };
 
 const handleExport = () => {
-    gridApi.value?.exportDataAsExcel({ fileName: 'preventivi' });
+    exportToXlsx('preventivi');
 };
 </script>
 
@@ -247,8 +308,8 @@ const handleExport = () => {
   <DataGridPage
     title="Preventivi"
     :grid-config="gridConfig"
-    :row-data="gridRows"
-    :loading="loading || statsLoading"
+    :row-data="gridRows as any[]"
+    :loading="loading || statsLoading || alertsLoading"
     
     :show-toolbar="false"
     :filter-text="searchText"
@@ -257,18 +318,17 @@ const handleExport = () => {
     empty-state-message="Non ci sono preventivi associati a questo progetto."
     :custom-components="{ actionsRenderer: DataGridActions }"
     :context-extras="gridContext"
-    @row-dblclick="(params) => navigateToEstimate(params?.data as Estimate | undefined)"
-    @grid-ready="onGridReady"
+    @row-dblclick="(params: any) => navigateToEstimate(params?.data)"
+    @grid-ready="(params: any) => onGridReady(params)"
   >
     <template #header-meta>
        <div class="flex items-center gap-2">
-          <span class="text-[hsl(var(--foreground))] font-medium">
+         <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]">
             Progetto: {{ project?.name || '...' }}
-          </span>
-          <span class="text-[hsl(var(--border))]">|</span>
-          <span class="text-[hsl(var(--muted-foreground))]">
+         </span>
+         <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]">
             {{ estimates.length }} {{ estimates.length === 1 ? 'preventivo' : 'preventivi' }}
-          </span>
+         </span>
        </div>
     </template>
 
@@ -281,23 +341,39 @@ const handleExport = () => {
           Delta: {{ formatDeltaPerc(activeEstimateStats.deltaPerc) }}
         </span>
       </div>
-      <UButton 
-        color="primary" 
-        size="sm" 
-        icon="i-heroicons-arrow-up-tray" 
-        variant="solid"
-        @click="navigateTo(`/projects/${projectId}/import`)"
-      >
-        Importa Dati
-      </UButton>
+      <!-- Import button moved to Topbar -->
     </template>
 
     <!-- Toolbar Slot -->
     <template #pre-grid>
-        <PageToolbar
-          v-model="searchText"
-          search-placeholder="Cerca preventivo..."
-        >
+        <!-- Alerts moved to bottom bar -->
+        <ClientOnly>
+          <Teleport to="#app-bottombar-right">
+            <div v-if="alertSummaryTotal > 0" class="flex items-center gap-4 text-xs">
+              <div class="flex items-center gap-2 text-amber-500 font-medium animate-pulse">
+                <Icon name="heroicons:exclamation-triangle" class="w-4 h-4" />
+                <span>{{ alertSummaryTotal }} Alert da risolvere</span>
+              </div>
+              <div class="h-4 w-px bg-[hsl(var(--border))]" />
+              <UButton
+                size="xs"
+                color="neutral"
+                variant="solid"
+                label="Risoluzione Alert"
+                icon="i-heroicons-wrench-screwdriver"
+                :to="`/projects/${projectId}/conflicts`"
+              />
+            </div>
+          </Teleport>
+        </ClientOnly>
+
+        <ClientOnly>
+          <Teleport to="#topbar-actions-portal">
+            <PageToolbar
+              v-model="searchText"
+              search-placeholder="Cerca preventivo..."
+              class="!py-0"
+            >
           <template #right>
             <button
                v-if="searchText"
@@ -308,14 +384,29 @@ const handleExport = () => {
               Reset
             </button>     
 
-            <button
-               class="btn-outline-theme"
+            <UButton
+               color="neutral"
+               variant="ghost"
+               icon="i-heroicons-arrow-down-tray"
+               class="text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
                @click="handleExport"
             >
                Esporta
-            </button>
+            </UButton>
+
+            <UButton
+              color="neutral"
+              variant="ghost"
+              icon="i-heroicons-arrow-up-tray"
+              class="text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
+              @click="navigateTo(`/projects/${projectId}/import`)"
+            >
+              Importa Dati
+            </UButton>
           </template>
-        </PageToolbar>
+            </PageToolbar>
+          </Teleport>
+        </ClientOnly>
     </template>
   </DataGridPage>
 </template>

@@ -1,7 +1,31 @@
- 
-import type { AnyBulkWriteOperation } from 'mongoose';
+
+
+import { WbsRepository } from '#repositories/WbsRepository';
 import { Types } from 'mongoose';
-import { WbsNode } from '#models';
+import type { AnyBulkWriteOperation } from 'mongoose'; // Still needed for type definition of ops construction
+
+/**
+ * Retrieve WBS nodes with optional filtering.
+ */
+export async function listWbsNodes(
+    projectId: string,
+    estimateId?: string,
+    filters: { level?: number; type?: string; parent_id?: string } = {}
+) {
+    const query: Record<string, unknown> = {
+        project_id: new Types.ObjectId(projectId),
+    };
+
+    if (estimateId) {
+        query.estimate_id = new Types.ObjectId(estimateId);
+    }
+
+    if (filters.level) query.level = filters.level;
+    if (filters.type) query.type = filters.type;
+    if (filters.parent_id) query.parent_id = new Types.ObjectId(filters.parent_id);
+
+    return WbsRepository.find(query);
+}
 
 /**
  * Upsert WBS nodes (spatial, wbs6, wbs7) and return lookup maps by code.
@@ -93,16 +117,17 @@ export async function upsertWbsHierarchy(projectId: string, estimateId: string, 
                 upsert: true,
             },
         }));
-        await WbsNode.bulkWrite(ops, { ordered: false });
+        await WbsRepository.bulkUpsert(ops, false);
     }
 
-    const docs = await WbsNode.find({ project_id: projectObjectId, estimate_id: estimateObjectId });
+    const docs = await WbsRepository.findForHierarchy(projectId, estimateId);
     const idMap: Record<string, string> = {};
     const ancestorsById: Record<string, Types.ObjectId[]> = {};
+    // docs are IWbsNode[], need handling for _id casting if necessary or assuming string/ObjectId
     for (const doc of docs) {
         const key = `${doc.level}:${doc.code}`;
         idMap[key] = doc._id.toString();
-        ancestorsById[doc._id.toString()] = doc.ancestors as Types.ObjectId[];
+        ancestorsById[doc._id.toString()] = doc.ancestors ? (doc.ancestors as Types.ObjectId[]) : [];
     }
 
     // Set parents and ancestors where parentKey is provided
@@ -116,14 +141,14 @@ export async function upsertWbsHierarchy(projectId: string, estimateId: string, 
         const ancestors = [...parentAncestors, new Types.ObjectId(parentId)];
         updates.push({
             updateOne: {
-                filter: { _id: selfId },
-                update: { $set: { parent_id: parentId, ancestors } },
+                filter: { _id: new Types.ObjectId(selfId) },
+                update: { $set: { parent_id: new Types.ObjectId(parentId), ancestors } },
             },
         });
         ancestorsById[selfId] = ancestors;
     }
     if (updates.length) {
-        await WbsNode.bulkWrite(updates, { ordered: false });
+        await WbsRepository.bulkUpsert(updates, false);
     }
 
     const map: { spatial: Record<string, string>; wbs6: Record<string, string>; wbs7: Record<string, string> } = {
@@ -165,7 +190,11 @@ export async function buildAndUpsertWbsFromItems(
                 if (!lvl) continue;
                 const levelNum = lvl.level ?? 0;
                 if (levelNum < 1 || levelNum > 7) continue;
-                const type = levelNum <= 5 ? 'spatial' : 'commodity';
+
+                let type: 'spatial' | 'wbs6' | 'wbs7' = 'spatial';
+                if (levelNum === 6) type = 'wbs6';
+                if (levelNum === 7) type = 'wbs7';
+
                 const code = normalizeWbsCode(lvl);
                 const desc = lvl.description;
 

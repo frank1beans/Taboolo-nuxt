@@ -45,20 +45,33 @@ export async function proxyMultipartToPython(
 ) {
   const config = useRuntimeConfig();
   const baseUrl: string | undefined = config.pythonApiBaseUrl;
+  const maxUploadMb = Number(config.pythonProxyMaxUploadMb ?? 100);
+  const maxUploadBytes = Number.isFinite(maxUploadMb) ? maxUploadMb * 1024 * 1024 : 100 * 1024 * 1024;
+  const timeoutMs = Number(config.pythonProxyTimeoutMs ?? 600000);
   if (!baseUrl) {
     throw createError({ statusCode: 500, statusMessage: 'pythonApiBaseUrl non configurato' });
   }
   const normalizedBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+
+  const contentLength = Number(getRequestHeader(event, 'content-length') ?? 0);
+  if (contentLength && contentLength > maxUploadBytes) {
+    throw createError({ statusCode: 413, statusMessage: 'Upload troppo grande' });
+  }
 
   const parts = await readMultipartFormData(event);
   if (!parts) {
     throw createError({ statusCode: 400, statusMessage: 'Corpo multipart mancante' });
   }
 
+  let totalBytes = 0;
   const form = new FormData();
   for (const part of parts) {
     const originalName = part.name || 'file';
     const name = options?.mapFieldName ? options.mapFieldName(originalName) : originalName;
+    totalBytes += part.data.length;
+    if (totalBytes > maxUploadBytes) {
+      throw createError({ statusCode: 413, statusMessage: 'Upload troppo grande' });
+    }
     if (part.filename) {
       // Use Web Blob to keep undici fetch compatibility
       const blob = new Blob([part.data], { type: part.type || 'application/octet-stream' });
@@ -77,11 +90,24 @@ export async function proxyMultipartToPython(
   const url = `${normalizedBase}${targetPath.startsWith('/') ? '' : '/'}${targetPath}`;
   const method = options?.method || event.node.req.method || 'POST';
 
-  const res = await fetch(url, {
-    method,
-    headers,
-    body: form,
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      method,
+      headers,
+      body: form,
+      signal: controller.signal,
+    });
+  } catch (error: unknown) {
+    if (error && typeof error === 'object' && 'name' in error && (error as { name?: string }).name === 'AbortError') {
+      throw createError({ statusCode: 504, statusMessage: 'Python request timed out' });
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
 
   return parseResponse(event, res, url);
 }

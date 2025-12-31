@@ -38,7 +38,7 @@ def detect_column_suggestions(rows: list[tuple[Any, ...]], header_idx: int) -> d
         normalized = label.lower()
         if "cod" in normalized:
             suggestions.setdefault("codice", ColumnSuggestion(idx, letter, label))
-        if "desc" in normalized or "indicazione" in normalized:
+        if "desc" in normalized or "indicazione" in normalized or "estesa" in normalized or "des" in normalized or "nom" in normalized:
             suggestions.setdefault("descrizione", ColumnSuggestion(idx, letter, label))
         if "prezzo" in normalized:
             suggestions.setdefault("prezzo", ColumnSuggestion(idx, letter, label))

@@ -1,5 +1,5 @@
 import { computed, toValue, type MaybeRefOrGetter } from 'vue'
-import type { Project, Estimate } from '~/types/project'
+import type { Project, Estimate } from '#types'
 
 export interface TreeNode {
   id: string
@@ -8,6 +8,7 @@ export interface TreeNode {
   count?: number
   to?: string
   children?: TreeNode[]
+  meta?: Record<string, any>
 }
 
 export const useProjectTree = (

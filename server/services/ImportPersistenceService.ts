@@ -69,6 +69,7 @@ type PythonOfferItem = {
     code?: string;
     codice?: string;
     description?: string;
+    short_description?: string;
     descrizione?: string;
     long_description?: string;
     descrizione_estesa?: string;
@@ -145,10 +146,12 @@ type BaselineAggregate = {
 
 type OfferAlertInsert = {
     project_id: Types.ObjectId;
+    estimate_id?: Types.ObjectId;
     offer_id: Types.ObjectId;
     offer_item_id?: Types.ObjectId;
     estimate_item_id?: Types.ObjectId;
     price_list_item_id?: Types.ObjectId;
+    candidate_price_list_item_ids?: Types.ObjectId[];
     source?: 'detailed' | 'aggregated';
     origin?: 'baseline' | 'addendum';
     type: 'price_mismatch' | 'quantity_mismatch' | 'code_mismatch' | 'missing_baseline' | 'ambiguous_match' | 'addendum';
@@ -159,6 +162,7 @@ type OfferAlertInsert = {
     delta?: number | null;
     code?: string | null;
     baseline_code?: string | null;
+    imported_description?: string | null;
 };
 
 type PendingAlert = OfferAlertInsert & { itemIndex: number };
@@ -213,6 +217,10 @@ async function persistProjectEstimate(payload: PythonImportResult, projectId: st
             ancestors: mappedParent ? [mappedParent] : []
         };
     });
+
+    if (wbsDocs.length) {
+        await WbsNode.deleteMany({ project_id: projectObjectId, estimate_id: estimateId });
+    }
 
     if (wbsDocs.length) {
         await WbsNode.bulkWrite(
@@ -453,7 +461,7 @@ export async function persistOffer(payload: PythonImportResult, projectId: strin
             .toLowerCase()
             .normalize('NFD').replace(/[\u0300-\u036f]/g, ''); // strip accents
     };
-    const normalizeCode = (value: string | undefined): string =>
+    const normalizeCode = (value: unknown): string =>
         (value ?? '').toString().trim().toLowerCase();
     const asNumber = (value: unknown): number | null =>
         typeof value === 'number' && !Number.isNaN(value) ? value : null;
@@ -483,6 +491,10 @@ export async function persistOffer(payload: PythonImportResult, projectId: strin
         throw new Error("Cannot find a baseline estimate to attach this offer to.");
     }
 
+    const estimateObjectId = baselineEstId instanceof Types.ObjectId
+        ? baselineEstId
+        : new Types.ObjectId(baselineEstId);
+
     // 1. Create/Update Offer Header
     const offerQuery = {
         project_id: projectObjectId,
@@ -495,7 +507,7 @@ export async function persistOffer(payload: PythonImportResult, projectId: strin
         {
             $set: {
                 ...offerQuery,
-                estimate_id: baselineEstId,
+                estimate_id: estimateObjectId,
                 name: estData.name || `Offerta ${offerQuery.company_name}`,
                 mode: importMode,
                 description: estData.notes,
@@ -549,7 +561,7 @@ export async function persistOffer(payload: PythonImportResult, projectId: strin
         detailedBaselineMap = new Map();
         const blItems = await EstimateItem.find({
             project_id: projectObjectId,
-            'project.estimate_id': baselineEstId
+            'project.estimate_id': estimateObjectId
         }).select('progressive _id project.unit_price project.quantity unit_measure code price_list_item_id').lean<BaselineItemLean[]>();
         for (const bli of blItems) {
             // Fix: explicit check for undefined/null because progressive can be 0
@@ -570,7 +582,7 @@ export async function persistOffer(payload: PythonImportResult, projectId: strin
         // We match imported items to PriceList items by Code (priority) or Description (fallback)
         const plItems = await PriceListItem.find({
             project_id: projectObjectId,
-            estimate_id: baselineEstId
+            estimate_id: estimateObjectId
         }).select('code description long_description price _id').lean<PriceListItemLean[]>();
 
         // Build Lookups
@@ -581,9 +593,10 @@ export async function persistOffer(payload: PythonImportResult, projectId: strin
         for (const pli of plItems) {
             priceListMetaMap.set(String(pli._id), { code: pli.code ?? null, price: pli.price ?? null });
             if (pli.code) {
-                const arr = plCodeMap.get(pli.code) || [];
+                const normCode = normalizeCode(pli.code);
+                const arr = plCodeMap.get(normCode) || [];
                 arr.push(pli._id as Types.ObjectId);
-                plCodeMap.set(pli.code, arr);
+                plCodeMap.set(normCode, arr);
             }
 
             // Map regular description
@@ -606,7 +619,7 @@ export async function persistOffer(payload: PythonImportResult, projectId: strin
         baselineByPriceListId = new Map<string, BaselineAggregate>();
         const baselineItems = await EstimateItem.find({
             project_id: projectObjectId,
-            'project.estimate_id': baselineEstId
+            'project.estimate_id': estimateObjectId
         }).select('price_list_item_id project.quantity project.unit_price').lean<BaselineItemLean[]>();
 
         for (const item of baselineItems) {
@@ -629,7 +642,7 @@ export async function persistOffer(payload: PythonImportResult, projectId: strin
         const code = rawCode.length ? rawCode : undefined;
 
         // Extract Description(s)
-        const description = (item.description || item.descrizione || '').trim();
+        const description = (item.description || item.short_description || item.descrizione || '').trim();
         const longDescription = (item.long_description || item.descrizione_estesa || '').trim();
 
         // Effective description for matching (prefer long if desc is empty, or try both matches)
@@ -666,9 +679,56 @@ export async function persistOffer(payload: PythonImportResult, projectId: strin
             }
         } else {
             // Aggregated Mode
-            const codeMatches: Types.ObjectId[] = code && plCodeMap ? (plCodeMap.get(code) || []) : [];
+            let lookupCode = code;
+            let lookupNormDesc = normDesc;
+
+            // Heuristic: If code is missing, try to extract from description "CODE - Description"
+            if (!lookupCode && description && description.includes(' - ')) {
+                const sepIdx = description.indexOf(' - ');
+                if (sepIdx > 0) {
+                    const potCode = description.substring(0, sepIdx).trim();
+                    const potDesc = description.substring(sepIdx + 3).trim();
+
+                    // 1. Try to recover code (if valid in map)
+                    const normPotCode = normalizeCode(potCode);
+                    if (plCodeMap && plCodeMap.has(normPotCode)) {
+                        lookupCode = potCode;
+                    }
+
+                    // 2. Try to recover clean description (if valid in map)
+                    const normPotDesc = normalizeDescription(potDesc);
+                    if (plDescMap && plDescMap.has(normPotDesc)) {
+                        lookupNormDesc = normPotDesc;
+                    }
+                }
+            }
+
+            const normCodeForLookup = normalizeCode(lookupCode);
+            const codeMatches: Types.ObjectId[] = normCodeForLookup && plCodeMap ? (plCodeMap.get(normCodeForLookup) || []) : [];
             const longDescMatches: Types.ObjectId[] = normLongDesc && plDescMap ? (plDescMap.get(normLongDesc) || []) : [];
-            const shortDescMatches: Types.ObjectId[] = normDesc && plDescMap ? (plDescMap.get(normDesc) || []) : [];
+            const shortDescMatches: Types.ObjectId[] = lookupNormDesc && plDescMap ? (plDescMap.get(lookupNormDesc) || []) : [];
+
+            // Debug logging for first 5 items
+            if (itemIndex < 5) {
+                console.log(`[Persistence DEBUG] Item #${itemIndex}:`, {
+                    code,
+                    normCodeForLookup,
+                    description: description?.substring(0, 60),
+                    normDesc: normDesc?.substring(0, 60),
+                    longDescription: longDescription?.substring(0, 60),
+                    normLongDesc: normLongDesc?.substring(0, 60),
+                    codeMatchCount: codeMatches.length,
+                    longDescMatchCount: longDescMatches.length,
+                    shortDescMatchCount: shortDescMatches.length,
+                    plDescMapSize: plDescMap?.size ?? 0,
+                    plCodeMapSize: plCodeMap?.size ?? 0,
+                });
+                // Log a few sample keys from plDescMap
+                if (plDescMap && itemIndex === 0) {
+                    const sampleKeys = Array.from(plDescMap.keys()).slice(0, 5);
+                    console.log(`[Persistence DEBUG] Sample plDescMap keys:`, sampleKeys.map(k => k?.substring(0, 60)));
+                }
+            }
 
             const pickUnique = (arr: Types.ObjectId[]) => (arr.length === 1 ? arr[0] : undefined);
 
@@ -711,6 +771,7 @@ export async function persistOffer(payload: PythonImportResult, projectId: strin
         }) => {
             pendingAlerts.push({
                 project_id: projectObjectId,
+                estimate_id: estimateObjectId,
                 offer_id: offerId,
                 source,
                 origin: data.origin ?? origin,
@@ -778,7 +839,9 @@ export async function persistOffer(payload: PythonImportResult, projectId: strin
                         type: 'ambiguous_match',
                         severity: 'warning',
                         message: `Multiple candidates (${candidatePriceListItemIds.length}) for matching`,
-                        code: code ?? null
+                        code: code ?? null,
+                        imported_description: description || longDescription || null,
+                        candidate_price_list_item_ids: candidatePriceListItemIds,
                     });
                 } else {
                     addAlert({

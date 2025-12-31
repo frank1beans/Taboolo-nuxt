@@ -1,19 +1,12 @@
-import { defineEventHandler, createError, getRouterParam, getQuery } from 'h3';
-import { Types } from 'mongoose';
+import { defineEventHandler } from 'h3';
 import { EstimateItem, Offer } from '#models';
+import { requireObjectIdParam, requireObjectIdQuery, toObjectId } from '#utils/validate';
 
 export default defineEventHandler(async (event) => {
-  const projectId = getRouterParam(event, 'id');
-  if (!projectId) {
-    throw createError({ statusCode: 400, statusMessage: 'Project ID required' });
-  }
-
-  const projectObjectId = new Types.ObjectId(projectId);
-  const estimateId = getQuery(event).estimate_id?.toString();
-  if (!estimateId) {
-    throw createError({ statusCode: 400, statusMessage: 'Estimate ID required for analytics' });
-  }
-  const estimateObjectId = new Types.ObjectId(estimateId);
+  const projectId = requireObjectIdParam(event, 'id', 'Project ID');
+  const projectObjectId = toObjectId(projectId);
+  const estimateId = requireObjectIdQuery(event, 'estimate_id', 'Estimate ID');
+  const estimateObjectId = toObjectId(estimateId);
 
   // 1. Calculate Baseline Total (Project Estimate)
   // We need to support calculated fields if not stored directly

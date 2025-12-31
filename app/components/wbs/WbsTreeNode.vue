@@ -1,92 +1,68 @@
 <template>
-  <div class="select-none relative">
-    <!-- Connecting line (vertical) for this node towards its siblings -->
-    <!-- Managed by parent for the list, but we need lines inside children -->
-    
-    <!-- Node Row -->
+  <div class="select-none">
     <div
       role="treeitem"
       :aria-expanded="hasChildren ? isExpanded : undefined"
       :aria-selected="isSelected"
       :tabindex="depth === 0 ? 0 : -1"
-      class="group relative flex items-center gap-2.5 py-1.5 px-2 mb-0.5 rounded-lg cursor-pointer transition-all duration-150 outline-none border border-transparent"
+      class="group flex items-center gap-2 rounded-xl px-3 py-2 transition-all duration-200 outline-none select-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
       :class="[
-        isSelected 
-          ? 'bg-[hsl(var(--primary)/0.1)] border-[hsl(var(--primary)/0.2)]' 
-          : 'hover:bg-[hsl(var(--muted)/0.8)]',
-        'focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1'
+        isSelected
+          ? 'bg-[hsl(var(--primary))/0.1] text-[hsl(var(--primary))] font-semibold'
+          : 'text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))/0.5] hover:text-[hsl(var(--foreground))]'
       ]"
-      :style="{ paddingLeft: `${depth * 16 + 8}px` }"
+      :style="{ paddingLeft: `${depth * 16 + 12}px` }"
       @click="handleClick"
       @keydown="handleKeydown"
     >
-      <!-- Active Indicator (Left Bar) -->
-      <div
-        v-if="isSelected"
-        class="absolute left-0 top-1 bottom-1 w-[3px] bg-[hsl(var(--primary))] rounded-r-full"
-      />
-
-      <!-- Chevron / Leaf Indicator -->
-      <button
-        v-if="hasChildren"
-        type="button"
-        class="w-5 h-5 flex items-center justify-center rounded transition-colors hover:bg-[hsl(var(--muted)/0.8)] text-[hsl(var(--muted-foreground))]"
-        :aria-label="isExpanded ? 'Collassa' : 'Espandi'"
-        @click.stop="$emit('toggle', node.id)"
-      >
-        <UIcon
-          name="i-heroicons-chevron-right-20-solid"
-          class="w-3.5 h-3.5 transition-transform duration-200"
-          :class="{ 'rotate-90': isExpanded, 'text-[hsl(var(--foreground))]': isSelected }"
+      <div class="w-5 h-5 flex items-center justify-center">
+        <button
+          v-if="hasChildren"
+          type="button"
+          class="w-5 h-5 flex items-center justify-center rounded transition-colors"
+          :class="isSelected ? 'text-[hsl(var(--primary))]' : 'text-[hsl(var(--muted-foreground))] group-hover:text-[hsl(var(--foreground))]'"
+          :aria-label="isExpanded ? 'Collassa' : 'Espandi'"
+          @click.stop="$emit('toggle', node.id)"
+        >
+          <UIcon
+            name="i-heroicons-chevron-right-20-solid"
+            class="w-3.5 h-3.5 transition-transform duration-200"
+            :class="{ 'rotate-90': isExpanded }"
+          />
+        </button>
+        <div
+          v-else
+          class="w-1.5 h-1.5 rounded-full"
+          :class="isSelected ? 'bg-[hsl(var(--primary))]' : 'bg-[hsl(var(--border))]'"
         />
-      </button>
-      <!-- Leaf Node Icon (Dot) -->
-      <div v-else class="w-5 h-5 flex items-center justify-center">
-        <div class="w-1.5 h-1.5 rounded-full bg-[hsl(var(--border))]" :class="{ 'bg-[hsl(var(--primary))]': isSelected }" />
       </div>
 
-      <!-- Level Badge (Minimalist) -->
-      <div 
-         class="h-5 px-1.5 rounded text-[10px] font-bold flex items-center justify-center shadow-sm border"
-         :class="isSelected 
-            ? 'bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] border-[hsl(var(--primary))]' 
-            : 'bg-[hsl(var(--card))] text-[hsl(var(--muted-foreground))] border-[hsl(var(--border))]'"
-         title="Livello WBS"
+      <span
+        class="text-[9px] font-semibold uppercase px-1.5 py-0.5 rounded border"
+        :class="isSelected
+          ? 'bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] border-[hsl(var(--primary))]'
+          : 'bg-[hsl(var(--card))] text-[hsl(var(--muted-foreground))] border-[hsl(var(--border))]'"
+        title="Livello WBS"
       >
         L{{ node.level }}
-      </div>
+      </span>
 
-      <!-- Name & Info -->
-      <div class="flex-1 min-w-0 flex flex-col justify-center">
-         <span
-          class="truncate text-sm font-medium leading-tight transition-colors"
-          :class="isSelected ? 'text-[hsl(var(--primary))]' : 'text-[hsl(var(--foreground))]'"
-          :title="node.name"
-        >
-          {{ node.name }}
-        </span>
-      </div>
+      <span class="flex-1 truncate text-sm" :title="node.name">
+        {{ node.name }}
+      </span>
 
-      <!-- Children Count Badge -->
       <span
         v-if="hasChildren"
-        class="text-[10px] font-medium px-1.5 py-0.5 rounded-full flex-shrink-0 transition-colors"
-        :class="isSelected 
-          ? 'bg-[hsl(var(--primary)/0.2)] text-[hsl(var(--primary-dark))]' 
+        class="text-[10px] font-medium px-2 py-0.5 rounded-full"
+        :class="isSelected
+          ? 'bg-[hsl(var(--primary))/0.2] text-[hsl(var(--primary))]'
           : 'bg-[hsl(var(--secondary))] text-[hsl(var(--muted-foreground))]'"
       >
         {{ node.children?.length }}
       </span>
     </div>
 
-    <!-- Children (recursive) -->
-    <div v-if="hasChildren && isExpanded" role="group" class="relative">
-      <!-- Continuous Guide Line -->
-      <div
-        class="absolute top-0 bottom-1 w-px bg-[hsl(var(--border))]"
-        :style="{ left: `${(depth + 1) * 16 + 10}px` }"
-      />
-      
+    <div v-if="hasChildren && isExpanded" role="group" class="mt-0.5 space-y-0.5">
       <WbsTreeNode
         v-for="child in node.children"
         :key="child.id"
@@ -104,18 +80,18 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { WbsSidebarNode } from './WbsSidebar.vue';
+import type { WbsNode } from '~/composables/useWbsTree';
 
 const props = defineProps<{
-  node: WbsSidebarNode;
+  node: WbsNode;
   depth: number;
   expandedNodes: Set<string>;
-  selectedNode: WbsSidebarNode | null;
+  selectedNode: WbsNode | null;
 }>();
 
 const emit = defineEmits<{
   toggle: [nodeId: string];
-  select: [node: WbsSidebarNode];
+  select: [node: WbsNode];
 }>();
 
 const hasChildren = computed(() => (props.node.children?.length ?? 0) > 0);

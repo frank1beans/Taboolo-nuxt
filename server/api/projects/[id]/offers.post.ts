@@ -1,6 +1,7 @@
-import { defineEventHandler, createError, getRouterParam, getQuery } from 'h3';
+import { defineEventHandler, getQuery } from 'h3';
 import { proxyMultipartToPython } from '#utils/python-proxy';
 import { mapComputoToEstimate } from '#utils/python-mappers';
+import { requireObjectIdParam } from '#utils/validate';
 
 type OfferEstimate = {
   estimate_id?: string;
@@ -46,10 +47,7 @@ const valueMap = (name: string, value: string) => {
 };
 
 export default defineEventHandler(async (event) => {
-  const projectId = getRouterParam(event, 'id');
-  if (!projectId) {
-    throw createError({ statusCode: 400, statusMessage: 'Project ID required' });
-  }
+  const projectId = requireObjectIdParam(event, 'id', 'Project ID');
 
   // Proxy all offer imports (LC/MC) to Python importer
   const result = await proxyMultipartToPython(event, `/commesse/${projectId}/ritorni`, { method: 'POST', mapFieldName: fieldMap, mapFieldValue: valueMap });

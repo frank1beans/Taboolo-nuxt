@@ -1,21 +1,18 @@
-import { defineEventHandler, createError, getRouterParam } from 'h3';
-import { Types } from 'mongoose';
+import { defineEventHandler, createError } from 'h3';
 import { WbsNode } from '#models';
+import { listWbsNodes } from '#services/WbsService';
 import { serializeDocs } from '#utils/serialize';
+import { requireObjectIdParam, toObjectId } from '#utils/validate';
 
 export default defineEventHandler(async (event) => {
-  const projectId = getRouterParam(event, 'id');
-  const estimateId = getRouterParam(event, 'estimateId');
-
-  if (!projectId || !estimateId) {
-    throw createError({ statusCode: 400, statusMessage: 'Project ID and Estimate ID required' });
-  }
+  const projectId = requireObjectIdParam(event, 'id', 'Project ID');
+  const estimateId = requireObjectIdParam(event, 'estimateId', 'Estimate ID');
 
   try {
     // Use ObjectId for proper filtering
-    const projectObjectId = new Types.ObjectId(projectId);
-    const estimateObjectId = new Types.ObjectId(estimateId);
-    const nodes = await WbsNode.find({ project_id: projectObjectId, estimate_id: estimateObjectId }).lean();
+    const projectObjectId = toObjectId(projectId);
+    const estimateObjectId = toObjectId(estimateId);
+    const nodes = await listWbsNodes(projectId, estimateId);
 
     const spatial = nodes.filter(n => n.type === 'spatial' || (n.level && n.level <= 5));
     const wbs6 = nodes.filter(n => n.level === 6);

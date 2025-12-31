@@ -1,14 +1,16 @@
-import { defineEventHandler, createError, getRouterParam, readBody } from 'h3';
+import { defineEventHandler, createError, readBody } from 'h3';
 import { Project } from '#models';
 import { serializeDoc } from '#utils/serialize';
+import { requireObjectIdParam, toObjectId } from '#utils/validate';
 
 export default defineEventHandler(async (event) => {
-  const id = getRouterParam(event, 'id');
+  const id = requireObjectIdParam(event, 'id', 'Project ID');
+  const projectObjectId = toObjectId(id);
   const body = await readBody(event);
 
   try {
     const updatedProject = await Project.findByIdAndUpdate(
-      id,
+      projectObjectId,
       { $set: body },
       { new: true, runValidators: true }
     ).lean();

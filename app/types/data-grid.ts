@@ -36,6 +36,7 @@ export interface DataGridColumn {
    * If set to "number" the column will use AG Grid number filter and show numeric operators.
    */
   filterType?: 'text' | 'number' | 'date';
+  filterMode?: 'single' | 'multi';
 }
 
 export type ColumnFilterOperator =
@@ -50,12 +51,13 @@ export type ColumnFilterOperator =
   | 'greater_than_or_equal'
   | 'less_than_or_equal'
   | 'not_equals'
-  | 'in_range';
+  | 'in_range'
+  | 'in';
 
 export interface ColumnFilter {
   columnKey: string;
   operator: ColumnFilterOperator;
-  value?: string | null;
+  value?: string | string[] | null;
 }
 
 export interface DataGridConfig {
@@ -102,22 +104,26 @@ export interface ActiveFilter {
   label: string;
   value: string;
   operator: ColumnFilterOperator;
+  /** Type of filter: 'wbs' for hierarchy filters, 'column' for table column filters */
+  filterType?: 'wbs' | 'column';
 }
 
 export interface FilterPanelState {
   field: string;
   label: string;
   options: string[];
+  multiSelect?: boolean;
   triggerRect?: DOMRect;
   triggerEl?: HTMLElement | null;
   currentFilter?: ColumnFilter | null;
-  filterType?: 'text' | 'number' | 'date';
+  filterType?: 'text' | 'number' | 'date' | 'set';
 }
 
 export interface FilterPanelConfig {
   field: string;
   label: string;
   options: string[];
+  multiSelect?: boolean;
   triggerEl?: HTMLElement | null;
-  filterType?: 'text' | 'number' | 'date';
+  filterType?: 'text' | 'number' | 'date' | 'set';
 }

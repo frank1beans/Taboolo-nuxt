@@ -6,32 +6,32 @@ import type {
   ITooltipParams,
   CellStyle,
 } from "ag-grid-community";
+import { formatCurrency as formatCurrencyLib, formatNumber as formatNumberLib } from "~/lib/formatters";
 import { utils, writeFile } from "xlsx";
 import type * as ExcelJSTypes from "exceljs";
 import ExcelJS from "exceljs/dist/exceljs.min.js";
 
 // ============= FORMATTERS =============
 
-const currencyFormatter = new Intl.NumberFormat("en-US", {
-  style: "currency",
-  currency: "EUR",
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
-
 const formatCurrency = (value: number | null | undefined): string => {
-  if (value === null || value === undefined || isNaN(value)) return "€0.00";
-  return currencyFormatter.format(value);
+  return formatCurrencyLib(value, {
+    locale: "en-US",
+    currency: "EUR",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+    fallback: "?0.00",
+  });
 };
 
 const formatNumber = (
   value: number | null | undefined,
   decimals: number = 2
 ): string => {
-  if (value === null || value === undefined || isNaN(value)) return "0";
-  return value.toLocaleString("en-US", {
+  return formatNumberLib(value, {
+    locale: "en-US",
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
+    fallback: "0",
   });
 };
 
@@ -40,10 +40,13 @@ const formatPercentage = (
   decimals: number = 2
 ): string => {
   if (value === null || value === undefined || isNaN(value)) return "0%";
-  return `${value.toLocaleString("en-US", {
+  const formatted = formatNumberLib(value, {
+    locale: "en-US",
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
-  })}%`;
+    fallback: "0",
+  });
+  return `${formatted}%`;
 };
 
 // ============= VALUE FORMATTERS =============
@@ -514,8 +517,37 @@ export const getGridThemeClass = (isDarkMode: boolean): string => {
 
 // ============= UTILITY FUNCTIONS =============
 
+const stableStringify = (value: unknown): string => {
+  if (value === null || value === undefined) return "";
+  if (typeof value !== "object") return JSON.stringify(value);
+  if (Array.isArray(value)) {
+    return `[${value.map(stableStringify).join(",")}]`;
+  }
+  const obj = value as Record<string, unknown>;
+  return `{${Object.keys(obj).sort().map((key) => `${JSON.stringify(key)}:${stableStringify(obj[key])}`).join(",")}}`;
+};
+
+const hashString = (input: string): string => {
+  let hash = 2166136261;
+  for (let i = 0; i < input.length; i += 1) {
+    hash ^= input.charCodeAt(i);
+    hash += (hash << 1) + (hash << 4) + (hash << 7) + (hash << 8) + (hash << 24);
+  }
+  return (hash >>> 0).toString(16);
+};
+
 export const getRowId = (params: { data: Record<string, unknown> }): string => {
-  return params.data.id || params.data.codice || String(Math.random());
+  const data = params.data || {};
+  const direct =
+    data.id ??
+    data._id ??
+    data.codice ??
+    data.code ??
+    data.item_code ??
+    data.price_list_item_id ??
+    data.offer_id;
+  if (direct) return String(direct);
+  return `row_${hashString(stableStringify(data))}`;
 };
 
 export const shortenDescription = (text: string | null | undefined, maxLength: number = 80): string => {
@@ -909,3 +941,5 @@ export const exportToExcelJS = async (options: ExcelJSExportOptions): Promise<vo
   link.click();
   window.URL.revokeObjectURL(url);
 };
+
+

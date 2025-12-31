@@ -1,6 +1,7 @@
-import { defineEventHandler, createError, getRouterParam, getQuery } from 'h3';
+import { defineEventHandler, getQuery } from 'h3';
 import { Types } from 'mongoose';
 import { EstimateItem, Offer, OfferItem, PriceListItem, WbsNode } from '#models';
+import { requireObjectIdParam, toObjectId } from '#utils/validate';
 
 type OfferDoc = {
   _id: Types.ObjectId | string;
@@ -70,12 +71,8 @@ type ComparisonRow = {
 };
 
 export default defineEventHandler(async (event) => {
-  const projectId = getRouterParam(event, 'id');
-  const estimateId = getRouterParam(event, 'estimateId');
-
-  if (!projectId || !estimateId) {
-    throw createError({ statusCode: 400, statusMessage: 'Project ID and Estimate ID required' });
-  }
+  const projectId = requireObjectIdParam(event, 'id', 'Project ID');
+  const estimateId = requireObjectIdParam(event, 'estimateId', 'Estimate ID');
 
   const query = getQuery(event);
   const rawRound = query.round as string | undefined;
@@ -91,8 +88,8 @@ export default defineEventHandler(async (event) => {
       ? rawCompany
       : undefined;
 
-  const projectObjectId = new Types.ObjectId(projectId);
-  const estimateObjectId = new Types.ObjectId(estimateId);
+  const projectObjectId = toObjectId(projectId);
+  const estimateObjectId = toObjectId(estimateId);
 
   // 1. Fetch offers matching filters
   const offerMatch: Record<string, unknown> = { project_id: projectObjectId, estimate_id: estimateObjectId };

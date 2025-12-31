@@ -1,15 +1,14 @@
-import { defineEventHandler, createError, getRouterParam } from 'h3';
+import { defineEventHandler, createError } from 'h3';
 import { Project, Estimate } from '#models';
 import { deleteEstimateCascade } from '#services/EstimateService';
+import { requireObjectIdParam, toObjectId } from '#utils/validate';
 
 export default defineEventHandler(async (event) => {
-  const id = getRouterParam(event, 'id');
-  if (!id) {
-    throw createError({ statusCode: 400, statusMessage: 'Project ID required' });
-  }
+  const id = requireObjectIdParam(event, 'id', 'Project ID');
+  const projectObjectId = toObjectId(id);
 
   try {
-    const project = await Project.findById(id);
+    const project = await Project.findById(projectObjectId);
 
     if (!project) {
       throw createError({
@@ -18,11 +17,11 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    const estimates = await Estimate.find({ project_id: id });
+    const estimates = await Estimate.find({ project_id: projectObjectId });
     for (const est of estimates) {
       await deleteEstimateCascade(id, est._id.toString());
     }
-    await Project.findByIdAndDelete(id);
+    await Project.findByIdAndDelete(projectObjectId);
 
     return { success: true };
   } catch (error) {

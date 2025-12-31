@@ -3,6 +3,7 @@ import EstimateItemsPage from '~/components/estimates/EstimateItemsPage.vue'
 
 definePageMeta({
   breadcrumb: 'Preventivo',
+  disableDefaultSidebar: true,
 })
 </script>
 

@@ -14,7 +14,7 @@ import type { ApiEstimate, ApiProjectDetail } from '~/types/api';
 
 ModuleRegistry.registerModules([AllCommunityModule]);
 
-const props = defineProps<{ projectId: string }>();
+const props = defineProps<{ projectId: string; estimateId?: string }>();
 const emit = defineEmits<{ success: [result: unknown]; close: [] }>();
 
 // ==================== STATE ====================
@@ -63,7 +63,7 @@ const multiCompanyRows = ref<MultiCompanyRow[]>([]);
 // constant removed
 
 // Baseline Estimate Selection
-const selectedEstimateId = ref<string | undefined>(undefined);
+const selectedEstimateId = ref<string | undefined>(props.estimateId);
 const estimateOptions = ref<{ id: string; label: string }[]>([]);
 const submissionState = ref<'idle' | 'loading' | 'success' | 'error'>('idle');
 const submissionMessage = ref<string>('');
@@ -81,7 +81,12 @@ onMounted(async () => {
         }))
         .filter(opt => !!opt.id);
 
-      if (estimateOptions.value.length === 1) {
+      // If estimateId is provided via props, use it (locked)
+      if (props.estimateId) {
+        selectedEstimateId.value = props.estimateId;
+      } 
+      // specific logic if only one option exists
+      else if (estimateOptions.value.length === 1) {
         selectedEstimateId.value = estimateOptions.value[0].id;
       }
     }
@@ -114,19 +119,25 @@ const canProceedStep2 = computed(() => {
   return files.value.every((f) => f.headers?.length > 0 && f.impresa.trim().length > 0);
 });
 
-const canSubmit = computed(() => {
-  const codice = mappingRows.value.find((r) => r.campo === 'Codice')?.colonna;
-  const descr = mappingRows.value.find((r) => r.campo === 'Descrizione')?.colonna;
-  const prezzo = mappingRows.value.find((r) => r.campo === 'Prezzo')?.colonna;
-  const qta = mappingRows.value.find((r) => r.campo === 'Quantita')?.colonna;
+const getMappingColumn = (campo: string) =>
+  mappingRows.value.find((r) => r.campo === campo)?.colonna || '';
 
-  const hasIdentifier = !!codice || !!descr;
+const identifierFields = ['Codice', 'Descrizione', 'Descrizione Estesa'];
+
+const hasIdentifier = computed(() =>
+  identifierFields.some((field) => !!getMappingColumn(field))
+);
+const missingIdentifier = computed(() => !hasIdentifier.value);
+
+const canSubmit = computed(() => {
+  const prezzo = getMappingColumn('Prezzo');
+  const qta = getMappingColumn('Quantita');
 
   if (uploadType.value === 'multi') {
-    return hasIdentifier && multiCompanyRows.value.every((r) => r.impresa.trim() && r.prezzo && r.quantita);
+    return hasIdentifier.value && multiCompanyRows.value.every((r) => r.impresa.trim() && r.prezzo && r.quantita);
   }
 
-  return hasIdentifier && !!prezzo && !!qta;
+  return hasIdentifier.value && !!prezzo && !!qta;
 });
 
 const headerOptions = computed(() => {
@@ -219,7 +230,12 @@ const mappingColDefs = computed<ColDef[]>(() => [
     flex: 1,
     cellRenderer: GridSelectCell,
     cellRendererParams: { values: () => headerOptions.value },
-    cellClassRules: { 'cell-required': (p) => ['Prezzo', 'Quantita'].includes(p.data.campo) && !p.data.colonna },
+    cellClassRules: {
+      'cell-required': (p) => (
+        (['Prezzo', 'Quantita'].includes(p.data.campo) && !p.data.colonna)
+        || (missingIdentifier.value && identifierFields.includes(p.data.campo) && !p.data.colonna)
+      ),
+    },
     cellClass: 'cell-no-padding',
   },
   { field: 'note', headerName: 'Note', editable: false, flex: 1, cellClass: 'cell-muted' },
@@ -295,9 +311,27 @@ watch(
 
     const detected = autoDetectColumns(newHeaders.map((h) => h.name));
 
+    // Try to separate short and long description
+    const allDescs = detected.description;
+    let shortCol = allDescs[0] || '';
+    let longCol = '';
+    
+    if (allDescs.length > 1) {
+      // Prioritize explicit "estesa" or "lunga"
+      const estesa = allDescs.find(c => /estesa|lungh/i.test(c));
+      if (estesa) {
+        longCol = estesa;
+        shortCol = allDescs.find(c => c !== estesa) || '';
+      } else {
+        // Otherwise just take the second one as potential long description
+        longCol = allDescs[1];
+      }
+    }
+
     const rows: MappingRow[] = [
-      { id: '1', campo: 'Codice', colonna: detected.code[0] || '', note: "Opzionale se c'e Descrizione" },
-      { id: '2', campo: 'Descrizione', colonna: detected.description[0] || '', note: "Opzionale se c'e Codice" },
+      { id: '1', campo: 'Codice', colonna: detected.code[0] || '', note: 'Alternativo a Descrizione/Descrizione Estesa' },
+      { id: '2', campo: 'Descrizione', colonna: shortCol, note: 'Alternativa a Codice/Descrizione Estesa' },
+      { id: 'long_desc', campo: 'Descrizione Estesa', colonna: longCol, note: 'Obbligatoria se mancano Codice e Descrizione' },
     ];
 
     if (uploadType.value !== 'multi') {
@@ -342,6 +376,7 @@ const handleFileSelect = async (selectedFile: File) => {
       headers: result.headers.map((name: string, index: number) => ({ name, index })),
       headerRowIndex: result.headerRowIndex ?? 0,
       round: 1,
+      // If we are batch uploading, we can try to guess company/round from file name if needed.
     });
   } catch (err) {
     console.error('Error reading file:', err);
@@ -373,6 +408,7 @@ const addMultiRow = () => {
     prezzo: '',
     quantita: '',
     round: 1,
+    // Add default round/imprese from file?
   });
 };
 
@@ -399,6 +435,7 @@ const submit = async () => {
   try {
     const codice = mappingRows.value.find((r) => r.campo === 'Codice')?.colonna || '';
     const descr = mappingRows.value.find((r) => r.campo === 'Descrizione')?.colonna || '';
+    const descrExt = mappingRows.value.find((r) => r.campo === 'Descrizione Estesa')?.colonna || '';
     const prog = mappingRows.value.find((r) => r.campo === 'Progressivo')?.colonna || '';
 
     const priceCol = mappingRows.value.find((r) => r.campo === 'Prezzo')?.colonna || '';
@@ -406,6 +443,8 @@ const submit = async () => {
 
     // Helper per inviare una singola offerta
     const uploadSingle = async (entry: FileEntry, company: string, roundNum: number) => {
+      // DEBUG LOG
+      console.log('Uploading with sourceEstimateId:', selectedEstimateId.value);
       return api.uploadBidOffer(props.projectId, {
         file: entry.file,
         company,
@@ -415,10 +454,12 @@ const submit = async () => {
         roundNumber: roundNum,
         codeColumns: codice ? [codice] : [],
         descriptionColumns: descr ? [descr] : [],
+        longDescriptionColumns: descrExt ? [descrExt] : [],
         priceColumn: priceCol,
         quantityColumn: qtyCol,
         progressColumn: prog || undefined,
         sourceEstimateId: selectedEstimateId.value,
+        headerRowIndex: entry.headerRowIndex,
       });
     };
 
@@ -499,6 +540,12 @@ const submit = async () => {
 const forceUpdateFiles = () => triggerRef(files);
 const forceUpdateMappings = () => triggerRef(mappingRows);
 const forceUpdateMulti = () => triggerRef(multiCompanyRows);
+
+
+// ==================== TEMPLATE LOGIC FOR SELECT MENU ====================
+// If we want to disable the select menu when estimateId is provided props.estimateId
+// we can do that in the template.
+
 </script>
 
 <template>
@@ -603,6 +650,7 @@ const forceUpdateMulti = () => triggerRef(multiCompanyRows);
                placeholder="Seleziona preventivo..."
                searchable
                color="neutral"
+               :disabled="!!props.estimateId"
              >
                <template #label>
                  <span v-if="selectedEstimateId" class="truncate">
@@ -652,7 +700,7 @@ const forceUpdateMulti = () => triggerRef(multiCompanyRows);
         <ClientOnly v-if="files.length > 0">
           <AgGridVue
             :class="[themeClass, 'w-full rounded border border-neutral-200 dark:border-neutral-700']"
-            :style="{ height: Math.max(120, 52 + files.length * 44) + 'px' }"
+            :style="{ height: (36 + files.length * 42) + 'px' }"
             :column-defs="fileColDefs"
             :row-data="files"
             :default-col-def="defaultColDef"
@@ -684,13 +732,13 @@ const forceUpdateMulti = () => triggerRef(multiCompanyRows);
           color="neutral"
           variant="soft"
           title="Abbina le colonne"
-          description="Seleziona almeno Codice o Descrizione, e Prezzo + Quantita. Solo le celle editabili mostrano il selettore."
+          description="Seleziona almeno Codice, Descrizione o Descrizione Estesa, e Prezzo + Quantita. Solo le celle editabili mostrano il selettore."
         />
 
         <ClientOnly>
           <AgGridVue
             :class="[themeClass, 'w-full rounded border border-neutral-200 dark:border-neutral-700']"
-            :style="{ height: Math.max(120, 52 + mappingRows.length * 44) + 'px' }"
+            :style="{ height: (36 + mappingRows.length * 42) + 'px' }"
             :column-defs="mappingColDefs"
             :row-data="mappingRows"
             :default-col-def="defaultColDef"
@@ -715,7 +763,7 @@ const forceUpdateMulti = () => triggerRef(multiCompanyRows);
           <ClientOnly>
             <AgGridVue
               :class="[themeClass, 'w-full rounded border border-neutral-200 dark:border-neutral-700']"
-              :style="{ height: Math.max(120, 52 + multiCompanyRows.length * 44) + 'px' }"
+              :style="{ height: (36 + multiCompanyRows.length * 42) + 'px' }"
               :column-defs="multiCompanyColDefs"
               :row-data="multiCompanyRows"
               :default-col-def="defaultColDef"
@@ -732,7 +780,7 @@ const forceUpdateMulti = () => triggerRef(multiCompanyRows);
 
         <div v-if="!canSubmit" class="flex items-center gap-1 text-xs text-amber-500">
           <UIcon name="i-heroicons-exclamation-triangle" class="h-4 w-4" />
-          Seleziona almeno Codice o Descrizione, e Prezzo + Quantita.
+          Seleziona almeno Codice, Descrizione o Descrizione Estesa, e Prezzo + Quantita.
         </div>
       </div>
     </div>

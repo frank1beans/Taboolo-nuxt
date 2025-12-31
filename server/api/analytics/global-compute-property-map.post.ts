@@ -16,7 +16,7 @@ interface GlobalComputePropertyMapParams {
 export default defineEventHandler(async (event) => {
     const body = await readBody<GlobalComputePropertyMapParams>(event)
     const config = useRuntimeConfig()
-    const pythonUrl = config.pythonApiBaseUrl || 'http://localhost:8000'
+    const pythonUrl = config.pythonApiBaseUrl || 'http://localhost:8000/api/v1'
 
     try {
         const response = await $fetch(`${pythonUrl}/analytics/global/compute-property-map`, {

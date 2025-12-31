@@ -20,15 +20,18 @@ const isOpen = computed(() => !!props.panel);
 
 const operator = ref<ColumnFilterOperator>('contains');
 const query = ref('');
+const selectedValues = ref<Set<string>>(new Set());
 
 const initialOperator = ref<ColumnFilterOperator>('contains');
 const initialValue = ref('');
+const initialSelected = ref<Set<string>>(new Set());
 
 const placement = ref<'left' | 'right'>('right');
 const widthPx = ref(360);
 const pos = ref({ top: 0, left: 0 });
 
 const isNumeric = computed(() => props.panel?.filterType === 'number');
+const multiSelect = computed(() => props.panel?.multiSelect === true);
 
 const operatorOptions: Array<{ label: string; value: ColumnFilterOperator }> = [
   { label: 'Contiene', value: 'contains' },
@@ -61,15 +64,17 @@ const operatorRequiresValue = (op: ColumnFilterOperator) =>
   op === 'less_than' ||
   op === 'greater_than_or_equal' ||
   op === 'less_than_or_equal' ||
-  op === 'not_equals';
+  op === 'not_equals' ||
+  op === 'in';
 
-const inputDisabled = computed(() => !operatorRequiresValue(operator.value));
+const inputDisabled = computed(() => multiSelect.value ? false : !operatorRequiresValue(operator.value));
 const normalizedQuery = computed(() => {
   const val = query.value as unknown;
   return (val === null || val === undefined ? '' : String(val)).trim();
 });
 
 const placeholder = computed(() => {
+  if (multiSelect.value) return 'Cerca valori...';
   const label = props.panel?.label ?? 'colonna';
   if (operator.value === 'is_empty') return 'Valori vuoti';
   if (operator.value === 'is_not_empty') return 'Valori non vuoti';
@@ -79,6 +84,7 @@ const placeholder = computed(() => {
 const totalOptions = computed(() => props.panel?.options?.length ?? 0);
 const visibleOptions = computed(() => {
   const options = props.panel?.options ?? [];
+  const searchOperator = multiSelect.value ? 'contains' : operator.value;
   
   // If no query, show all options regardless of operator
   if (!normalizedQuery.value) {
@@ -86,17 +92,17 @@ const visibleOptions = computed(() => {
   }
   
   // For is_empty and is_not_empty operators, don't filter options by query
-  if (operator.value === 'is_empty' || operator.value === 'is_not_empty') {
+  if (!multiSelect.value && (operator.value === 'is_empty' || operator.value === 'is_not_empty')) {
     return options;
   }
   
   // For text-based operators, filter options that match the current query
   // For numeric operators with a query, show options that would match the comparison
-  return options.filter((opt) => matchesOperator(String(opt ?? ''), normalizedQuery.value, operator.value));
+  return options.filter((opt) => matchesOperator(String(opt ?? ''), normalizedQuery.value, searchOperator));
 });
 const visibleCount = computed(() => visibleOptions.value.length);
 const highlightEnabled = computed(
-  () => operator.value === 'contains' || operator.value === 'starts_with' || operator.value === 'equals'
+  () => multiSelect.value || operator.value === 'contains' || operator.value === 'starts_with' || operator.value === 'equals'
 );
 
 const getHighlightParts = (value: string) => {
@@ -106,7 +112,9 @@ const getHighlightParts = (value: string) => {
   if (!q) return { match: false, parts: [value] as [string] };
 
   const lower = value.toLowerCase();
-  const idx = operator.value === 'starts_with' ? (lower.startsWith(q) ? 0 : -1) : lower.indexOf(q);
+  const idx = operator.value === 'starts_with' && !multiSelect.value
+    ? (lower.startsWith(q) ? 0 : -1)
+    : lower.indexOf(q);
   if (idx === -1) return { match: false, parts: [value] as [string] };
 
   const end = idx + q.length;
@@ -119,6 +127,24 @@ const getHighlightParts = (value: string) => {
 
 const setInitialState = (panel: FilterPanelState) => {
   const current = panel.currentFilter;
+
+  if (panel.multiSelect) {
+    const rawValues = Array.isArray(current?.value)
+      ? current?.value
+      : current?.value
+        ? [String(current.value)]
+        : [];
+
+    const nextSelected = new Set(rawValues.map((v) => String(v)));
+    selectedValues.value = nextSelected;
+    initialSelected.value = new Set(nextSelected);
+
+    operator.value = 'in';
+    query.value = '';
+    initialOperator.value = operator.value;
+    initialValue.value = '';
+    return;
+  }
   
   // Determine default operator based on filter type
   // For numeric filters, 'contains' is not valid, so default to 'equals'
@@ -142,9 +168,19 @@ const setInitialState = (panel: FilterPanelState) => {
   initialValue.value = normalizedQuery.value;
 };
 
-const isDirty = computed(() => operator.value !== initialOperator.value || normalizedQuery.value !== initialValue.value);
+const isDirty = computed(() => {
+  if (multiSelect.value) {
+    if (selectedValues.value.size !== initialSelected.value.size) return true;
+    for (const v of selectedValues.value) {
+      if (!initialSelected.value.has(v)) return true;
+    }
+    return false;
+  }
+  return operator.value !== initialOperator.value || normalizedQuery.value !== initialValue.value;
+});
 
 const applyButtonDisabled = computed(() => {
+  if (multiSelect.value) return !isDirty.value;
   const needsValue = operatorRequiresValue(operator.value) && !normalizedQuery.value;
   return needsValue || !isDirty.value;
 });
@@ -159,6 +195,24 @@ const focusInitial = () => {
 
 const applyFilter = (force = false) => {
   if (!props.panel) return;
+
+  if (multiSelect.value) {
+    if (!force && !isDirty.value) return;
+    const values = Array.from(selectedValues.value);
+    if (!values.length) {
+      emit('apply-filter', props.panel.field, null);
+      emit('close');
+      return;
+    }
+    const filter: ColumnFilter = {
+      columnKey: props.panel.field,
+      operator: 'in',
+      value: values,
+    };
+    emit('apply-filter', props.panel.field, filter);
+    emit('close');
+    return;
+  }
 
   if (!force) {
     if (!isDirty.value) return;
@@ -196,15 +250,37 @@ const applyEmptyShortcut = (op: ColumnFilterOperator) => {
 };
 
 const applyEqualsValue = (value: string) => {
+  if (multiSelect.value) {
+    toggleSelection(value);
+    return;
+  }
   operator.value = 'equals';
   query.value = value;
   applyFilter(true);
 };
 
 const handleOperatorChange = (value: ColumnFilterOperator) => {
+  if (multiSelect.value) return;
   operator.value = value;
   if (!operatorRequiresValue(value)) query.value = '';
   focusInitial();
+};
+
+const toggleSelection = (value: string) => {
+  const next = new Set(selectedValues.value);
+  if (next.has(value)) next.delete(value);
+  else next.add(value);
+  selectedValues.value = next;
+};
+
+const selectAllVisible = () => {
+  const next = new Set(selectedValues.value);
+  visibleOptions.value.forEach((opt) => next.add(String(opt)));
+  selectedValues.value = next;
+};
+
+const clearSelection = () => {
+  selectedValues.value = new Set();
 };
 
 const updatePosition = () => {
@@ -388,7 +464,7 @@ onBeforeUnmount(() => {
         <!-- Body -->
         <div class="px-4 py-3 space-y-3">
           <div class="grid grid-cols-12 gap-2 items-end">
-            <div class="col-span-4">
+            <div v-if="!multiSelect" class="col-span-4">
               <label class="block text-[11px] font-semibold uppercase tracking-wide mb-1 text-[hsl(var(--muted-foreground))]">
                 Operatore
               </label>
@@ -405,11 +481,14 @@ onBeforeUnmount(() => {
               </select>
             </div>
 
-            <div class="col-span-8">
+            <div :class="multiSelect ? 'col-span-12' : 'col-span-8'">
               <label class="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wide mb-1 text-[hsl(var(--muted-foreground))]">
-                <span>Valore</span>
+                <span>{{ multiSelect ? 'Seleziona valori' : 'Valore' }}</span>
                 <span class="text-[10px] text-[hsl(var(--muted-foreground))]">
                   Valori mostrati: {{ visibleCount }} / {{ totalOptions }}
+                  <span v-if="multiSelect && selectedValues.size" class="ml-2 text-[hsl(var(--primary))]">
+                    Selezionati: {{ selectedValues.size }}
+                  </span>
                 </span>
               </label>
 
@@ -434,7 +513,7 @@ onBeforeUnmount(() => {
             </div>
           </div>
 
-          <div class="flex flex-wrap gap-2">
+          <div v-if="!multiSelect" class="flex flex-wrap gap-2">
             <button
               type="button"
               class="text-xs px-2.5 py-1 rounded-lg border transition border-[hsl(var(--border))] text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))]"
@@ -457,6 +536,30 @@ onBeforeUnmount(() => {
               Solo non vuoti
             </button>
           </div>
+
+          <div v-else class="flex flex-wrap gap-2">
+            <button
+              type="button"
+              class="text-xs px-2.5 py-1 rounded-lg border transition border-[hsl(var(--border))] text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))]"
+              @click="selectAllVisible"
+            >
+              Seleziona tutti
+            </button>
+            <button
+              type="button"
+              class="text-xs px-2.5 py-1 rounded-lg border transition border-[hsl(var(--border))] text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))]"
+              @click="clearSelection"
+            >
+              Deseleziona
+            </button>
+            <button
+              type="button"
+              class="text-xs px-2.5 py-1 rounded-lg border transition border-[hsl(var(--border))] text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))]"
+              @click="resetFilter"
+            >
+              Mostra tutto
+            </button>
+          </div>
         </div>
 
         <!-- Values list -->
@@ -473,7 +576,16 @@ onBeforeUnmount(() => {
               class="w-full text-left px-4 py-2.5 flex items-center gap-3 text-sm border-b border-[hsl(var(--border))] hover:bg-[hsl(var(--muted))] text-[hsl(var(--foreground))]"
               @click="applyEqualsValue(String(opt))"
             >
+              <template v-if="multiSelect">
+                <input
+                  type="checkbox"
+                  class="h-4 w-4 rounded border-[hsl(var(--border))] text-[hsl(var(--primary))] focus:ring-[hsl(var(--ring)/0.6)]"
+                  :checked="selectedValues.has(String(opt))"
+                  @click.stop="toggleSelection(String(opt))"
+                >
+              </template>
               <Icon
+                v-else
                 name="heroicons:tag"
                 class="w-4 h-4 text-[hsl(var(--muted-foreground))]"
               />
@@ -495,7 +607,7 @@ onBeforeUnmount(() => {
                   {{ String(opt) }}
                 </template>
               </span>
-              <Icon name="heroicons:chevron-right" class="w-4 h-4 opacity-40" />
+              <Icon v-if="!multiSelect" name="heroicons:chevron-right" class="w-4 h-4 opacity-40" />
             </button>
 
             <div

@@ -11,26 +11,28 @@
  */
 
 // Re-export all APIs for modular usage
+// Import for backward compatibility layer
+import { projectsApi } from "./projects";
+import { estimatesApi } from "./estimates";
+import { analyticsApi } from "./analytics";
+import { catalogApi } from "./catalog";
+import { offersApi } from "./offers";
+import { settingsApi, importConfigsApi } from "./settings";
+import { authApi } from "./auth";
+import { dashboardApi } from "./dashboard";
+
 export { apiFetch, buildQueryString, getApiBaseUrl, API_BASE_URL } from "./client";
 export { projectsApi } from "./projects";
 export { estimatesApi } from "./estimates";
 export { analyticsApi } from "./analytics";
 export { catalogApi } from "./catalog";
+export { offersApi } from "./offers";
 export { settingsApi, importConfigsApi } from "./settings";
 export { authApi } from "./auth";
 export { dashboardApi } from "./dashboard";
 
 // Re-export types
 export type { ApiProject } from "@/types/api";
-
-// Import for backward compatibility layer
-import { projectsApi } from "./projects";
-import { estimatesApi } from "./estimates";
-import { analyticsApi } from "./analytics";
-import { catalogApi } from "./catalog";
-import { settingsApi, importConfigsApi } from "./settings";
-import { authApi } from "./auth";
-import { dashboardApi } from "./dashboard";
 
 /**
  * Backward-compatible API object
@@ -59,6 +61,7 @@ export const api = {
     setBaselineEstimate: estimatesApi.setBaseline,
     getEstimateWbs: estimatesApi.getWbs,
     uploadProjectEstimate: estimatesApi.upload,
+    mergeProjectEstimates: estimatesApi.merge,
     previewSixEstimates: estimatesApi.previewSix,
     importSixFile: estimatesApi.importSix,
     previewXpweEstimates: estimatesApi.previewXpwe,
@@ -73,6 +76,12 @@ export const api = {
     getProjectTrendRound: analyticsApi.getTrendRound,
     getProjectCompetitivenessHeatmap: analyticsApi.getCompetitivenessHeatmap,
     updateManualOfferPrice: analyticsApi.updateManualPrice,
+
+    // Offers
+    getOfferAlerts: offersApi.getAlerts,
+    getOfferAlertSummary: offersApi.getAlertSummary,
+    resolveOfferAlert: offersApi.resolveAlert,
+    getOfferAddendum: offersApi.getAddendum,
 
     // Catalog
     getProjectPriceCatalog: catalogApi.getProjectPriceList,

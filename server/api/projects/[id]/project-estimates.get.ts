@@ -1,15 +1,13 @@
-import { defineEventHandler, createError, getRouterParam } from 'h3';
-import { Estimate } from '#models';
+import { defineEventHandler, createError } from 'h3';
+import { listEstimates } from '#services/EstimateService';
 import { serializeDocs } from '#utils/serialize';
+import { requireObjectIdParam } from '#utils/validate';
 
 export default defineEventHandler(async (event) => {
-  const projectId = getRouterParam(event, 'id');
-  if (!projectId) {
-    throw createError({ statusCode: 400, statusMessage: 'Project ID required' });
-  }
+  const projectObjectId = requireObjectIdParam(event, 'id', 'Project ID');
 
   try {
-    const estimates = await Estimate.find({ project_id: projectId }).sort({ created_at: -1 }).lean();
+    const estimates = await listEstimates(projectObjectId);
     return serializeDocs(estimates);
   } catch (error) {
     throw createError({
@@ -19,7 +17,3 @@ export default defineEventHandler(async (event) => {
     });
   }
 });
-
-
-
-

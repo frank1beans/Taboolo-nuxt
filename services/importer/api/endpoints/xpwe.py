@@ -10,6 +10,7 @@ from application.process_file import process_file_content
 from loader import LoaderService
 from parsers.shared.wbs_constants import CANONICAL_WBS_LEVELS
 from api.endpoints.shared import ImportResult, compute_embeddings_for_items
+from core import settings
 
 router = APIRouter()
 
@@ -35,6 +36,8 @@ async def import_xpwe_raw(
         raise HTTPException(400, "Filename required")
     
     content = await file.read()
+    if len(content) > settings.max_upload_size_mb * 1024 * 1024:
+        raise HTTPException(413, "File too large")
     
     try:
         # 1. Parse using Domain Logic
@@ -127,6 +130,8 @@ async def preview_xpwe_raw(
         raise HTTPException(400, "Filename required")
     
     content = await file.read()
+    if len(content) > settings.max_upload_size_mb * 1024 * 1024:
+        raise HTTPException(413, "File too large")
     
     try:
         print(f"DEBUG Endpoint: Processing XPWE preview for {file.filename}")

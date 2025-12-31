@@ -1,21 +1,14 @@
-import { defineEventHandler, createError, getRouterParam } from 'h3';
-import { Types } from 'mongoose';
+import { defineEventHandler, createError } from 'h3';
 import { Estimate } from '#models';
 import { deleteEstimateCascade } from '#services/EstimateService';
+import { requireObjectIdParam, toObjectId } from '#utils/validate';
 
 export default defineEventHandler(async (event) => {
-    const projectId = getRouterParam(event, 'id');
-    const estimateId = getRouterParam(event, 'estimateId');
+    const projectId = requireObjectIdParam(event, 'id', 'Project ID');
+    const estimateId = requireObjectIdParam(event, 'estimateId', 'Estimate ID');
 
-    if (!projectId || !estimateId) {
-        throw createError({
-            statusCode: 400,
-            statusMessage: 'Project ID and Estimate ID are required',
-        });
-    }
-
-    const projectObjectId = new Types.ObjectId(projectId);
-    const estimateObjectId = new Types.ObjectId(estimateId);
+    const projectObjectId = toObjectId(projectId);
+    const estimateObjectId = toObjectId(estimateId);
 
     try {
         const estimate = await Estimate.findOne({ _id: estimateObjectId, project_id: projectObjectId });

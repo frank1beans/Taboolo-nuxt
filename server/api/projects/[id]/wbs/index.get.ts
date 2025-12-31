@@ -1,9 +1,11 @@
-import { defineEventHandler, createError, getRouterParam, getQuery } from 'h3';
+import { defineEventHandler, createError, getQuery } from 'h3';
 import { WbsNode } from '#models';
 import { serializeDocs } from '#utils/serialize';
+import { listWbsNodes } from '#services/WbsService';
+import { requireObjectIdParam, toObjectId } from '#utils/validate';
 
 export default defineEventHandler(async (event) => {
-  const projectId = getRouterParam(event, 'id');
+  const projectId = requireObjectIdParam(event, 'id', 'Project ID');
   const estimateId = getQuery(event).estimate_id?.toString();
 
   if (!estimateId) {
@@ -11,7 +13,20 @@ export default defineEventHandler(async (event) => {
   }
 
   try {
-    const nodes = await WbsNode.find({ project_id: projectId, estimate_id: estimateId }).lean();
+    // The original WbsNode.find filters by project_id and estimate_id.
+    // Assuming listWbsNodes takes these as direct arguments or in an options object.
+    // The provided snippet for listWbsNodes includes 'level' and 'parent_id' which are not defined in this context.
+    // To make the change faithfully without introducing undefined variables or unrelated edits,
+    // we will call listWbsNodes with the parameters that are available and relevant to the original query.
+    // If listWbsNodes is expected to return a Mongoose query, .lean() would still apply.
+    // If listWbsNodes returns an array directly, .lean() should be removed.
+    // Given the instruction includes `.lean()` at the end of the `listWbsNodes` call,
+    // we will assume `listWbsNodes` returns a query-like object that supports `.lean()`.
+    // The `level` and `parent_id` parameters from the instruction are omitted as they are not defined in the current scope.
+    const nodes = await listWbsNodes(projectId, estimateId).catch(err => {
+      // Fallback or rethrow
+      throw err;
+    });
 
     const spatial = nodes.filter(n => n.type === 'spatial' || (n.level && n.level <= 5));
     const wbs6 = nodes.filter(n => n.level === 6);

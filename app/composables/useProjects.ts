@@ -1,6 +1,6 @@
 import { ref } from 'vue';
 import type { DataGridFetchParams, DataGridFetchResponse } from '~/types/data-grid';
-import type { Project } from '~/types/project';
+import type { Project } from '#types';
 
 export function useProjects() {
   const projects = ref<Project[]>([]);

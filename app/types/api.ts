@@ -35,9 +35,63 @@ export interface ApiEstimate {
   matching_report?: Record<string, unknown> | null;
 }
 
+export interface ApiEstimateMergeRequest {
+  estimate_ids: string[];
+  name?: string;
+  price_list_name?: string;
+  set_as_baseline?: boolean;
+}
+
+export interface ApiEstimateMergeMismatchEntry {
+  code: string;
+  description?: string | null;
+  unit?: string | null;
+  quantity: {
+    min: number | null;
+    max: number | null;
+    by_estimate: Array<{
+      estimate_id: string;
+      estimate_name?: string | null;
+      quantity: number | null;
+    }>;
+  };
+  unit_price: {
+    min: number | null;
+    max: number | null;
+    by_estimate: Array<{
+      estimate_id: string;
+      estimate_name?: string | null;
+      unit_price: number | null;
+    }>;
+  };
+  quantity_mismatch: boolean;
+  price_mismatch: boolean;
+}
+
+export interface ApiEstimateMergeReport {
+  type: 'merge';
+  created_at: string;
+  source_estimate_ids: string[];
+  mismatches: ApiEstimateMergeMismatchEntry[];
+  summary: {
+    total_codes: number;
+    mismatches: number;
+    quantity_mismatches: number;
+    price_mismatches: number;
+  };
+}
+
+export interface ApiEstimateMergeResponse {
+  success: boolean;
+  estimate_id: string;
+  price_list_id: string;
+  report: ApiEstimateMergeReport;
+}
+
 export interface ApiOfferSummary {
   id: string;
   name?: string | null;
+  estimate_id?: string | null;
   company_name?: string | null;
   round_number?: number | null;
   status?: string;
@@ -48,19 +102,26 @@ export interface ApiOfferSummary {
 export interface ApiOfferAlert {
   id: string;
   offer_id: string;
+  estimate_id?: string | null;
   offer_item_id?: string | null;
   estimate_item_id?: string | null;
   price_list_item_id?: string | null;
+  candidate_price_list_item_ids?: string[] | null;
   source?: "detailed" | "aggregated";
   origin?: "baseline" | "addendum";
   type: string;
   severity: "info" | "warning" | "error";
+  status?: "open" | "resolved" | "ignored";
+  resolved_at?: string | null;
+  resolution_note?: string | null;
+  resolved_by?: string | null;
   message?: string | null;
   actual?: number | string | null;
   expected?: number | string | null;
   delta?: number | null;
   code?: string | null;
   baseline_code?: string | null;
+  imported_description?: string | null;
   created_at?: string;
   updated_at?: string;
 }
@@ -68,6 +129,20 @@ export interface ApiOfferAlert {
 export interface ApiOfferAlertSummary {
   total: number;
   by_type: Record<string, number>;
+}
+
+export interface ApiOfferAlertSummaryItem {
+  offer_id?: string | null;
+  estimate_id?: string | null;
+  company_name?: string | null;
+  round_number?: number | null;
+  total: number;
+  by_type: Record<string, number>;
+}
+
+export interface ApiOfferAlertSummaryResponse {
+  total: number;
+  items: ApiOfferAlertSummaryItem[];
 }
 
 export interface ApiOfferImportResult {

@@ -12,7 +12,7 @@ interface GlobalMapParams {
 export default defineEventHandler(async (event) => {
     const body = await readBody<GlobalMapParams>(event)
     const config = useRuntimeConfig()
-    const pythonUrl = config.pythonApiBaseUrl || 'http://localhost:8000'
+    const pythonUrl = config.pythonApiBaseUrl || 'http://localhost:8000/api/v1'
 
     try {
         const response = await $fetch(`${pythonUrl}/analytics/global/property-map-data`, {

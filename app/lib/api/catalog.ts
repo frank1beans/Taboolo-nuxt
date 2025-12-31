@@ -7,6 +7,7 @@ import type {
     ApiPriceListItem,
     ApiPriceListItemSearchResult,
     ApiPriceCatalogSummary,
+    PaginatedResponse,
 } from "@/types/api";
 import { apiFetch, buildQueryString } from "./client";
 
@@ -35,6 +36,29 @@ export const catalogApi = {
             business_unit: options?.businessUnit,
         });
         return apiFetch<ApiPriceListItem[]>(`/catalog${suffix}`);
+    },
+
+    async getGlobalPaged(options: {
+        page: number;
+        pageSize: number;
+        search?: string;
+        projectId?: number | string | null;
+        businessUnit?: string | null;
+        sort?: string;
+        order?: "asc" | "desc";
+        filters?: Record<string, unknown>;
+    }): Promise<PaginatedResponse<ApiPriceListItem>> {
+        const suffix = buildQueryString({
+            page: options.page,
+            pageSize: options.pageSize,
+            search: options.search,
+            project_id: options.projectId,
+            business_unit: options.businessUnit,
+            sort: options.sort,
+            order: options.order,
+            filters: options.filters ? JSON.stringify(options.filters) : undefined,
+        });
+        return apiFetch<PaginatedResponse<ApiPriceListItem>>(`/catalog${suffix}`);
     },
 
     async semanticSearch(params: {

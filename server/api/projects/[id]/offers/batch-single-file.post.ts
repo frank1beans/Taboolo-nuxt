@@ -1,7 +1,8 @@
-import { defineEventHandler, createError, getRouterParam } from 'h3';
+import { defineEventHandler } from 'h3';
 import { proxyMultipartToPython } from '#utils/python-proxy';
 import { mapBatchSingleFileResult } from '#utils/python-mappers';
 import { persistOffer } from '#services/ImportPersistenceService';
+import { requireObjectIdParam } from '#utils/validate';
 
 const fieldMap = (name: string) => {
   if (name === 'companies_config') return 'imprese_config';
@@ -26,10 +27,7 @@ const valueMap = (name: string, value: string) => {
 };
 
 export default defineEventHandler(async (event) => {
-  const projectId = getRouterParam(event, 'id');
-  if (!projectId) {
-    throw createError({ statusCode: 400, statusMessage: 'Project ID required' });
-  }
+  const projectId = requireObjectIdParam(event, 'id', 'Project ID');
 
   const result = await proxyMultipartToPython(
     event,

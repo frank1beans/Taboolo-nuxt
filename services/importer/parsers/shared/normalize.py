@@ -35,6 +35,7 @@ def _normalize_item(item: ParsedItem) -> NormalizedItem:
         amount=item.amount,
         notes=item.notes,
         metadata=item.metadata,
+        long_description=item.long_description,
     )
 
 

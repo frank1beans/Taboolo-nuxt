@@ -6,6 +6,8 @@
 import type {
     ApiEstimate,
     ApiEstimateWbsSummary,
+    ApiEstimateMergeRequest,
+    ApiEstimateMergeResponse,
     ApiSixEstimatesPreview,
     ApiSixImportReport,
     ApiXpweEstimatesPreview,
@@ -46,6 +48,16 @@ export const estimatesApi = {
     ): Promise<ApiEstimateWbsSummary> {
         const actualEstimateId = estimateId !== undefined ? estimateId : estimateIdOrProjectId;
         return apiFetch<ApiEstimateWbsSummary>(`/estimates/${actualEstimateId}/wbs`);
+    },
+
+    async merge(
+        projectId: number | string,
+        payload: ApiEstimateMergeRequest,
+    ): Promise<ApiEstimateMergeResponse> {
+        return apiFetch<ApiEstimateMergeResponse>(`/projects/${projectId}/estimates/merge`, {
+            method: "POST",
+            body: JSON.stringify(payload),
+        });
     },
 
     async upload(
@@ -162,27 +174,35 @@ export const estimatesApi = {
             sheetName: string;
             codeColumns: string[];
             descriptionColumns: string[];
+            longDescriptionColumns?: string[];
             priceColumn?: string;
             quantityColumn?: string;
             progressColumn?: string;
             sourceEstimateId?: string;
+            headerRowIndex?: number;
         },
     ): Promise<ApiOfferImportResult> {
         const formData = new FormData();
         formData.append("file", params.file);
         formData.append("company", params.company);
+        formData.append("mode", params.mode || "lx");
+        formData.append("sheetName", params.sheetName);
         formData.append("round_mode", params.roundMode);
-        formData.append("sheet_name", params.sheetName);
 
         if (params.roundNumber != null) formData.append("round_number", String(params.roundNumber));
         if (params.discipline) formData.append("discipline", params.discipline);
-        if (params.codeColumns?.length) formData.append("code_columns", JSON.stringify(params.codeColumns));
-        if (params.descriptionColumns?.length) formData.append("description_columns", JSON.stringify(params.descriptionColumns));
-        if (params.mode) formData.append("mode", params.mode);
+
+        params.codeColumns.forEach(col => formData.append("code_columns", col));
+        params.descriptionColumns.forEach(col => formData.append("description_columns", col));
+        if (params.longDescriptionColumns) {
+            params.longDescriptionColumns.forEach(col => formData.append("long_description_columns", col));
+        }
+
         if (params.priceColumn) formData.append("price_column", params.priceColumn);
         if (params.quantityColumn) formData.append("quantity_column", params.quantityColumn);
         if (params.progressColumn) formData.append("progressive_column", params.progressColumn);
         if (params.sourceEstimateId) formData.append("estimate_id", params.sourceEstimateId);
+        if (params.headerRowIndex !== undefined) formData.append("header_row_index", String(params.headerRowIndex));
 
         const suffix = buildQueryString({
             estimate_id: params.sourceEstimateId,
@@ -192,7 +212,7 @@ export const estimatesApi = {
             round_mode: params.roundMode,
         });
 
-        return apiFetch<ApiEstimate>(`/projects/${projectId}/offers${suffix}`, {
+        return apiFetch<ApiOfferImportResult>(`/projects/${projectId}/offers${suffix}`, {
             method: "POST",
             body: formData,
         });

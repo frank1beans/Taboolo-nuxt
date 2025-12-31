@@ -1,8 +1,11 @@
 import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
-
 from dotenv import load_dotenv
+
+# Carica variabili .env una sola volta all'import del modulo - PRIMA DI QUALSIASI ALTRO IMPORT
+load_dotenv(Path(__file__).parent / ".env")
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -12,8 +15,8 @@ from core.logging import configure_logging
 
 logger = logging.getLogger(__name__)
 
-# Carica variabili .env una sola volta all'import del modulo
-load_dotenv(Path(__file__).parent.parent.parent / ".env")
+# Carica variabili .env spostato in cima
+
 
 
 def _build_cors_origins() -> list[str]:

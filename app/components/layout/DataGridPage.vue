@@ -27,6 +27,16 @@ interface Props {
   // Empty state
   emptyStateTitle?: string
   emptyStateMessage?: string
+  showEmptyAction?: boolean
+  emptyStateActionLabel?: string
+  showEmptySecondaryAction?: boolean
+  emptyStateSecondaryActionLabel?: string
+  emptyStateSecondaryActionIcon?: string
+
+  // Grid behavior
+  rowClickable?: boolean
+  rowAriaLabel?: string
+  stickyHeader?: boolean
 
   // Toolbar
   toolbarPlaceholder?: string
@@ -36,12 +46,20 @@ interface Props {
 const _props = withDefaults(defineProps<Props>(), {
   subtitle: '',
   loading: false,
-  gridHeight: 'calc(100vh - 240px)', // Fallback default
-  divider: false, // No divider by default for cleaner look
+  gridHeight: '100%',
+  divider: false,
   toolbarPlaceholder: 'Cerca...',
   exportFilename: 'export',
   emptyStateTitle: 'Nessun dato disponibile',
-  emptyStateMessage: 'Non ci sono dati da visualizzare.'
+  emptyStateMessage: 'Non ci sono dati da visualizzare.',
+  showEmptyAction: false,
+  emptyStateActionLabel: 'Ricarica',
+  showEmptySecondaryAction: false,
+  emptyStateSecondaryActionLabel: 'Azione',
+  emptyStateSecondaryActionIcon: 'i-heroicons-plus',
+  rowClickable: false,
+  rowAriaLabel: undefined,
+  stickyHeader: true
 })
 
 const emit = defineEmits<{
@@ -72,22 +90,36 @@ const onGridReady = (params: GridReadyEvent<Record<string, unknown>>) => {
     </template>
 
     <template #default>
-      <div v-if="$slots['pre-grid']" class="mt-4">
-        <slot name="pre-grid" />
+      <!-- Content wrapper for proper vertical flex layout -->
+      <div class="flex-1 min-h-0 flex flex-col">
+        <!-- Toolbar slot - tight spacing -->
+        <div v-if="$slots['pre-grid']" class="flex-shrink-0">
+          <slot name="pre-grid" />
+        </div>
+        
+        <!-- DataGrid - fills remaining vertical space -->
+        <DataGrid
+          v-bind="$attrs"
+          :config="gridConfig"
+          :row-data="rowData"
+          :loading="loading"
+          :height="gridHeight"
+          class="flex-1 min-h-0 mt-2 rounded-lg overflow-hidden"
+          :toolbar-placeholder="toolbarPlaceholder"
+          :export-filename="exportFilename"
+          :empty-state-title="emptyStateTitle"
+          :empty-state-message="emptyStateMessage"
+          :show-empty-action="showEmptyAction"
+          :empty-action-label="emptyStateActionLabel"
+          :show-empty-secondary-action="showEmptySecondaryAction"
+          :empty-secondary-action-label="emptyStateSecondaryActionLabel"
+          :empty-secondary-action-icon="emptyStateSecondaryActionIcon"
+          :row-clickable="rowClickable"
+          :row-aria-label="rowAriaLabel"
+          :sticky-header="stickyHeader"
+          @grid-ready="onGridReady"
+        />
       </div>
-      <DataGrid
-        v-bind="$attrs"
-        :config="gridConfig"
-        :row-data="rowData"
-        :loading="loading"
-        :height="gridHeight"
-        class="flex-1 min-h-0 mt-2"
-        :toolbar-placeholder="toolbarPlaceholder"
-        :export-filename="exportFilename"
-        :empty-state-title="emptyStateTitle"
-        :empty-state-message="emptyStateMessage"
-        @grid-ready="onGridReady"
-      />
     </template>
 
     <!-- Sidebar Pass-through -->

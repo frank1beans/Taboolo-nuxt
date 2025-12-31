@@ -34,7 +34,6 @@ export function useWbsTree<T extends WithWbsHierarchy>(
   }
 ) {
   const selectedWbsNode = ref<WbsNode | null>(null)
-  const wbsSidebarVisible = ref(true)
 
   const extractLevels = (item: T): WbsLevel[] => {
     if (options?.getLevels) {
@@ -172,7 +171,6 @@ export function useWbsTree<T extends WithWbsHierarchy>(
   return {
     wbsNodes,
     selectedWbsNode,
-    wbsSidebarVisible,
     filteredRowData,
     onWbsNodeSelected
   }

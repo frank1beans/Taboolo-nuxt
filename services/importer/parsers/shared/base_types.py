@@ -34,6 +34,7 @@ class ParsedItem:
     amount: float | None
     notes: str | None
     metadata: dict[str, Any] | None = None
+    long_description: str | None = None
 
 
 @dataclass
@@ -72,6 +73,7 @@ class NormalizedItem:
     amount: float | None
     notes: str | None = None
     metadata: dict[str, Any] | None = None
+    long_description: str | None = None
 
 
 @dataclass

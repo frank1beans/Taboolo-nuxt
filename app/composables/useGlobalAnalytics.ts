@@ -17,6 +17,7 @@ export interface GlobalPoint {
     z: number
     cluster: number
     label: string
+    long_description: string
     code: string
     price: number | null
     unit: string
@@ -24,9 +25,15 @@ export interface GlobalPoint {
     wbs06_desc: string
 }
 
+export interface GlobalMapMeta {
+    version?: string | null
+    updated_at?: string | null
+}
+
 export interface GlobalMapResponse {
     points: GlobalPoint[]
     projects: ProjectInfo[]
+    map_meta?: GlobalMapMeta
 }
 
 export interface GlobalAnalysisParams {
@@ -58,6 +65,7 @@ export const useGlobalAnalytics = () => {
 
     // Analysis-specific state
     const analysisParams = reactive<GlobalAnalysisParams>({ ...defaultAnalysisParams })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const analysisResult = ref<any>(null)
     const isLoadingAnalysis = ref(false)
     const analysisError = ref<string | null>(null)
@@ -95,6 +103,7 @@ export const useGlobalAnalytics = () => {
 
     // Points computed
     const points = computed(() => base.mapData.value?.points ?? [])
+    const mapMeta = computed(() => base.mapData.value?.map_meta ?? null)
 
     const filteredPoints = computed(() => {
         let pts = points.value
@@ -107,12 +116,15 @@ export const useGlobalAnalytics = () => {
     // Outlier computed helpers
     const outlierItems = computed(() => {
         if (!analysisResult.value) return []
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         return analysisResult.value.categories?.flatMap((cat: any) =>
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             cat.items.filter((i: any) => i.is_outlier)
         ) ?? []
     })
 
     const outlierIds = computed(() => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         return new Set(outlierItems.value.map((item: any) => item.item_id))
     })
 
@@ -123,6 +135,40 @@ export const useGlobalAnalytics = () => {
 
     const resetAnalysisParams = () => {
         Object.assign(analysisParams, defaultAnalysisParams)
+    }
+
+    const waitForMapUpdate = async (options?: { pollIntervalsMs?: number[] }) => {
+        const previousUpdatedAt = mapMeta.value?.updated_at ?? null
+        const intervals = options?.pollIntervalsMs ?? [2000, 4000, 6000, 8000, 10000]
+
+        for (const delayMs of intervals) {
+            await new Promise(resolve => setTimeout(resolve, delayMs))
+            await base.fetchMapData()
+            const nextUpdatedAt = mapMeta.value?.updated_at ?? null
+            if (nextUpdatedAt && nextUpdatedAt !== previousUpdatedAt) {
+                return true
+            }
+        }
+
+        return false
+    }
+
+    // Map parameters state
+    const mapParams = reactive({
+        n_neighbors: 30,
+        min_dist: 0.0,
+        metric: 'cosine',
+        min_cluster_size: 5
+    })
+
+    // Recalculate map with current params
+    const recalculateMap = async () => {
+        return await base.computeMap({
+            n_neighbors: mapParams.n_neighbors,
+            min_dist: mapParams.min_dist,
+            metric: mapParams.metric,
+            min_cluster_size: mapParams.min_cluster_size
+        })
     }
 
     return {
@@ -150,6 +196,12 @@ export const useGlobalAnalytics = () => {
         outlierIds,
         outlierPercent,
         runAnalysis,
-        resetAnalysisParams
+        resetAnalysisParams,
+        mapMeta,
+        waitForMapUpdate,
+
+        // Map Params
+        mapParams,
+        recalculateMap
     }
 }

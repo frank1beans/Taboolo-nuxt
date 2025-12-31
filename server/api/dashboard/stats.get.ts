@@ -19,14 +19,15 @@ type LeanEstimate = {
 
 export default defineEventHandler(async () => {
   // Basic counts
-  const [projects, estimates]: [LeanProject[], LeanEstimate[]] = await Promise.all([
+  const [projects, estimates, offers] = await Promise.all([
     Project.find().lean(),
     Estimate.find().lean(),
-  ])
+    Offer.find().lean(),
+  ]);
 
   const active_projects = projects.filter((p) => p.status !== 'closed').length
   const loaded_estimates = estimates.length
-  const offers = estimates.filter((e) => e.type === 'offer').length
+  const offers_count = offers.length // Renamed to avoid conflict with the 'offers' array
   const generated_reports = 0
 
   // Recent activity: last 10 estimates (project or offer)

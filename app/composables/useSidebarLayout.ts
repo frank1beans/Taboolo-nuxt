@@ -1,14 +1,16 @@
 import { computed, onMounted, ref, watch } from 'vue'
 
 const STORAGE_KEY = 'app-shell:sidebar'
-const DEFAULT_WIDTH = 280
+const DEFAULT_WIDTH = 300
 const MIN_WIDTH = 240
-const MAX_WIDTH = 420
-const COLLAPSED_WIDTH = 72
+const MAX_WIDTH = 360
+const COLLAPSED_WIDTH = 56
+const HIDDEN_WIDTH = 0
 
 const state = {
   initialized: ref(false),
-  isCollapsed: ref(true),
+  isCollapsed: ref(false),
+  isHidden: ref(false),
   width: ref(DEFAULT_WIDTH),
   lastExpandedWidth: ref(DEFAULT_WIDTH),
 }
@@ -17,22 +19,41 @@ const clampWidth = (value: number) => Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, va
 
 export const useSidebarLayout = () => {
   const isCollapsed = state.isCollapsed
+  const isHidden = state.isHidden
   const width = state.width
   const lastExpandedWidth = state.lastExpandedWidth
 
-  const effectiveWidth = computed(() =>
-    isCollapsed.value ? COLLAPSED_WIDTH : clampWidth(width.value),
-  )
+  const effectiveWidth = computed(() => {
+    if (isHidden.value) return HIDDEN_WIDTH
+    return isCollapsed.value ? COLLAPSED_WIDTH : clampWidth(width.value)
+  })
 
-  const toggleCollapsed = () => {
-    if (isCollapsed.value) {
-      isCollapsed.value = false
-      width.value = clampWidth(lastExpandedWidth.value || DEFAULT_WIDTH)
+  const setCollapsed = (value: boolean) => {
+    if (value === isCollapsed.value) return
+    if (value) {
+      lastExpandedWidth.value = clampWidth(width.value || lastExpandedWidth.value || DEFAULT_WIDTH)
+      isCollapsed.value = true
+      width.value = COLLAPSED_WIDTH
       return
     }
-    lastExpandedWidth.value = clampWidth(width.value)
-    isCollapsed.value = true
-    width.value = COLLAPSED_WIDTH
+    isCollapsed.value = false
+    width.value = clampWidth(lastExpandedWidth.value || DEFAULT_WIDTH)
+  }
+
+  const toggleCollapsed = () => {
+    setCollapsed(!isCollapsed.value)
+  }
+
+  const expand = () => setCollapsed(false)
+  const collapse = () => setCollapsed(true)
+
+  // Hide/show sidebar completely (width = 0)
+  const hide = () => {
+    isHidden.value = true
+  }
+
+  const show = () => {
+    isHidden.value = false
   }
 
   const setWidth = (value: number) => {
@@ -80,11 +101,18 @@ export const useSidebarLayout = () => {
 
   return {
     isCollapsed,
+    isHidden,
     width: effectiveWidth,
     minWidth: MIN_WIDTH,
     maxWidth: MAX_WIDTH,
     collapsedWidth: COLLAPSED_WIDTH,
+    hiddenWidth: HIDDEN_WIDTH,
     toggleCollapsed,
+    setCollapsed,
+    expand,
+    collapse,
+    hide,
+    show,
     setWidth,
   }
 }

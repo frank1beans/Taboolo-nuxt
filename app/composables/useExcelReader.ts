@@ -60,7 +60,7 @@ export function useExcelReader() {
         // Legge tutte le righe come array
         const rows = utils.sheet_to_json(sheet, {
             header: 1,
-            blankrows: false,
+            blankrows: true,
             defval: ''
         }) as (string | number)[][];
 
@@ -164,7 +164,7 @@ export function useExcelReader() {
                 result.code.push(header);
             }
 
-            if (lower.includes('desc') || lower.includes('voce') || lower.includes('lavor')) {
+            if (lower.includes('desc') || lower.includes('voce') || lower.includes('lavor') || lower.includes('estesa') || lower.includes('des.') || lower.startsWith('des ')) {
                 result.description.push(header);
             }
 

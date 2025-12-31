@@ -1,40 +1,26 @@
-import { defineEventHandler, createError, getRouterParam, getQuery } from 'h3';
-import { Types } from 'mongoose';
-import { OfferAlert } from '#models';
+import { defineEventHandler, getQuery } from 'h3';
+import { listAlerts } from '#services/ConflictService';
 import { serializeDocs } from '#utils/serialize';
+import { requireObjectIdParam } from '#utils/validate';
 
 export default defineEventHandler(async (event) => {
-  const projectId = getRouterParam(event, 'id');
-  if (!projectId) {
-    throw createError({ statusCode: 400, statusMessage: 'Project ID required' });
-  }
+  const projectId = requireObjectIdParam(event, 'id', 'Project ID');
 
   const query = getQuery(event);
   const offerId = query.offer_id as string | undefined;
+  const estimateId = query.estimate_id as string | undefined;
   const type = query.type as string | undefined;
   const severity = query.severity as string | undefined;
+  const status = query.status as string | undefined;
 
-  const filter: Record<string, unknown> = { project_id: new Types.ObjectId(projectId) };
-
-  if (offerId && Types.ObjectId.isValid(offerId)) {
-    filter.offer_id = new Types.ObjectId(offerId);
-  }
-
-  if (type) {
-    const types = type.split(',').map((t) => t.trim()).filter(Boolean);
-    if (types.length) {
-      filter.type = { $in: types };
-    }
-  }
-
-  if (severity) {
-    const severities = severity.split(',').map((s) => s.trim()).filter(Boolean);
-    if (severities.length) {
-      filter.severity = { $in: severities };
-    }
-  }
-
-  const alerts = await OfferAlert.find(filter).sort({ created_at: -1 }).lean();
+  const alerts = await listAlerts({
+    projectId,
+    offerId,
+    estimateId,
+    type: type ? type.split(',').map(t => t.trim()).filter(Boolean) : undefined,
+    severity: severity ? severity.split(',').map(s => s.trim()).filter(Boolean) : undefined,
+    status: status ? status.split(',').map(s => s.trim()).filter(Boolean) : undefined,
+  });
 
   return { alerts: serializeDocs(alerts) };
 });

@@ -1,6 +1,6 @@
 <template>
   <div
-    class="flex flex-wrap items-center gap-4 px-6 py-4 bg-transparent"
+    class="flex flex-wrap items-center gap-3 px-4 py-3 bg-transparent"
   >
     <!-- Search input (Taller, Cleaner) -->
     <div class="flex items-center gap-2 flex-1 min-w-[320px]">
@@ -22,7 +22,7 @@
           @keydown.enter.prevent="$emit('apply-filter')"
           @clear="$emit('clear-filter')"
         >
-          <template #trailing v-if="searchModel">
+          <template v-if="searchModel" #trailing>
              <UButton
               color="neutral"
               variant="link"

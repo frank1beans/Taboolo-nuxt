@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useRoute } from 'vue-router';
+import type { GridApi, GridReadyEvent } from 'ag-grid-community';
 import { computed, onMounted, reactive, ref } from 'vue';
 import type { DataGridConfig } from '~/types/data-grid';
 import type { ApiEstimate, ApiOfferSummary } from '~/types/api';
@@ -10,7 +11,10 @@ import DataGridPage from '~/components/layout/DataGridPage.vue';
 import PageToolbar from '~/components/layout/PageToolbar.vue';
 import { formatCurrency as formatCurrencyLib, formatDelta } from '~/lib/formatters';
 
+import ImportWizard from '~/components/projects/ImportWizard.vue';
+
 const route = useRoute();
+
 const projectId = route.params.id as string;
 const estimateId = route.params.estimateId as string;
 
@@ -24,6 +28,14 @@ const { data: offersResponse, status: offersStatus, refresh: refreshOffers } = a
   {
     key: `project-${projectId}-offers-${estimateId}`,
     query: { estimate_id: estimateId },
+  },
+);
+
+const { data: alertSummary, status: alertStatus, refresh: refreshAlertSummary } = await useFetch(
+  `/api/projects/${projectId}/offers/alerts/summary`,
+  {
+    key: `project-${projectId}-estimate-${estimateId}-alert-summary`,
+    query: { group_by: 'offer', estimate_id: estimateId, status: 'open' },
   },
 );
 
@@ -82,6 +94,19 @@ const baselineTotal = computed(() => stats.value?.project_total || 0);
 const offerRows = computed(() => offersResponse.value?.offers || []);
 const offersLoading = computed(() => offersStatus.value === 'pending');
 const offersCount = computed(() => offerRows.value.length);
+const alertsLoading = computed(() => alertStatus.value === 'pending');
+
+const alertSummaryItems = computed(() => alertSummary.value?.items || []);
+const alertSummaryTotal = computed(() => alertSummary.value?.total ?? 0);
+const alertSummaryMap = computed<Record<string, number>>(() => {
+  const map: Record<string, number> = {};
+  alertSummaryItems.value.forEach((item: { offer_id?: string; total?: number }) => {
+    if (item.offer_id) {
+      map[item.offer_id] = Number(item.total || 0);
+    }
+  });
+  return map;
+});
 
 // Find the best offer across all rounds (lowest total_amount)
 const bestOfferId = computed(() => {
@@ -109,6 +134,7 @@ const unifiedRows = computed(() => {
     total_amount: baselineTotal.value,
     deltaAmount: 0,
     deltaPerc: 0,
+    alertCount: 0,
     isBest: false,
     isBaseline: true,
   });
@@ -124,6 +150,7 @@ const unifiedRows = computed(() => {
       rowType: 'offer',
       deltaAmount,
       deltaPerc,
+      alertCount: alertSummaryMap.value[offer.id] ?? 0,
       isBest: offer.id === bestOfferId.value,
       isBaseline: false,
     });
@@ -205,6 +232,18 @@ const unifiedGridConfig: DataGridConfig = {
       },
     },
     {
+      field: 'alertCount',
+      headerName: 'Alert',
+      width: 110,
+      cellClass: 'ag-right-aligned-cell',
+      cellRenderer: (params: { value?: number; data?: { isBaseline?: boolean } }): string => {
+        if (params.data?.isBaseline) return '-';
+        const count = Number(params.value || 0);
+        if (!count) return '-';
+        return `<span class="stat-pill stat-pill--warning">${count}</span>`;
+      },
+    },
+    {
       field: 'actions',
       headerName: 'Azioni',
       width: 140,
@@ -279,12 +318,36 @@ type OfferRow = {
   isBaseline?: boolean;
 };
 
-const openOfferDetail = (row: OfferRow | null | undefined) => {
-  if (!row || row.isBaseline) return;
+const navigateToPricelist = (row: OfferRow | null | undefined) => {
+  if (!row) return;
   const params = new URLSearchParams();
-  if (row.round_number !== undefined) params.set('round', String(row.round_number));
+  // Using query 'estimateId' equal to the current estimate, but maybe pricelist needs specific offer context?
+  // Actually, 'Listino' usually implies seeing the items.
+  // The pricelist page uses `estimateId` query param to load items.
+  // If we want to see a specific offer's items, we should pass that context.
+  // The pricelist logic (checked before) uses `estimateId` query param. 
+  // Wait, `selectedEstimateId` in pricelist page defaults to query param.
+  // But here we are listing OFFERS (which are technically estimates/returns?)
+  // If `row.isBaseline`, it is the project baseline.
+  // If `row.rowType === 'offer'`, it is a return.
+  
+  // Assuming pricelist page can filter by round/company or just show the estimate content.
+  // If I want to see the items of THIS offer:
+  // Navigate to /projects/.../pricelist?estimateId=[estimateId]&round=[row.round]&company=[row.company]
+  
+  params.set('estimateId', estimateId);
+  if (row.round_number !== undefined && row.round_number !== null) params.set('round', String(row.round_number));
   if (row.company_name) params.set('company', row.company_name);
-  navigateTo(`/projects/${projectId}/estimate/${estimateId}/offer?${params.toString()}`);
+  
+  navigateTo(`/projects/${projectId}/pricelist?${params.toString()}`);
+};
+
+const openOfferDetail = (row: OfferRow | null | undefined) => {
+   if (!row || row.isBaseline) return;
+   const params = new URLSearchParams();
+   if (row.round_number !== undefined) params.set('round', String(row.round_number));
+   if (row.company_name) params.set('company', row.company_name);
+   navigateTo(`/projects/${projectId}/estimate/${estimateId}/offer?${params.toString()}`);
 };
 
 const openEditOffer = (row: OfferRow | null | undefined) => {
@@ -323,6 +386,7 @@ const saveOffer = async () => {
 
     closeEditModal();
     await refreshOffers();
+    await refreshAlertSummary();
     await loadStats();
     await refresh();
   } catch (error) {
@@ -331,18 +395,45 @@ const saveOffer = async () => {
   }
 };
 
-const deleteOffer = async (row: OfferRow | null | undefined) => {
-  if (!row?.id || row.isBaseline) return;
-  const ok = window.confirm(`Eliminare l'offerta ${row.name || row.company_name || row.id}? Verranno rimossi anche i relativi items.`);
-  if (!ok) return;
+// ---------------------------------------------------------------------------
+// Delete Confirmation Modal
+// ---------------------------------------------------------------------------
+const isDeleteModalOpen = ref(false);
+const offerToDelete = ref<OfferRow | null>(null);
+
+const openDeleteModal = (row: OfferRow | null | undefined) => {
+  console.log('openDeleteModal called', { row, id: row?.id, isBaseline: row?.isBaseline });
+  if (!row?.id || row.isBaseline) {
+    console.log('openDeleteModal early return - no id or isBaseline');
+    return;
+  }
+  offerToDelete.value = row;
+  isDeleteModalOpen.value = true;
+};
+
+const closeDeleteModal = () => {
+  isDeleteModalOpen.value = false;
+  offerToDelete.value = null;
+};
+
+const confirmDeleteOffer = async () => {
+  const row = offerToDelete.value;
+  if (!row?.id) {
+    closeDeleteModal();
+    return;
+  }
+  
   try {
     await $fetch(`/api/projects/${projectId}/offers/${row.id}`, { method: 'DELETE' });
+    closeDeleteModal();
     await refreshOffers();
+    await refreshAlertSummary();
     await loadStats();
     await refresh();
   } catch (error) {
     console.error("Errore durante l'eliminazione dell'offerta", error);
     window.alert("Errore durante l'eliminazione dell'offerta.");
+    closeDeleteModal();
   }
 };
 
@@ -366,17 +457,21 @@ const deleteEstimate = async () => {
 
 const gridContext = computed(() => ({
   rowActions: {
-    open: (row: OfferRow) => row?.isBaseline ? null : openOfferDetail(row),
+    viewPricelist: (row: OfferRow) => navigateToPricelist(row),
+    viewOffer: (row: OfferRow) => openOfferDetail(row),
+    resolve: () => navigateTo(`/projects/${projectId}/conflicts?estimateId=${estimateId}`), // Should filter by offer?
     edit: (row: OfferRow) => row?.isBaseline ? null : openEditOffer(row),
-    remove: (row: OfferRow) => row?.isBaseline ? deleteEstimate() : deleteOffer(row),
+    remove: (row: OfferRow) => row?.isBaseline ? deleteEstimate() : openDeleteModal(row),
   },
-  hideActionsFor: (row: OfferRow) => false,
+  // Helper to determine if resolution is needed
+  hasAlerts: (row: OfferRow) => (alertSummaryMap.value[row.id] || 0) > 0
 }));
 
 // Toolbar State
 const searchText = ref('')
-const gridApi = ref<any>(null)
-const onGridReady = (params: any) => {
+const gridApi = ref<GridApi | null>(null)
+const { exportToXlsx } = useDataGridExport(gridApi)
+const onGridReady = (params: GridReadyEvent<Record<string, unknown>>) => {
   gridApi.value = params.api
 }
 
@@ -385,9 +480,22 @@ const handleReset = () => {
   gridApi.value?.setFilterModel(null)
 }
 
+
 const handleExport = () => {
-  gridApi.value?.exportDataAsExcel({ fileName: 'ritorni-gara' })
+  exportToXlsx('ritorni-gara')
 }
+
+// ---------------------------------------------------------------------------
+// Import Modal
+// ---------------------------------------------------------------------------
+const isImportModalOpen = ref(false);
+
+const handleImportSuccess = async () => {
+  isImportModalOpen.value = false;
+  await refreshOffers();
+  await refreshAlertSummary();
+  await loadStats();
+};
 </script>
 
 <template>
@@ -396,7 +504,7 @@ const handleExport = () => {
       title="Ritorni di Gara"
       :grid-config="unifiedGridConfig"
       :row-data="unifiedRows"
-      :loading="loading || statsLoading || offersLoading"
+      :loading="loading || statsLoading || offersLoading || alertsLoading"
       empty-state-title="Nessun dato"
       empty-state-message="Non ci sono ancora offerte o dati di progetto."
       :custom-components="{ actionsRenderer: DataGridActions }"
@@ -404,67 +512,104 @@ const handleExport = () => {
       
       :show-toolbar="false"
       :filter-text="searchText"
-      @row-dblclick="openOfferDetail"
+      @row-dblclick="navigateToPricelist"
       @grid-ready="onGridReady"
     >
       <!-- Meta: Estimate Name + Count -->
       <template #header-meta>
          <div class="flex items-center gap-2">
-            <span class="text-[hsl(var(--foreground))] font-medium">
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]">
                 {{ currentEstimate?.name || 'Dettaglio Gare' }}
             </span>
-            <span class="text-[hsl(var(--border))]">|</span>
-            <span class="text-[hsl(var(--muted-foreground))] flex items-center gap-2">
-                <Icon name="heroicons:document-text" class="w-4 h-4 ml-1" />
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]">
+                <Icon name="heroicons:document-text" class="w-3.5 h-3.5" />
                 {{ offersCount }} offerte
             </span>
          </div>
       </template>
 
-      <!-- Actions -->
-      <template #actions>
-        <div class="flex items-center gap-2 ml-2">
-            <UButton
-            color="primary"
-            variant="solid"
-            icon="i-heroicons-plus"
-            size="sm"
-            @click="navigateTo(`/projects/${projectId}/estimate/${estimateId}/comparison`)"
-            >
-            Confronto Dettagliato
-            </UButton>
-        </div>
-      </template>
+      <!-- Actions removed (moved to Topbar) -->
+      <template #actions/>
 
       <!-- Toolbar -->
       <template #pre-grid>
-        <PageToolbar
-          v-model="searchText"
-          search-placeholder="Filtra per preventivo, impresa o round..."
-        >
-          <template #right>
-            <button
-               v-if="searchText"
-               class="flex items-center justify-center h-9 px-4 rounded-full text-sm font-medium text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--background))] hover:text-[hsl(var(--foreground))] transition-colors"
-               @click="handleReset"
-            >
-              <Icon name="heroicons:arrow-path" class="w-4 h-4 mr-2" />
-              Reset
-            </button>     
+        <!-- Alerts moved to bottom bar -->
+        <ClientOnly>
+          <Teleport to="#app-bottombar-right">
+            <div v-if="alertSummaryTotal > 0" class="flex items-center gap-4 text-xs">
+              <div class="flex items-center gap-2 text-amber-500 font-medium animate-pulse">
+                <Icon name="heroicons:exclamation-triangle" class="w-4 h-4" />
+                <span>{{ alertSummaryTotal }} Alert da risolvere</span>
+              </div>
+              <div class="h-4 w-px bg-[hsl(var(--border))]" />
+              <UButton
+                size="2xs"
+                color="warning"
+                variant="solid"
+                label="Risoluzione Alert"
+                icon="i-heroicons-wrench-screwdriver"
+                :to="`/projects/${projectId}/conflicts?estimateId=${estimateId}`"
+              />
+            </div>
+          </Teleport>
+        </ClientOnly>
 
-            <button
-               class="btn-outline-theme"
-               @click="handleExport"
+        <ClientOnly>
+          <Teleport to="#topbar-actions-portal">
+            <PageToolbar
+              v-model="searchText"
+              search-placeholder="Filtra per preventivo, impresa o round..."
+              class="!py-0"
             >
-               Esporta
-            </button>
-          </template>
-        </PageToolbar>
+              <template #right>
+                <button
+                  v-if="searchText"
+                  class="flex items-center justify-center h-9 px-4 rounded-full text-sm font-medium text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--background))] hover:text-[hsl(var(--foreground))] transition-colors"
+                  @click="handleReset"
+                >
+                  <Icon name="heroicons:arrow-path" class="w-4 h-4 mr-2" />
+                  Reset
+                </button>     
+
+                <UButton
+                  color="gray"
+                  variant="ghost"
+                  icon="i-heroicons-arrow-down-tray"
+                  class="text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
+                  @click="handleExport"
+                >
+                  Esporta
+                </UButton>
+                
+                <UButton
+                  color="gray"
+                  variant="ghost" 
+                  icon="i-heroicons-arrow-up-tray"
+                  class="text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
+                  @click="isImportModalOpen = true"
+                >
+                  Importa
+                </UButton>
+
+                <UButton
+                  color="primary"
+                  variant="solid"
+                  icon="i-heroicons-plus"
+                  size="xs"
+                  @click="navigateTo(`/projects/${projectId}/estimate/${estimateId}/comparison`)"
+                >
+                  Confronto
+                </UButton>
+              </template>
+            </PageToolbar>
+          </Teleport>
+        </ClientOnly>
       </template>
     </DataGridPage>
 
     <!-- Modal Teleport -->
     <Teleport to="body">
+      <!-- Edit Offer Modal -->
       <div v-if="isEditModalOpen" class="fixed inset-0 z-[100] flex items-center justify-center px-4 py-6">
         <!-- Backdrop -->
         <div 
@@ -514,6 +659,39 @@ const handleExport = () => {
               Salva Modifiche
             </UButton>
           </div>
+        </div>
+      </div>
+
+      <!-- Delete Confirmation Modal -->
+      <ConfirmModal
+        :open="isDeleteModalOpen"
+        title="Conferma Eliminazione"
+        confirm-label="Elimina"
+        variant="danger"
+        @confirm="confirmDeleteOffer"
+        @cancel="closeDeleteModal"
+      >
+        <p class="text-[hsl(var(--foreground))]">
+          Eliminare l'offerta <strong>{{ offerToDelete?.name || offerToDelete?.company_name }}</strong>?
+        </p>
+        <p class="text-sm text-[hsl(var(--muted-foreground))] mt-2">
+          Verranno rimossi anche tutti i relativi items.
+        </p>
+      </ConfirmModal>
+
+      <!-- Import Wizard Modal -->
+      <div v-if="isImportModalOpen" class="fixed inset-0 z-[100] flex items-center justify-center px-4 py-6">
+        <div 
+          class="absolute inset-0 bg-black/50 dark:bg-black/60 backdrop-blur-sm transition-opacity"
+          @click="isImportModalOpen = false"
+        />
+        <div class="relative z-[105] w-full max-w-5xl h-[85vh] rounded-xl shadow-2xl overflow-hidden bg-[hsl(var(--card))] border border-[hsl(var(--border))] flex flex-col">
+           <ImportWizard 
+             :project-id="projectId"
+             :estimate-id="estimateId"
+             @success="handleImportSuccess"
+             @close="isImportModalOpen = false"
+           />
         </div>
       </div>
     </Teleport>

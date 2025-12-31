@@ -19,7 +19,7 @@ interface GlobalAnalysisParams {
 export default defineEventHandler(async (event) => {
     const body = await readBody<GlobalAnalysisParams>(event)
     const config = useRuntimeConfig()
-    const pythonUrl = config.pythonApiBaseUrl || 'http://localhost:8000'
+    const pythonUrl = config.pythonApiBaseUrl || 'http://localhost:8000/api/v1'
 
     try {
         const response = await $fetch(`${pythonUrl}/analytics/global/price-analysis`, {

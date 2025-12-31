@@ -13,6 +13,7 @@ from api.endpoints import xpwe as xpwe_endpoints
 from api.endpoints import returns as returns_endpoints
 from api.endpoints import analytics_routes as analytics_endpoints
 from api.endpoints import extraction as extraction_endpoints
+from api.endpoints import price_estimator as price_estimator_endpoints
 
 # Create main router with API prefix
 api_router = APIRouter(prefix=app_settings.api_v1_prefix)
@@ -50,4 +51,11 @@ api_router.include_router(
     tags=["extraction"]
 )
 
+# Price Estimator Endpoints
+api_router.include_router(
+    price_estimator_endpoints.router, 
+    tags=["price-estimator"]
+)
+
 __all__ = ["api_router"]
+

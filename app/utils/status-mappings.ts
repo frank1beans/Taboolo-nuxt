@@ -19,13 +19,13 @@ export const UNIFIED_STATUSES: Record<UnifiedStatus, StatusConfig> = {
     in_progress: {
         label: 'In Corso',
         color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300',
-        badgeColor: 'warning',
+        badgeColor: 'success',
         icon: 'i-heroicons-play',
     },
     completed: {
         label: 'Completo',
         color: 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300',
-        badgeColor: 'success',
+        badgeColor: 'primary',
         icon: 'i-heroicons-check-circle',
     },
     archived: {
@@ -37,7 +37,7 @@ export const UNIFIED_STATUSES: Record<UnifiedStatus, StatusConfig> = {
     warning: {
         label: 'Attenzione',
         color: 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300',
-        badgeColor: 'error',
+        badgeColor: 'warning',
         icon: 'i-heroicons-exclamation-triangle',
     },
     unknown: {

@@ -1,19 +1,15 @@
-import { defineEventHandler, createError, getRouterParam, getQuery } from 'h3';
-import { Types } from 'mongoose';
+import { defineEventHandler, createError, getQuery } from 'h3';
 import { EstimateItem, Offer, OfferItem } from '#models';
 import { serializeDocs } from '#utils/serialize';
+import { requireObjectIdParam, toObjectId } from '#utils/validate';
 
 export default defineEventHandler(async (event) => {
-    const projectId = getRouterParam(event, 'id');
-    const estimateId = getRouterParam(event, 'estimateId');
-
-    if (!projectId || !estimateId) {
-        throw createError({ statusCode: 400, statusMessage: 'Project ID and Estimate ID required' });
-    }
+    const projectId = requireObjectIdParam(event, 'id', 'Project ID');
+    const estimateId = requireObjectIdParam(event, 'estimateId', 'Estimate ID');
 
     try {
-        const validProjectId = new Types.ObjectId(projectId);
-        const validEstimateId = new Types.ObjectId(estimateId);
+        const validProjectId = toObjectId(projectId);
+        const validEstimateId = toObjectId(estimateId);
 
         // Check for filters
         const query = getQuery(event);
@@ -203,20 +199,15 @@ export default defineEventHandler(async (event) => {
                             }
                         },
                         project: {
-                            $mergeObjects: [
-                                '$project',
-                                {
-                                    unit_price: { $ifNull: ['$project.unit_price', '$price_item.price'] },
-                                    amount: {
-                                        $cond: {
-                                            if: { $gt: ['$project.amount', null] }, // Check if > null (exists and not null) or use type check? $ifNull is easier if we accept stored 0.
-                                            // If project.amount exists, use it.
-                                            then: '$project.amount',
-                                            else: { $multiply: ['$project.quantity', { $ifNull: ['$price_item.price', 0] }] }
-                                        }
-                                    }
+                            quantity: { $ifNull: ['$project.quantity', 0] },
+                            unit_price: { $ifNull: ['$project.unit_price', { $ifNull: ['$price_item.price', 0] }] },
+                            amount: {
+                                $cond: {
+                                    if: { $gt: ['$project.amount', null] },
+                                    then: '$project.amount',
+                                    else: { $multiply: [{ $ifNull: ['$project.quantity', 0] }, { $ifNull: ['$price_item.price', 0] }] }
                                 }
-                            ]
+                            }
                         }
                     }
                 },

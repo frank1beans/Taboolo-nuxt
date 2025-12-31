@@ -2,14 +2,15 @@
   <ClientOnly>
     <div
       ref="gridWrapper"
-      class="w-full relative flex flex-col overflow-hidden bg-transparent"
+      class="surface-card w-full relative flex flex-col overflow-hidden"
+      :class="{ 'data-grid--sticky-header': stickyHeader }"
       :style="{ height }"
     >
       <!-- Loading State -->
       <DataGridLoadingSkeleton v-if="loading" />
 
       <!-- Main Grid -->
-      <template v-else-if="rowData.length > 0">
+      <template v-else-if="showGrid">
         <!-- Toolbar -->
         <DataGridToolbar
           v-if="showToolbar"
@@ -18,21 +19,31 @@
           :enable-reset="true"
           :enable-export="config.enableExport !== false"
           :enable-column-toggle="config.enableColumnToggle !== false"
-          class="mb-4"
+          class="mb-2"
           @apply-filter="applyQuickFilter"
           @clear-filter="clearQuickFilter"
           @export="exportToXlsx(exportFilename)"
           @toggle-columns="openColumnConfig"
         />
 
+        <!-- ACC-Style Filter Bar - Above Grid -->
+        <DataGridFilterChips
+          :filters="activeFilters"
+          @remove="removeFilter"
+          @clear-all="clearAllFilters"
+        />
+
         <!-- AG Grid -->
         <AgGridVue
           :key="gridKey"
-          :class="['flex-1 w-full', themeClass]"
+          :class="['flex-1 w-full min-h-0', themeClass]"
+          style="min-height: 0;"
           theme="legacy"
           :column-defs="columnDefs"
-          :row-data="rowData"
+          :row-data="gridRowData"
           :default-col-def="defaultColDef"
+          :row-class-rules="rowClassRules"
+          :get-row-class="config.getRowClass"
           :components="components"
           :context="context"
           :row-selection="rowSelectionProp"
@@ -44,18 +55,17 @@
           :animate-rows="config.animateRows ?? true"
           :suppress-cell-focus="config.suppressCellFocus ?? true"
           :dom-layout="domLayout"
+          :row-model-type="rowModelType"
+          v-bind="rowModelType === 'infinite' ? {
+            'cache-block-size': gridCacheBlockSize,
+            'max-blocks-in-cache': gridMaxBlocksInCache
+          } : {}"
+          :aria-label="gridAriaLabel"
           @grid-ready="onGridReady"
           @row-clicked="handleRowClick"
           @row-double-clicked="handleRowDoubleClick"
           @selection-changed="handleSelectionChange"
           @column-resized="onColumnResized"
-        />
-
-        <!-- Filter Chips -->
-        <DataGridFilterChips
-          :filters="activeFilters"
-          @remove="removeFilter"
-          @clear-all="clearAllFilters"
         />
 
         <!-- Column Filter Popover -->
@@ -77,19 +87,23 @@
       </template>
 
       <!-- Empty State -->
-      <DataGridEmptyState
-        v-else
-        :title="emptyStateTitle"
-        :message="emptyStateMessage"
-        :show-action="showEmptyAction"
-        :action-label="emptyActionLabel"
-        @action="$emit('empty-action')"
-      />
+  <DataGridEmptyState
+    v-else
+    :title="emptyStateTitle"
+    :message="emptyStateMessage"
+    :show-action="showEmptyAction"
+    :action-label="emptyActionLabel"
+    :show-secondary-action="showEmptySecondaryAction"
+    :secondary-action-label="emptySecondaryActionLabel"
+    :secondary-icon="emptySecondaryActionIcon"
+    @action="$emit('empty-action')"
+    @secondary-action="$emit('empty-secondary-action')"
+  />
     </div>
 
     <template #fallback>
       <div
-        class="w-full border border-[hsl(var(--border))] rounded-md flex items-center justify-center text-sm text-[hsl(var(--muted-foreground))]"
+        class="surface-card w-full flex items-center justify-center text-sm text-[hsl(var(--muted-foreground))]"
         :style="{ height }"
       >
         Caricamento tabella...
@@ -138,6 +152,9 @@ const props = withDefaults(
     emptyStateMessage?: string;
     showEmptyAction?: boolean;
     emptyActionLabel?: string;
+    showEmptySecondaryAction?: boolean;
+    emptySecondaryActionLabel?: string;
+    emptySecondaryActionIcon?: string;
     exportFilename?: string;
     loading?: boolean;
     customComponents?: Record<string, unknown>;
@@ -145,6 +162,23 @@ const props = withDefaults(
     domLayout?: 'normal' | 'autoHeight' | 'print';
     showToolbar?: boolean;
     filterText?: string;
+    rowClickable?: boolean;
+    rowAriaLabel?: string;
+    stickyHeader?: boolean;
+    fetchRows?: (params: {
+      page: number;
+      pageSize: number;
+      sortModel?: unknown[];
+      filterModel?: Record<string, unknown>;
+      quickFilter?: string;
+    }) => Promise<{
+      data: RowData[];
+      total: number;
+      page: number;
+      pageSize: number;
+    }>;
+    cacheBlockSize?: number;
+    maxBlocksInCache?: number;
   }>(),
   {
     rowData: () => [],
@@ -155,6 +189,9 @@ const props = withDefaults(
     emptyStateMessage: 'Non ci sono dati da visualizzare.',
     showEmptyAction: false,
     emptyActionLabel: 'Ricarica',
+    showEmptySecondaryAction: false,
+    emptySecondaryActionLabel: 'Azione',
+    emptySecondaryActionIcon: 'i-heroicons-plus',
     exportFilename: 'export',
     loading: false,
     customComponents: () => ({}),
@@ -162,6 +199,12 @@ const props = withDefaults(
     domLayout: 'normal',
     showToolbar: true,
     filterText: '',
+    rowClickable: false,
+    rowAriaLabel: undefined,
+    stickyHeader: true,
+    fetchRows: undefined,
+    cacheBlockSize: undefined,
+    maxBlocksInCache: undefined,
   }
 );
 
@@ -174,6 +217,7 @@ const emit = defineEmits<{
   'sort-changed': [sortModel: unknown[]];
   'grid-ready': [params: GridReadyEvent];
   'empty-action': [];
+  'empty-secondary-action': [];
 }>();
 
 const gridWrapper = ref<HTMLElement | null>(null);
@@ -201,6 +245,22 @@ const rowSelectionProp = computed(() => {
   return { mode: 'singleRow' as const, checkboxes: false, headers: false }
 })
 
+const isServerSide = computed(() => typeof props.fetchRows === 'function');
+const gridCacheBlockSize = computed(() => isServerSide.value ? (props.cacheBlockSize || props.config.pagination?.pageSize || 200) : undefined);
+const gridMaxBlocksInCache = computed(() => isServerSide.value ? (props.maxBlocksInCache ?? 4) : undefined);
+const rowModelType = computed(() => (isServerSide.value ? 'infinite' : undefined));
+const showGrid = computed(() => isServerSide.value || props.rowData.length > 0);
+const gridRowData = computed(() => (isServerSide.value ? undefined : props.rowData));
+const rowClassRules = computed(() => {
+  const base = props.config.rowClassRules;
+  if (!props.rowClickable) return base;
+  return { ...(base || {}), 'row-clickable': () => true };
+});
+const gridAriaLabel = computed(() => {
+  if (!props.rowClickable) return undefined;
+  return props.rowAriaLabel || 'Seleziona una riga per aprire il dettaglio';
+});
+
 const {
   quickFilterText,
   activeFilters,
@@ -212,18 +272,24 @@ const {
   clearAllFilters,
   openFilterPanel,
   getCurrentFilter,
-} = useDataGridFilters(gridApi, props.config.columns);
+} = useDataGridFilters(gridApi, props.config.columns, {
+  serverSide: isServerSide.value,
+  onQuickFilterChange: () => {
+    if (isServerSide.value) {
+      gridApi.value?.purgeInfiniteCache?.();
+    }
+  },
+});
 
 // Watch external filterText prop
 watch(() => props.filterText, (newValue) => {
   if (newValue !== undefined) {
     quickFilterText.value = newValue;
-    // Apply filter immediately if API is ready, strictly speaking useDataGridFilters should handle this but let's be safe
-    // Actually useDataGridFilters likely watches quickFilterText or provides applyQuickFilter.
-    // Let's assume assigning to quickFilterText is enough if bound, or valid if we call apply.
-    // Checking useDataGridFilters implementation would be ideal but treating quickFilterText as the source of truth.
-    // However, usually one needs to trigger the API.
-    gridApi.value?.setGridOption('quickFilterText', newValue);
+    if (isServerSide.value) {
+      gridApi.value?.purgeInfiniteCache?.();
+    } else {
+      gridApi.value?.setGridOption('quickFilterText', newValue);
+    }
   }
 });
 
@@ -314,24 +380,77 @@ const context = computed(() => ({
 }));
 
 // Grid ready handler
+const buildServerDatasource = () => {
+  if (!gridApi.value || !props.fetchRows) return;
+  const api = gridApi.value;
+  const blockSize = gridCacheBlockSize.value || 200;
+
+  api.setGridOption('datasource', {
+    getRows: async (params: {
+      startRow: number;
+      endRow: number;
+      sortModel: unknown[];
+      filterModel: Record<string, unknown>;
+      successCallback: (rows: RowData[], total: number) => void;
+      failCallback: () => void;
+    }) => {
+      try {
+        const page = Math.floor(params.startRow / blockSize) + 1;
+        const response = await props.fetchRows({
+          page,
+          pageSize: blockSize,
+          sortModel: params.sortModel,
+          filterModel: params.filterModel,
+          quickFilter: quickFilterText.value,
+        });
+        params.successCallback(response.data, response.total);
+      } catch (error) {
+        console.error('DataGrid fetchRows failed:', error);
+        params.failCallback();
+      }
+    },
+  });
+};
+
 const onGridReady = (params: GridReadyEvent) => {
   onGridReadyBase(params);
 
   // Emit grid-ready to parent
   emit('grid-ready', params);
 
+  if (isServerSide.value) {
+    buildServerDatasource();
+  }
+
   // Setup event listeners for filter and sort changes
   params.api.addEventListener('filterChanged', () => {
     emit('filter-changed', params.api.getFilterModel());
+    if (isServerSide.value) {
+      params.api.refreshInfiniteCache?.();
+    }
   });
 
   params.api.addEventListener('sortChanged', () => {
-    emit('sort-changed', params.api.getSortModel());
+    // AG Grid v31+: getSortModel is deprecated/removed. Use getColumnState.
+    const sortState = params.api.getColumnState()
+        .filter(s => s.sort)
+        .map(s => ({ colId: s.colId, sort: s.sort, sortIndex: s.sortIndex }));
+    emit('sort-changed', sortState);
+    if (isServerSide.value) {
+      params.api.refreshInfiniteCache?.();
+    }
   });
 };
 
 // Event handlers
 const handleRowClick = (event: RowClickedEvent<RowData>) => {
+  const domEvent = event.event as Event | undefined;
+  if (domEvent instanceof Event) {
+    const target = domEvent.target as HTMLElement | null;
+    if (target?.closest('button, a, [role="button"], input, select, textarea, [data-stop-row-click]')) {
+      return;
+    }
+  }
   emit('row-click', event.data as RowData);
 };
 
@@ -381,5 +500,20 @@ defineExpose({
 :deep(.ag-theme-quartz-dark .ag-cell) {
   padding-top: 0;
   padding-bottom: 0;
+}
+
+:deep(.data-grid--sticky-header .ag-header) {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: hsl(var(--background));
+}
+
+:deep(.ag-row.row-clickable) {
+  cursor: pointer;
+}
+
+:deep(.ag-row.row-clickable:hover .ag-cell) {
+  background-color: hsl(var(--muted)/0.2);
 }
 </style>

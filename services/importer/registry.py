@@ -78,6 +78,7 @@ def parse_excel_estimate_from_bytes(
     sheet_name: str | None = None,
     price_column: str | None = None,
     quantity_column: str | None = None,
+    **kwargs,
 ) -> NormalizedEstimate:
     path = _with_tempfile(file_bytes, filename)
     try:
@@ -104,6 +105,9 @@ def parse_lx_estimate_from_bytes(
     price_column: str | None = None,
     quantity_column: str | None = None,
     progressive_column: str | None = None,
+    header_row_index: int | None = None,
+    long_description_columns: list[str] | None = None,
+    **kwargs,
 ) -> NormalizedEstimate:
     path = _with_tempfile(file_bytes, filename)
     try:
@@ -115,6 +119,8 @@ def parse_lx_estimate_from_bytes(
             price_column=price_column or "",
             quantity_column=quantity_column,
             progressive_column=progressive_column,
+            header_row_index=header_row_index,
+            long_description_columns=long_description_columns,
         )
         return normalize_estimate(parsed, format="lx", source="excel")
     finally:
@@ -133,6 +139,7 @@ def parse_mx_estimate_from_bytes(
     price_column: str | None = None,
     quantity_column: str | None = None,
     progressive_column: str | None = None,
+    **kwargs,
 ) -> NormalizedEstimate:
     path = _with_tempfile(file_bytes, filename)
     try:

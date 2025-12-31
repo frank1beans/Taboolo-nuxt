@@ -3,6 +3,8 @@ import { matchesOperator } from '~/utils/columnFilter';
 
 type GridRow = Record<string, unknown>;
 
+const SET_FILTER_PREFIX = '__set__:';
+
 export function useDataGridColumns() {
   const mapAgOptionToOperator = (filterOption: string): ColumnFilterOperator => {
     switch (filterOption) {
@@ -41,10 +43,14 @@ export function useDataGridColumns() {
         };
       }
 
+      const isMultiSelect = col.filterMode === 'multi';
       let filterSetting: string | boolean = col.filter ?? 'agTextColumnFilter';
 
       if (filterSetting === true) filterSetting = 'agTextColumnFilter';
       if (filterSetting === 'number') filterSetting = 'agNumberColumnFilter';
+      if (isMultiSelect) {
+        filterSetting = 'agTextColumnFilter';
+      }
 
       const shouldTreatAsNumeric = (() => {
         if (!col.field) return false;
@@ -59,6 +65,7 @@ export function useDataGridColumns() {
       })();
 
       if (
+        !isMultiSelect &&
         shouldTreatAsNumeric &&
         (col.filter === undefined || col.filter === true || col.filter === 'agTextColumnFilter')
       ) {
@@ -89,11 +96,25 @@ export function useDataGridColumns() {
         headerComponentParams: col.headerComponentParams,
       };
 
-      if (filterSetting && filterSetting !== 'agNumberColumnFilter') {
+      if (filterSetting === 'agTextColumnFilter') {
         colDef.filterParams = {
           textMatcher: (params: { filterOption?: string; value: unknown; filterText?: string }) => {
+            const rawText = typeof params.filterText === 'string'
+              ? params.filterText
+              : String(params.filterText ?? '');
+            if (rawText.startsWith(SET_FILTER_PREFIX)) {
+              const encoded = rawText.slice(SET_FILTER_PREFIX.length);
+              try {
+                const values = JSON.parse(encoded);
+                if (!Array.isArray(values)) return true;
+                if (values.length === 0) return true;
+                return values.some((val) => matchesOperator(params.value as string, String(val ?? ''), 'equals'));
+              } catch {
+                return true;
+              }
+            }
             const operator = mapAgOptionToOperator(params.filterOption || 'contains');
-            return matchesOperator(params.value, params.filterText || '', operator);
+            return matchesOperator(params.value as string, rawText, operator);
           },
         };
       }
@@ -151,6 +172,11 @@ export function useDataGridColumns() {
             },
           };
         }
+      }
+
+      if (col.filterMode) {
+        const context = (colDef.context as Record<string, unknown> | undefined) ?? {};
+        colDef.context = { ...context, filterMode: col.filterMode };
       }
 
       return colDef;

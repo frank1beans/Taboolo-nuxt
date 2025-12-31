@@ -11,7 +11,7 @@ export interface BaseMapResponse {
     projects: ProjectInfo[]
 }
 
-export interface BaseAnalyticsOptions<TResponse extends BaseMapResponse> {
+export interface BaseAnalyticsOptions<_TResponse extends BaseMapResponse> {
     endpoint: string
     computeEndpoint?: string
 }
@@ -42,7 +42,7 @@ export function useBaseAnalytics<TResponse extends BaseMapResponse>(
 
     const availableYears = computed(() => {
         const years = new Set<number>()
-        mapData.value?.projects.forEach(p => {
+        mapData.value?.projects.forEach((p: { year?: number | null }) => {
             if (p.year) years.add(p.year)
         })
         return Array.from(years).sort((a, b) => b - a)
@@ -50,7 +50,7 @@ export function useBaseAnalytics<TResponse extends BaseMapResponse>(
 
     const availableBusinessUnits = computed(() => {
         const units = new Set<string>()
-        mapData.value?.projects.forEach(p => {
+        mapData.value?.projects.forEach((p: { business_unit?: string | null }) => {
             if (p.business_unit) units.add(p.business_unit)
         })
         return Array.from(units).sort()
@@ -114,10 +114,9 @@ export function useBaseAnalytics<TResponse extends BaseMapResponse>(
         Object.assign(filters, defaultFilters)
     }
 
-    // Initial load
-    onMounted(() => {
-        fetchMapData()
-    })
+    // Note: Initial data fetch is NOT automatic.
+    // The calling component should call fetchMapData() explicitly when needed.
+    // This prevents duplicate API calls when multiple analytics composables are used.
 
     return {
         // State

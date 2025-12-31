@@ -1,71 +1,42 @@
 import { defineEventHandler, createError, getQuery } from 'h3';
-import { Project } from '#models';
+import { listProjects } from '../../services/ProjectService';
 import { serializeDocs } from '#utils/serialize';
+import type { Project } from '../../../types';
 
 export default defineEventHandler(async (event) => {
   try {
     const query = getQuery(event);
 
-    // Pagination params
-    const page = parseInt(query.page as string) || 1;
-    const pageSize = parseInt(query.pageSize as string) || 50;
-    const skip = (page - 1) * pageSize;
+    const clampInt = (value: unknown, fallback: number, min: number, max: number) => {
+      const parsed = Number.parseInt(String(value), 10);
+      if (!Number.isFinite(parsed)) return fallback;
+      return Math.min(Math.max(parsed, min), max);
+    };
 
-    // Sort params
+    // Extract params
+    const page = clampInt(query.page, 1, 1, Number.MAX_SAFE_INTEGER);
+    const pageSize = clampInt(query.pageSize, 50, 1, 200);
     const sortField = (query.sort as string) || 'created_at';
-    const sortOrder = query.order === 'asc' ? 1 : -1;
+    const sortOrder = (query.order === 'asc' ? 'asc' : 'desc');
+    const search = query.search as string;
 
-    // Build filter query
-    const filter: Record<string, unknown> = {};
-
-    // Quick search (searches across multiple fields)
-    if (query.search) {
-      const searchRegex = new RegExp(query.search as string, 'i');
-      filter.$or = [
-        { code: searchRegex },
-        { name: searchRegex },
-        { description: searchRegex },
-        { business_unit: searchRegex },
-      ];
-    }
-
-    // Column filters (from DataGrid filterModel)
+    let filters: Record<string, any> | undefined;
     if (query.filters) {
-      try {
-        const parsedFilters = typeof query.filters === 'string'
-          ? JSON.parse(query.filters)
-          : query.filters;
-
-        Object.entries(parsedFilters as Record<string, unknown>).forEach(([field, rawConfig]) => {
-          if (!rawConfig || typeof rawConfig !== 'object') return;
-          const config = rawConfig as { filter?: unknown; type?: string };
-          if (config.filter !== undefined) {
-            if (config.type === 'equals') {
-              filter[field] = config.filter;
-            } else if (config.type === 'contains') {
-              filter[field] = new RegExp(String(config.filter), 'i');
-            } else if (config.type === 'notBlank') {
-              filter[field] = { $nin: [null, ''] };
-            }
-          }
-        });
-      } catch (err) {
-        console.error('Error parsing filters:', err);
-      }
+      filters = typeof query.filters === 'string' ? JSON.parse(query.filters) : query.filters;
     }
 
-    // Execute queries in parallel
-    const [projects, total] = await Promise.all([
-      Project.find(filter)
-        .sort({ [sortField]: sortOrder })
-        .skip(skip)
-        .limit(pageSize)
-        .lean(),
-      Project.countDocuments(filter),
-    ]);
+    // Call Service
+    const { projects, total } = await listProjects({
+      page,
+      pageSize,
+      sortField,
+      sortOrder,
+      search,
+      filters,
+    });
 
     return {
-      data: serializeDocs(projects),
+      data: serializeDocs<Project>(projects),
       total,
       page,
       pageSize,
