@@ -16,7 +16,7 @@ import type { GridApi, GridReadyEvent, RowNode } from 'ag-grid-community'
 import { useCurrentContext } from '~/composables/useCurrentContext'
 import { useWbsTree, type WithWbsHierarchy } from '~/composables/useWbsTree'
 import { useSidebarModules, usePageSidebarModule } from '~/composables/useSidebarModules'
-import { useAppSidebar } from '~/composables/useAppSidebar'
+import { useSidebarLayout } from '~/composables/useSidebarLayout'
 import WbsModule from '~/components/sidebar/modules/WbsModule.vue'
 import DataGridPage from '~/components/layout/DataGridPage.vue'
 import PageToolbar from '~/components/layout/PageToolbar.vue'
@@ -311,7 +311,7 @@ onUnmounted(() => {
 })
 
 const { toggleVisibility, isVisible: sidebarVisible, setActiveModule, showSidebar } = useSidebarModules()
-const { showDefaultSidebar } = useAppSidebar()
+const { showDefaultSidebar } = useSidebarLayout()
 
 // Register WBS Module using route-scoped helper
 usePageSidebarModule({

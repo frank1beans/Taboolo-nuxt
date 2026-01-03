@@ -222,7 +222,7 @@ import MapToolbar from '~/components/analytics/MapToolbar.vue'
 import PointDetailSidebar from '~/components/analytics/PointDetailSidebar.vue'
 import ChartLoadingState from '~/components/ui/ChartLoadingState.vue'
 import { useSidebarModules } from '~/composables/useSidebarModules'
-import { useAppSidebar } from '~/composables/useAppSidebar'
+import { useSidebarLayout } from '~/composables/useSidebarLayout'
 import { useWbsTree } from '~/composables/useWbsTree'
 import WbsModule from '~/components/sidebar/modules/WbsModule.vue'
 import AnalyticsDataModule from '~/components/sidebar/modules/AnalyticsDataModule.vue'
@@ -259,7 +259,7 @@ const selectedPoint = ref<PropertyPoint | null>(null)
 const clickedPoint = ref<GlobalPoint | PropertyPoint | null>(null)
 
 const { registerModule, unregisterModule, setActiveModule } = useSidebarModules()
-const { showDefaultSidebar } = useAppSidebar()
+const { showDefaultSidebar } = useSidebarLayout()
 const actionsStore = useActionsStore()
 const actionOwner = 'page:project-analytics'
 

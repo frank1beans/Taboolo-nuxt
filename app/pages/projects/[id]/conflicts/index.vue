@@ -13,7 +13,7 @@ import ConflictDetailModule from '~/components/sidebar/modules/ConflictDetailMod
 import ConflictActionsModule from '~/components/sidebar/modules/ConflictActionsModule.vue';
 import { useProjectTree } from '~/composables/useProjectTree';
 import { useSidebarModules } from '~/composables/useSidebarModules';
-import { useAppSidebar } from '~/composables/useAppSidebar';
+import { useSidebarLayout } from '~/composables/useSidebarLayout';
 import { useActionsStore } from '~/stores/actions';
 import type { Action } from '~/types/actions';
 
@@ -46,7 +46,7 @@ const { treeNodes } = useProjectTree(context, currentEstimate);
 
 // Sidebar management
 const { registerModule, unregisterModule } = useSidebarModules();
-const { showDefaultSidebar } = useAppSidebar();
+const { showDefaultSidebar } = useSidebarLayout();
 
 const moduleIds = ['conflicts-assets', 'conflicts-filters', 'conflicts-detail', 'conflicts-actions'];
 

@@ -6,7 +6,6 @@ import type { Project } from '#types';
 import { useProjects } from '~/composables/useProjects';
 import { useProjectForm } from '~/composables/useProjectForm';
 import ProjectFormModal from '~/components/projects/ProjectFormModal.vue';
-import { useAppSidebar } from '~/composables/useAppSidebar';
 import { useCurrentContext } from '~/composables/useCurrentContext';
 import { useActionsStore } from '~/stores/actions';
 import { useSelectionStore } from '~/stores/selection';

@@ -14,10 +14,8 @@ import { useSidebarModules } from '~/composables/useSidebarModules'
 import { useCurrentContext } from '~/composables/useCurrentContext'
 import { useNavigation } from '~/composables/useNavigation'
 import { useProjectTree } from '~/composables/useProjectTree'
-import { useAppSidebar } from '~/composables/useAppSidebar'
 import { useCommandPaletteStore } from '~/stores/commandPalette'
 
-const { showDefaultSidebar } = useAppSidebar()
 const { hasModules, registerLayoutModule, unregisterModule } = useSidebarModules()
 const route = useRoute()
 const {
@@ -25,6 +23,7 @@ const {
   width,
   toggleCollapsed,
   collapse,
+  showDefaultSidebar
 } = useSidebarLayout()
 
 // Compute if sidebar should be completely hidden (no modules, no default sidebar)

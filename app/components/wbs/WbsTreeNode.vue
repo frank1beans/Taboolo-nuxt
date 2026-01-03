@@ -80,7 +80,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import type { WbsNode } from '~/composables/useWbsTree';
+import type { WbsNode } from '~/types/wbs';
 
 const props = defineProps<{
   node: WbsNode;

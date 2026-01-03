@@ -12,7 +12,7 @@ import { useEstimateGridConfig, type EstimateItem } from '~/composables/estimate
 import { useWbsTree } from '~/composables/useWbsTree'
 import { useCurrentContext } from '~/composables/useCurrentContext'
 import { useSidebarModules } from '~/composables/useSidebarModules'
-import { useAppSidebar } from '~/composables/useAppSidebar'
+import { useSidebarLayout } from '~/composables/useSidebarLayout'
 import WbsModule from '~/components/sidebar/modules/WbsModule.vue'
 import { formatCurrency } from '~/lib/formatters'
 
@@ -80,7 +80,7 @@ const rowData = computed(() => items.value || [])
 
 const { wbsNodes, selectedWbsNode, filteredRowData, onWbsNodeSelected } = useWbsTree(rowData)
 const { registerModule, unregisterModule, toggleVisibility, isVisible: sidebarVisible, setActiveModule, showSidebar } = useSidebarModules()
-const { showDefaultSidebar } = useAppSidebar()
+const { showDefaultSidebar } = useSidebarLayout()
 const { gridConfig } = useEstimateGridConfig(filteredRowData)
 const totalAmount = ref(0)
 const gridApiRef = ref<GridApi<EstimateItem> | null>(null)

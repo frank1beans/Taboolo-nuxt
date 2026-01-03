@@ -18,6 +18,11 @@ const state = {
 const clampWidth = (value: number) => Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, value))
 
 export const useSidebarLayout = () => {
+  // Merged from useAppSidebar
+  const route = useRoute()
+  const showDefaultSidebar = computed(() => {
+    return !route.meta.disableDefaultSidebar
+  })
   const isCollapsed = state.isCollapsed
   const isHidden = state.isHidden
   const width = state.width
@@ -114,5 +119,6 @@ export const useSidebarLayout = () => {
     hide,
     show,
     setWidth,
+    showDefaultSidebar,
   }
 }

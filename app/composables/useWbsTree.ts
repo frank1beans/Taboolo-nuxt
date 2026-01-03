@@ -1,12 +1,7 @@
 import { ref, computed, type Ref } from 'vue'
+import type { WbsNode } from '~/types/wbs'
 
-export interface WbsNode {
-  id: string
-  code: string
-  name: string
-  level: number
-  children?: WbsNode[]
-}
+export type { WbsNode }
 
 export interface WbsLevel {
   code: string
@@ -127,7 +122,7 @@ export function useWbsTree<T extends WithWbsHierarchy>(
     }
 
     const sortChildren = (nodes: WbsNode[]) => {
-      nodes.sort((a, b) => a.name.localeCompare(b.name))
+      nodes.sort((a, b) => (a.name || '').localeCompare(b.name || ''))
       for (const node of nodes) {
         if (node.children?.length) {
           sortChildren(node.children)

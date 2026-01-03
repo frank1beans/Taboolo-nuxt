@@ -7,16 +7,7 @@
  */
 import { ref, computed, watch, unref, type Ref } from 'vue'
 import { formatCurrencyCompact } from '~/lib/formatters'
-
-export interface WbsNode {
-  id: string
-  code: string
-  name: string
-  level: number
-  count?: number
-  amount?: number
-  children?: WbsNode[]
-}
+import type { WbsNode } from '~/types/wbs'
 
 type MaybeRef<T> = T | Ref<T>
 
