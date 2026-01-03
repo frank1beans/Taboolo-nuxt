@@ -106,24 +106,10 @@ async def preview_six(
         normalized = process_file_content(content, "six", filename=file.filename)
         print(f"DEBUG Endpoint: Normalized result has {len(normalized.preventivi)} preventivi")
         
-        # Map to lightweight preview structure expected by frontend
-        preventivi = []
-        for p in normalized.preventivi:
-            preventivi.append({
-                "preventivoId": p.id,
-                "code": p.code,
-                "description": p.name or p.code,
-                "stats": {
-                    "items": len(p.measurements)
-                }
-            })
-            
-        return {
-            "estimates": preventivi,
-            "preventivi": preventivi,
-            "groups_count": len(normalized.wbs_nodes),
-            "products_count": len(normalized.price_list_items)
-        }
+        # Use Preview Service
+        from ingestion.preview import PreviewService
+        return PreviewService.generate_summary(normalized)
 
     except Exception as e:
         raise HTTPException(400, f"Preview error: {str(e)}")
+

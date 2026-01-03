@@ -5,8 +5,8 @@ import os
 # Add local directory to path to allow imports
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from logic.extraction.router import FamilyRouter
-from logic.extraction.schemas.cartongesso import CartongessoProperties
+from embedding.extraction.router import FamilyRouter
+from embedding.extraction.schemas.cartongesso import CartongessoProperties
 
 def test_router():
     print("\n=== Testing FamilyRouter ===")
@@ -57,3 +57,4 @@ def test_schema_structure():
 if __name__ == "__main__":
     test_router()
     test_schema_structure()
+

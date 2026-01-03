@@ -2,6 +2,14 @@ import { ref } from 'vue';
 import type { DataGridFetchParams, DataGridFetchResponse } from '~/types/data-grid';
 import type { Project } from '#types';
 
+export type ProjectPayload = {
+  name: string;
+  code: string;
+  description?: string;
+  business_unit?: string;
+  status: Project['status'];
+};
+
 export function useProjects() {
   const projects = ref<Project[]>([]);
   const loading = ref(false);
@@ -88,6 +96,31 @@ export function useProjects() {
     return Array.from(values).sort();
   };
 
+  // --- CRUD Operations (Merged from useProjectCrud) ---
+
+  const createProject = async (payload: ProjectPayload) => {
+    return $fetch('/api/projects', {
+      method: 'POST',
+      body: payload,
+    });
+  };
+
+  const updateProject = async (id: string, payload: ProjectPayload) => {
+    return $fetch(`/api/projects/${id}`, {
+      method: 'PUT',
+      body: payload,
+    });
+  };
+
+  const deleteProject = async (id: string) => {
+    return $fetch(`/api/projects/${id}`, { method: 'DELETE' });
+  };
+
+  const reloadProjects = async (params: DataGridFetchParams = { page: 1, pageSize: 100 }) => {
+    const response = await fetchProjects(params);
+    return response.data;
+  };
+
   return {
     projects,
     loading,
@@ -95,5 +128,10 @@ export function useProjects() {
     fetchProjects,
     fetchProject,
     getFieldValues,
+    // CRUD
+    createProject,
+    updateProject,
+    deleteProject,
+    reloadProjects
   };
 }

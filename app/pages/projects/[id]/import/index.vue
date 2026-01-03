@@ -1,19 +1,94 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, defineAsyncComponent, onMounted, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { api } from '~/lib/api-client';
 import type { ApiSixEstimatesPreview, ApiEstimate, ApiXpweEstimatesPreview, ApiSixImportReport, ApiSixEstimateOption, ApiRawPreventivo } from '~/types/api';
 import FileDropZone from '~/components/ui/FileDropZone.vue';
 import ImportStatusCard from '~/components/ui/ImportStatusCard.vue';
-import ImportWizard from '~/components/projects/ImportWizard.vue';
 import PageHeader from '~/components/layout/PageHeader.vue';
 import MainPage from '~/components/layout/MainPage.vue';
+import { useActionsStore } from '~/stores/actions';
+import type { Action } from '~/types/actions';
+
+// Lazy load heavy ImportWizard component (31KB)
+const ImportWizard = defineAsyncComponent(() => import('~/components/projects/ImportWizard.vue'));
 
 const route = useRoute();
 const router = useRouter();
 const projectId = route.params.id as string;
+const actionsStore = useActionsStore();
+const actionOwner = 'page:project-import';
 
 definePageMeta({});
+
+const registerAction = (action: Action) => {
+  actionsStore.registerAction(action, { owner: actionOwner, overwrite: true });
+};
+
+onMounted(() => {
+  registerAction({
+    id: 'import.goToProject',
+    label: 'Torna al progetto',
+    description: 'Ritorna alla dashboard del progetto',
+    category: 'Import',
+    scope: 'project',
+    icon: 'i-heroicons-arrow-left',
+    keywords: ['progetto', 'indietro'],
+    handler: () => navigateToProject(),
+  });
+
+  registerAction({
+    id: 'import.confirmSix',
+    label: 'Conferma import SIX',
+    description: 'Esegue import del file SIX',
+    category: 'Import',
+    scope: 'project',
+    icon: 'i-heroicons-check',
+    keywords: ['six', 'import'],
+    isEnabled: () => Boolean(sixFile.value),
+    disabledReason: 'Nessun file SIX caricato',
+    handler: () => confirmSixImport(),
+  });
+
+  registerAction({
+    id: 'import.resetSix',
+    label: 'Reset import SIX',
+    description: 'Ripristina lo stato import SIX',
+    category: 'Import',
+    scope: 'project',
+    icon: 'i-heroicons-arrow-path',
+    keywords: ['six', 'reset'],
+    handler: () => resetSix(),
+  });
+
+  registerAction({
+    id: 'import.confirmXpwe',
+    label: 'Conferma import XPWE',
+    description: 'Esegue import del file XPWE',
+    category: 'Import',
+    scope: 'project',
+    icon: 'i-heroicons-check',
+    keywords: ['xpwe', 'import'],
+    isEnabled: () => Boolean(xpweFile.value),
+    disabledReason: 'Nessun file XPWE caricato',
+    handler: () => confirmXpweImport(),
+  });
+
+  registerAction({
+    id: 'import.resetXpwe',
+    label: 'Reset import XPWE',
+    description: 'Ripristina lo stato import XPWE',
+    category: 'Import',
+    scope: 'project',
+    icon: 'i-heroicons-arrow-path',
+    keywords: ['xpwe', 'reset'],
+    handler: () => resetXpwe(),
+  });
+});
+
+onUnmounted(() => {
+  actionsStore.unregisterOwner(actionOwner);
+});
 
 const activeTab = ref(0);
 const items = [{
@@ -40,7 +115,7 @@ const sixError = ref('');
 const sixProgress = ref(0);
 const sixPreview = ref<ApiSixEstimatesPreview | null>(null);
 const selectedEstimateId = ref<string | undefined>(undefined);
-const sixImportResult = ref<{ totalItems?: number; wbsNodes?: number; message?: string } | null>(null);
+const sixImportResult = ref<{ totalItems?: number; wbsNodes?: number; message?: string; estimateId?: string } | null>(null);
 const useRawParser = ref(true); // Default to NEW parser
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -75,6 +150,9 @@ interface PreviewEstimate {
   totalAmount?: number;
   version?: string;
   author?: string;
+  date?: string;
+  priceListLabel?: string;
+  uniqueProducts?: number;
   original: unknown;
 }
 
@@ -84,12 +162,18 @@ const toPreviewEstimate = (item: PreviewSource): PreviewEstimate => {
   const count = typeof statsItems === 'number'
     ? statsItems
     : ('items' in item && typeof item.items === 'number' ? item.items : 0);
+  
   const statsTotal = stats?.total_amount;
   const totalAmount = typeof statsTotal === 'number'
     ? statsTotal
     : ('total_amount' in item && typeof item.total_amount === 'number' ? item.total_amount : undefined);
+    
+  const uniqueProducts = typeof stats?.unique_products === 'number' ? stats.unique_products : undefined;
+    
   const extra = item as Record<string, unknown>;
   const importo = typeof extra.importo === 'number' ? extra.importo : undefined;
+  const priceListLabel = typeof extra.price_list_label === 'string' ? extra.price_list_label : undefined;
+  const dateStr = typeof extra.date === 'string' ? extra.date : undefined;
 
   return {
     id: 'preventivoId' in item ? item.preventivoId : item.internal_id,
@@ -98,6 +182,9 @@ const toPreviewEstimate = (item: PreviewSource): PreviewEstimate => {
     totalAmount: totalAmount ?? importo,
     version: 'version' in item ? item.version : undefined,
     author: 'author' in item ? item.author : undefined,
+    date: dateStr,
+    priceListLabel: priceListLabel,
+    uniqueProducts,
     original: item
   };
 };
@@ -400,14 +487,13 @@ const navigateToProject = () => {
           v-model="activeTab" 
           :items="items" 
           class="w-full flex-1 flex flex-col min-h-0" 
-          :ui="{ list: { background: 'bg-[hsl(var(--secondary))]' } }"  
-          :content="{ class: 'flex-1 min-h-0' }"
+          :ui="{ list: { background: 'bg-[hsl(var(--secondary))]' }, content: 'flex-1 min-h-0 overflow-y-auto custom-scrollbar' }"
         >
          
          <!-- TAB 1: SIX/XML -->
          <template #six>
             <div class="pt-4 pb-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-              <div class="max-w-3xl mx-auto space-y-5">
+              <div class="max-w-3xl mx-auto space-y-6">
                  
                  <!-- Intro Section -->
                  <div class="text-center space-y-2">
@@ -476,7 +562,7 @@ const navigateToProject = () => {
                       </div>
                       
                       <!-- Estimate Cards -->
-                      <div class="grid gap-3">
+                      <div class="grid gap-3 max-h-[35vh] overflow-y-auto pr-2 custom-scrollbar">
                         <button
                           v-for="estimate in previewEstimates"
                           :key="estimate.id"
@@ -490,27 +576,38 @@ const navigateToProject = () => {
                           @click="selectedEstimateId = estimate.id"
                         >
                           <div class="flex items-center justify-between">
-                            <div class="flex items-center gap-3">
+                            <div class="flex items-center gap-3 overflow-hidden">
                               <div 
-                                class="w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors"
+                                class="w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-colors"
                                 :class="selectedEstimateId === estimate.id ? 'border-[hsl(var(--primary))] bg-[hsl(var(--primary))]' : 'border-[hsl(var(--muted-foreground))]'"
                               >
                                 <UIcon v-if="selectedEstimateId === estimate.id" name="i-heroicons-check" class="w-3 h-3 text-white" />
                               </div>
-                              <div>
-                                <p class="font-medium text-[hsl(var(--foreground))]">{{ estimate.label }}</p>
-                                <p v-if="estimate.version" class="text-xs text-[hsl(var(--muted-foreground))]">
-                                  Versione {{ estimate.version }}
-                                </p>
+                              <div class="min-w-0">
+                                <p class="font-medium text-[hsl(var(--foreground))] truncate">{{ estimate.label }}</p>
+                                <div class="flex items-center gap-2 text-xs text-[hsl(var(--muted-foreground))]">
+                                  <p v-if="estimate.priceListLabel" class="flex items-center gap-1">
+                                    <UIcon name="i-heroicons-book-open" class="w-3 h-3" />
+                                    {{ estimate.priceListLabel }}
+                                  </p>
+                                  <span v-if="estimate.priceListLabel && estimate.uniqueProducts">•</span>
+                                  <p v-if="estimate.uniqueProducts">
+                                    {{ estimate.uniqueProducts }} articoli
+                                  </p>
+                                  <span v-if="(estimate.priceListLabel || estimate.uniqueProducts) && estimate.version">•</span>
+                                  <p v-if="estimate.version">
+                                    Versione {{ estimate.version }}
+                                  </p>
+                                </div>
                               </div>
                             </div>
-                            <div class="flex items-center gap-3 text-right">
+                            <div class="flex items-center gap-4 text-right flex-shrink-0 pl-4">
                               <div>
-                                <p class="text-sm font-semibold text-[hsl(var(--foreground))]">
+                                <p class="text-sm font-semibold text-[hsl(var(--foreground))] whitespace-nowrap">
                                   {{ estimate.count.toLocaleString('it-IT') }} voci
                                 </p>
-                                <p v-if="estimate.totalAmount" class="text-xs text-[hsl(var(--muted-foreground))]">
-                                  € {{ estimate.totalAmount.toLocaleString('it-IT', { minimumFractionDigits: 2 }) }}
+                                <p v-if="estimate.totalAmount" class="font-mono text-xs text-[hsl(var(--primary))] font-medium whitespace-nowrap">
+                                  € {{ estimate.totalAmount.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
                                 </p>
                               </div>
                             </div>
@@ -527,14 +624,12 @@ const navigateToProject = () => {
                    </div>
 
                    <!-- Options -->
-                   <div v-if="selectedEstimateId && sixPreview" class="bg-[hsl(var(--muted))] rounded-xl p-4">
-                     <label class="flex items-center justify-between cursor-pointer">
-                       <div>
-                         <p class="text-sm font-medium text-[hsl(var(--foreground))]">Genera Embedding AI</p>
-                         <p class="text-xs text-[hsl(var(--muted-foreground))]">Abilita la ricerca semantica (richiede più tempo)</p>
-                       </div>
-                       <UToggle v-model="enableEmbeddings" color="primary" />
-                     </label>
+                   <div v-if="selectedEstimateId && sixPreview" class="bg-[hsl(var(--muted))] rounded-xl p-4 grid grid-cols-[1fr_auto] gap-4 items-center">
+                     <div>
+                       <p class="text-sm font-medium text-[hsl(var(--foreground))]">Genera Embedding AI</p>
+                       <p class="text-xs text-[hsl(var(--muted-foreground))]">Abilita la ricerca semantica (richiede più tempo)</p>
+                     </div>
+                     <UToggle v-model="enableEmbeddings" color="primary" />
                    </div>
 
                    <!-- Action Button -->
@@ -570,7 +665,7 @@ const navigateToProject = () => {
          <!-- TAB XPWE -->
          <template #xpwe>
             <div class="pt-4 pb-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
-              <div class="max-w-3xl mx-auto space-y-5">
+              <div class="max-w-3xl mx-auto space-y-6">
 
                  <!-- Intro Section -->
                  <div class="text-center space-y-2">
@@ -639,7 +734,7 @@ const navigateToProject = () => {
                       </div>
                       
                       <!-- Estimate Cards -->
-                      <div class="grid gap-3">
+                      <div class="grid gap-3 max-h-[35vh] overflow-y-auto pr-2 custom-scrollbar">
                         <button
                           v-for="estimate in previewXpweEstimates"
                           :key="estimate.id"
@@ -731,14 +826,12 @@ const navigateToProject = () => {
                    </div>
 
                    <!-- Options -->
-                   <div v-if="selectedXpweEstimateId && xpwePreview" class="bg-[hsl(var(--secondary))] rounded-xl p-4">
-                     <label class="flex items-center justify-between cursor-pointer">
-                       <div>
-                         <p class="text-sm font-medium text-[hsl(var(--foreground))]">Genera Embedding AI</p>
-                         <p class="text-xs text-[hsl(var(--muted-foreground))]">Abilita la ricerca semantica (richiede più tempo)</p>
-                       </div>
-                       <UToggle v-model="enableEmbeddings" color="primary" />
-                     </label>
+                   <div v-if="selectedXpweEstimateId && xpwePreview" class="bg-[hsl(var(--secondary))] rounded-xl p-4 grid grid-cols-[1fr_auto] gap-4 items-center">
+                     <div>
+                       <p class="text-sm font-medium text-[hsl(var(--foreground))]">Genera Embedding AI</p>
+                       <p class="text-xs text-[hsl(var(--muted-foreground))]">Abilita la ricerca semantica (richiede più tempo)</p>
+                     </div>
+                     <UToggle v-model="enableEmbeddings" color="primary" />
                    </div>
 
                    <!-- Action Button -->

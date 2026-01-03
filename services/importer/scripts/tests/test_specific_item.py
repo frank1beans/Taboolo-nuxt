@@ -1,8 +1,11 @@
 import asyncio
 import os
 import json
-from logic.extraction.llm_extractor import LLMExtractor
-from logic.extraction.schemas.cartongesso import CartongessoProperties
+from embedding.extraction.llm_extractor import LLMExtractor
+from embedding.extraction.schemas.cartongesso import CartongessoProperties
+
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+IMPORTER_DIR = os.path.abspath(os.path.join(SCRIPT_DIR, "..", ".."))
 
 DESCRIPTION = """C09 - Fornitura e posa di parete in cartongesso standard/lastra rinforzata e rivestimento fonoisolante con mono orditura metallica da 50 mm, avente le seguenti caratteristiche:
 
@@ -36,10 +39,13 @@ async def run_test():
     )
     
     # Save to file for easy inspection
-    output_path = os.path.join(os.path.dirname(__file__), "logic", "extraction", "c09_extraction_result.json")
+    output_dir = os.path.join(IMPORTER_DIR, "embedding", "extraction")
+    os.makedirs(output_dir, exist_ok=True)
+    output_path = os.path.join(output_dir, "c09_extraction_result.json")
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(result, f, indent=2, ensure_ascii=False)
     print(f"Result saved to: {output_path}")
 
 if __name__ == "__main__":
     asyncio.run(run_test())
+

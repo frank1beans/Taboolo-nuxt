@@ -75,7 +75,9 @@ Taboolo-nuxt/
 │   └── importer/           # Servizio Python (FastAPI)
 │       ├── api/            # Endpoint Python
 │       ├── parsers/        # Parser SIX/Excel
-│       └── logic/          # Elaborazione (embedding, clustering)
+│       └── ingestion/        # Pipeline import
+│       └── embedding/        # Embedding + LLM extraction
+│       └── analytics/        # Analisi prezzi e clustering
 │
 ├── docs/                   # 📚 Documentazione (sei qui!)
 ├── old/                    # 🗄️ Codice legacy (React) per riferimento
@@ -445,10 +447,14 @@ services/importer/
 ├── parsers/
 │   ├── six_parser.py          # Parser SIX/XML
 │   └── excel_parser.py        # Parser Excel offerte
-└── logic/
-    ├── extraction/            # LLM extraction
+└── ingestion/
+    ├── preview.py               # Preview import
+    ├── raw_import_service.py    # Raw import service
+└── embedding/
+    ├── extraction/              # LLM extraction
+└── analytics/
     ├── gravitational_clustering.py
-    └── price_analysis.py
+    ├── price_analysis.py
 ```
 
 ---

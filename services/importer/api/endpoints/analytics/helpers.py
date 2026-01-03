@@ -7,7 +7,7 @@ import re
 import hashlib
 from typing import List, Optional, Dict, Any, Tuple
 
-from logic.extraction.props_text import build_weighted_props_text
+from embedding.extraction.props_text import build_weighted_props_text
 
 
 def grav_dump(params) -> Dict[str, Any]:
@@ -154,3 +154,4 @@ def trim_extracted_properties(raw_props: Any) -> Dict[str, Dict[str, Any]]:
             }
 
     return trimmed
+

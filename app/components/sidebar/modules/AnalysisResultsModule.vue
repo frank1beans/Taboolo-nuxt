@@ -123,7 +123,7 @@ const displayedCategories = computed(() => {
           Esegui Analisi Prezzi
         </UButton>
 
-        <div v-if="analysisError" class="text-xs text-red-500 mt-2 bg-red-50 p-2 rounded">
+        <div v-if="analysisError" class="text-xs text-[hsl(var(--destructive))] mt-2 bg-[hsl(var(--destructive-light))] p-2 rounded">
           {{ analysisError }}
         </div>
       </div>
@@ -131,9 +131,11 @@ const displayedCategories = computed(() => {
       <div v-if="analysisResult" class="mt-6 border-t border-[hsl(var(--border))] pt-4">
         <div class="flex items-center justify-between mb-3">
           <h3 class="panel-section-header">Risultati</h3>
-          <UBadge :color="analysisResult.outliers_found > 0 ? 'error' : 'success'" size="xs" variant="soft">
-            {{ analysisResult.outliers_found }} anomalie ({{ outlierPercent }}%)
-          </UBadge>
+          <CountBadge 
+            :count="analysisResult.outliers_found" 
+            :label="`(${outlierPercent}%)`"
+            :color="analysisResult.outliers_found > 0 ? 'destructive' : 'success'"
+          />
         </div>
 
         <div class="text-[10px] text-[hsl(var(--muted-foreground))] mb-3 grid grid-cols-2 gap-2">
@@ -163,7 +165,7 @@ const displayedCategories = computed(() => {
           <div v-for="cat in displayedCategories" :key="cat.wbs6_code" class="bg-[hsl(var(--muted)/0.2)] rounded p-2 text-xs">
             <div class="flex justify-between items-start mb-1">
               <span class="font-medium truncate flex-1 mr-2" :title="cat.wbs6_description">{{ cat.wbs6_description || cat.wbs6_code }}</span>
-              <span class="text-red-500 font-mono font-bold">{{ cat.outlier_count }}</span>
+              <span class="text-[hsl(var(--destructive))] font-mono font-bold">{{ cat.outlier_count }}</span>
             </div>
             <div class="text-[10px] text-[hsl(var(--muted-foreground))] flex justify-between">
               <span>{{ cat.item_count }} elementi</span>

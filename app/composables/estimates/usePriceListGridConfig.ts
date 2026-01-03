@@ -85,7 +85,7 @@ export const usePriceListGridConfig = (_rowData: Ref<ApiPriceListItem[]>) => {
                 field: 'total_quantity',
                 headerName: 'Quantità Tot.',
                 width: 120,
-                cellClass: 'ag-right-aligned-cell font-bold text-blue-600 dark:text-blue-400',
+                cellClass: 'ag-right-aligned-cell font-bold text-[hsl(var(--info))]',
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 valueFormatter: (params: any) =>
                     formatNumber(params.value, { minimumFractionDigits: 2, maximumFractionDigits: 2, fallback: '-' }),
@@ -95,7 +95,7 @@ export const usePriceListGridConfig = (_rowData: Ref<ApiPriceListItem[]>) => {
                 field: 'total_amount',
                 headerName: 'Importo Tot.',
                 width: 140,
-                cellClass: 'ag-right-aligned-cell font-bold text-emerald-600 dark:text-emerald-400',
+                cellClass: 'ag-right-aligned-cell font-bold text-[hsl(var(--success))]',
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 valueFormatter: (params: any) => formatCurrency(params.value, { fallback: '-' }),
                 filter: 'agNumberColumnFilter',

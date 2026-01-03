@@ -113,8 +113,8 @@ onUnmounted(() => {
           <div class="flex items-center justify-center">
             <button
               type="button"
-              class="w-full flex items-center justify-center gap-2 p-1.5 rounded-md text-[10px] uppercase tracking-wider font-semibold text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted)/0.3)] hover:text-[hsl(var(--foreground))] transition-all group"
-              :title="isCollapsed ? 'Espandi sidebar' : 'Nascondi sidebar'"
+              class="w-full flex items-center justify-center gap-2 p-1.5 rounded-md text-micro uppercase tracking-wider font-semibold text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted)/0.3)] hover:text-[hsl(var(--foreground))] transition-all group"
+              :aria-label="isCollapsed ? 'Espandi sidebar' : 'Nascondi sidebar'"
               @click="toggleCollapsed"
             >
               <Icon 

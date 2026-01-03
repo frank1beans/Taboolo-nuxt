@@ -39,7 +39,7 @@ const runAction = (key: keyof typeof actions.value) => {
         variant="ghost"
         icon="i-heroicons-list-bullet"
         size="xs"
-        class="transition-colors hover:bg-emerald-50 dark:hover:bg-emerald-950/30 hover:text-emerald-600"
+        class="transition-colors hover:bg-[hsl(var(--success-light))] hover:text-[hsl(var(--success))]"
         @click="runAction('viewPricelist')"
       />
     </UTooltip>
@@ -51,7 +51,7 @@ const runAction = (key: keyof typeof actions.value) => {
         variant="ghost"
         icon="i-heroicons-document-text"
         size="xs"
-        class="transition-colors hover:bg-blue-50 dark:hover:bg-blue-950/30 hover:text-blue-600"
+        class="transition-colors hover:bg-[hsl(var(--info-light))] hover:text-[hsl(var(--info))]"
         @click="runAction('viewOffer')"
       />
     </UTooltip>

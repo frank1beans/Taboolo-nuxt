@@ -95,6 +95,7 @@ export interface ApiOfferSummary {
   company_name?: string | null;
   round_number?: number | null;
   status?: string;
+  mode?: 'detailed' | 'aggregated' | string | null;
   total_amount?: number | null;
   is_baseline?: boolean;
 }

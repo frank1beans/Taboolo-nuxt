@@ -57,7 +57,9 @@ def main():
         
     print(f"Found {len(candidates)} candidates.")
     
-    output_path = os.path.join(script_dir, "logic", "extraction", "goldenset_candidates.json")
+    output_dir = os.path.join(script_dir, "embedding", "extraction")
+    os.makedirs(output_dir, exist_ok=True)
+    output_path = os.path.join(output_dir, "goldenset_candidates.json")
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(candidates, f, indent=2, ensure_ascii=False)
         

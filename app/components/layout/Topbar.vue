@@ -8,7 +8,7 @@ const toggleTheme = () => {
 </script>
 
 <template>
-  <header class="h-[56px] w-full flex items-center justify-between px-4 bg-[hsl(var(--background))] border-b border-[hsl(var(--border))] z-40 sticky top-0">
+  <header class="w-full h-full flex items-center justify-between px-4 bg-[hsl(var(--card))] border-b border-[hsl(var(--border))] z-40">
     <!-- Left / Center: Breadcrumb Area (Now Actions/Search Area) -->
     <div class="flex items-center min-w-0 flex-1 mr-4 gap-4">
       <slot name="start">
@@ -26,7 +26,7 @@ const toggleTheme = () => {
 
           <UButton
             :icon="isDark ? 'i-heroicons-sun-20-solid' : 'i-heroicons-moon-20-solid'"
-            color="gray"
+            color="neutral"
             variant="ghost"
             aria-label="Theme Toggle"
             @click="toggleTheme"

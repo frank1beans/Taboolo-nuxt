@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 # Add current dir to path to find logic modules
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from logic.gravitational_clustering import GravitationalClustering
+from analytics.gravitational_clustering import GravitationalClustering
 
 def generate_synthetic_data(n_samples=100, dim=10):
     np.random.seed(42)
@@ -116,3 +116,4 @@ def test_pipeline():
 
 if __name__ == "__main__":
     test_pipeline()
+

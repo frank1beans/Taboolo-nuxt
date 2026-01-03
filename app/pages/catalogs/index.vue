@@ -13,11 +13,14 @@ import type { ApiPriceCatalogSummary, ApiPriceListItem, ApiPriceListItemSearchRe
 import DataGridPage from '~/components/layout/DataGridPage.vue'
 import PageToolbar from '~/components/layout/PageToolbar.vue'
 import { usePriceListGridConfig } from '~/composables/estimates/usePriceListGridConfig'
-import { useSidebarModules } from '~/composables/useSidebarModules'
-import { useAppSidebar } from '~/composables/useAppSidebar'
+import { useSidebarModules, usePageSidebarModule } from '~/composables/useSidebarModules'
 import WbsModule from '~/components/sidebar/modules/WbsModule.vue'
 import { useWbsTree } from '~/composables/useWbsTree'
-import { catalogApi } from '~/lib/api/catalog'
+// import { catalogApi } from '~/lib/api/catalog' // Replaced by queryApi
+import { queryApi } from '~/utils/queries'
+import { QueryKeys } from '~/types/queries'
+import { useActionsStore } from '~/stores/actions'
+import type { Action } from '~/types/actions'
 
 // Standardized header: removed breadcrumb
 definePageMeta({
@@ -25,8 +28,7 @@ definePageMeta({
 })
 
 const _colorMode = useColorMode()
-const { registerModule, unregisterModule, toggleVisibility, isVisible: sidebarVisible, setActiveModule, showSidebar } = useSidebarModules()
-const { showDefaultSidebar } = useAppSidebar()
+const { toggleVisibility, isVisible: sidebarVisible, setActiveModule, showSidebar } = useSidebarModules()
 
 type CatalogWbsEntry = {
   wbs6_code?: string | null
@@ -42,9 +44,19 @@ type CatalogRowParams = { data?: ApiPriceListItem }
 const serverTotal = ref(0)
 const gridApi = ref<GridApi | null>(null)
 const { exportToXlsx } = useDataGridExport(gridApi)
+const actionsStore = useActionsStore()
+// actionOwner already defined below? No, I see it defined at line 46 and 48?
+// The file view showed:
+// 46: const actionOwner = 'page:catalogs-index'
+// 48: const actionOwner = 'page:catalogs-index'
+// I will remove the first occurrence or just deduplicate.
+// Replaces lines 46-50.
+const actionOwner = 'page:catalogs-index'
 
-const { data: wbsEntries } = await useFetch<CatalogWbsEntry[]>('/api/catalog/wbs')
-const { data: catalogSummary } = await useFetch<ApiPriceCatalogSummary>('/api/catalog/summary')
+const { data: wbsRes } = await useAsyncData('catalog-wbs', () => queryApi.fetch(QueryKeys.CATALOG_WBS_SUMMARY, {}))
+const { data: catalogSummary } = await useAsyncData('catalog-summary', () => queryApi.fetch(QueryKeys.CATALOG_SUMMARY, {}))
+
+const wbsEntries = computed(() => wbsRes.value?.items ?? [])
 
 const searchText = ref('')
 const debouncedSearch = ref('')
@@ -79,12 +91,14 @@ const runSemanticSearch = async (query: string) => {
   semanticResults.value = []
 
   try {
-    const results = await catalogApi.semanticSearch({
+    const response = await queryApi.fetch(QueryKeys.CATALOG_SEMANTIC_SEARCH, {
       query,
-      topK: SEMANTIC_TOP_K,
+      limit: SEMANTIC_TOP_K,
+      // threshold?
     })
+    const results = response.items
     if (token !== searchToken) return
-    semanticResults.value = results
+    semanticResults.value = results as unknown as ApiPriceListItemSearchResult[]
     lastSemanticQuery.value = query
   } catch {
     if (token !== searchToken) return
@@ -194,29 +208,71 @@ const handleReset = () => {
   gridApi.value?.onFilterChanged?.()
 }
 
-const handleExport = () => {
-  exportToXlsx('listino-globale')
+const registerAction = (action: Action) => {
+  actionsStore.registerAction(action, { owner: actionOwner, overwrite: true })
 }
 
-// Lifecycle
 onMounted(() => {
-  // Register WBS Module
-  registerModule({
-    id: 'wbs',
-    label: 'WBS',
-    icon: 'heroicons:squares-2x2',
-    component: WbsModule,
-    props: {
-      nodes: wbsNodes,
-      selectedNodeId: computed(() => selectedWbsNode.value?.id ?? null),
-      onNodeSelected: (node: WbsTreeItem | null) => onWbsNodeSelected(node),
-    }
+  registerAction({
+    id: 'grid.exportExcel',
+    label: 'Esporta in Excel',
+    description: 'Esporta dati in Excel',
+    category: 'Tabelle',
+    scope: 'selection',
+    icon: 'i-heroicons-arrow-down-tray',
+    keywords: ['export', 'excel', 'tabella'],
+    handler: () => exportToXlsx('listino-globale'),
   })
-  setActiveModule('wbs')
+
+  registerAction({
+    id: 'catalog.resetFilters',
+    label: 'Reset filtri catalogo',
+    description: 'Pulisce ricerca e filtri del catalogo',
+    category: 'Cataloghi',
+    scope: 'global',
+    icon: 'i-heroicons-arrow-path',
+    keywords: ['reset', 'filtri', 'catalogo'],
+    handler: () => handleReset(),
+  })
+
+  registerAction({
+    id: 'catalog.toggleWbsSidebar',
+    label: 'Mostra/Nascondi WBS',
+    description: 'Attiva o disattiva la sidebar WBS',
+    category: 'Cataloghi',
+    scope: 'global',
+    icon: 'i-heroicons-view-columns',
+    keywords: ['wbs', 'sidebar'],
+    handler: () => toggleWbsSidebar(),
+  })
+
+  registerAction({
+    id: 'catalog.clearWbsSelection',
+    label: 'Rimuovi filtro WBS',
+    description: 'Deseleziona il nodo WBS attivo',
+    category: 'Cataloghi',
+    scope: 'selection',
+    icon: 'i-heroicons-x-mark',
+    keywords: ['wbs', 'filtro'],
+    handler: () => onWbsNodeSelected(null),
+  })
 })
 
 onUnmounted(() => {
-  unregisterModule('wbs')
+  actionsStore.unregisterOwner(actionOwner)
+})
+
+// Register WBS Module using the route-scoped helper
+usePageSidebarModule({
+  id: 'wbs',
+  label: 'WBS',
+  icon: 'heroicons:squares-2x2',
+  component: WbsModule,
+  props: {
+    nodes: wbsNodes,
+    selectedNodeId: computed(() => selectedWbsNode.value?.id ?? null),
+    onNodeSelected: (node: WbsTreeItem | null) => onWbsNodeSelected(node),
+  }
 })
 
 const toggleWbsSidebar = () => {
@@ -230,16 +286,32 @@ const toggleWbsSidebar = () => {
 
 const fetchCatalogRows = async (params: DataGridFetchParams) => {
   const sortModel = params.sortModel?.[0] as { colId?: string; sort?: 'asc' | 'desc' } | undefined
-  const response = await catalogApi.getGlobalPaged({
+  
+  // Map grid filters to query Params
+  const wbs6 = [] as string[];
+  const wbs7 = [] as string[];
+  // Extract WBS filters from params.filterModel if present (custom logic might be needed if complex)
+  // Current implementation uses custom applyWbsFilter which sets `wbs6_code` and `wbs7_code` in filterModel.
+  
+  const filters: any = params.filterModel || {};
+  if (filters.wbs6_code) wbs6.push(filters.wbs6_code.filter);
+  if (filters.wbs7_code) wbs7.push(filters.wbs7_code.filter);
+
+  const response = await queryApi.fetch(QueryKeys.CATALOG_ROWS_PAGED, {
     page: params.page,
-    pageSize: params.pageSize,
+    limit: params.pageSize,
     search: params.quickFilter,
-    sort: sortModel?.colId,
-    order: sortModel?.sort,
-    filters: params.filterModel,
+    sort: sortModel ? (sortModel.sort === 'desc' ? '-' : '') + sortModel.colId : undefined,
+    wbs6: wbs6.length ? wbs6 : undefined,
+    wbs7: wbs7.length ? wbs7 : undefined,
+    // Add business_unit key if filtered?
   })
+  
   serverTotal.value = response.total
-  return response
+  return {
+     rows: response.items,
+     total: response.total
+  }
 }
 
 const applyWbsFilter = (node: typeof selectedWbsNode.value) => {
@@ -283,7 +355,7 @@ watch(selectedWbsNode, (node) => {
     :key="isSemanticSearch ? 'semantic' : 'server'"
     title="Listino Globale"
     :grid-config="gridConfig"
-    :row-data="gridRowData"
+    :row-data="gridRowData as any"
     :loading="loading"
     empty-state-title="Nessuna voce trovata"
     empty-state-message="Il catalogo globale non contiene ancora voci."
@@ -308,14 +380,9 @@ watch(selectedWbsNode, (node) => {
 
     <!-- Header Actions: Primary Page Actions -->
     <template #actions>
-      <UButton
-        :icon="sidebarVisible ? 'i-heroicons-view-columns' : 'i-heroicons-view-columns'"
-        :color="sidebarVisible ? 'primary' : 'neutral'"
-        variant="ghost"
-        size="sm"
-        :label="sidebarVisible ? 'WBS' : 'Mostra WBS'"
-        :title="sidebarVisible ? 'Nascondi WBS' : 'Mostra WBS'"
-        @click="toggleWbsSidebar"
+      <ActionList
+        layout="toolbar"
+        :action-ids="['catalog.toggleWbsSidebar']"
       />
     </template>
 
@@ -340,30 +407,16 @@ watch(selectedWbsNode, (node) => {
                   size="xs"
                   title="Rimuovi filtro WBS"
                   class="hover:bg-[hsl(var(--primary)/0.2)]"
-                  @click="onWbsNodeSelected(null)"
+                  @click="actionsStore.executeAction('catalog.clearWbsSelection')"
                 />
               </UBadge>
           </template>
 
           <template #right>
-            <button
-               v-if="searchText || selectedWbsNode"
-               class="flex items-center justify-center h-9 px-4 rounded-full text-sm font-medium text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--background))] hover:text-[hsl(var(--foreground))] transition-colors"
-               @click="handleReset"
-            >
-              <Icon name="heroicons:arrow-path" class="w-4 h-4 mr-2" />
-              Reset
-            </button>     
-
-            <UButton
-               color="gray"
-               variant="ghost"
-               icon="i-heroicons-arrow-down-tray"
-               class="text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
-               @click="handleExport"
-            >
-               Esporta
-            </UButton>
+            <ActionList
+              layout="toolbar"
+              :action-ids="['catalog.resetFilters', 'grid.exportExcel']"
+            />
           </template>
         </PageToolbar>
         </Teleport>

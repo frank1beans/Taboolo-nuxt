@@ -61,7 +61,7 @@ const getNodeMeta = (node?: NavigationNode | null) => {
   const inferredType = explicit.type ?? node.id.split(':')[0]
   return {
     type: inferredType,
-    subtitle: explicit.subtitle ?? typeLabels[inferredType],
+    subtitle: explicit.subtitle ?? (inferredType ? typeLabels[inferredType] : undefined),
     hint: explicit.hint,
   }
 }
@@ -249,6 +249,7 @@ const hasChildren = (node: NavigationNode) => Boolean(node.children?.length)
 
       <!-- Tree Items -->
       <div v-else class="space-y-2">
+        <!-- Header -->
         <div class="px-2">
           <p class="text-[11px] text-[hsl(var(--muted-foreground))] leading-tight">
             <span class="font-medium text-[hsl(var(--foreground))]">{{ contextTitle }}</span>
@@ -262,7 +263,7 @@ const hasChildren = (node: NavigationNode) => Boolean(node.children?.length)
             <NuxtLink
               v-if="item.node.to"
               :to="item.node.to"
-              class="group relative flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors outline-none select-none"
+              class="group relative flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors select-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))]"
               :class="[
                 item.node.id === resolvedActiveNodeId
                   ? 'bg-[hsl(var(--primary))/0.12] text-[hsl(var(--primary))] font-semibold'

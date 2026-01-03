@@ -46,7 +46,7 @@ defineSlots<{
         </h1>
 
         <!-- Meta Line - inline, subtle -->
-        <div v-if="meta || $slots.meta" class="text-[11px] text-[hsl(var(--muted-foreground))] leading-tight flex items-center gap-2 truncate">
+        <div v-if="meta || $slots.meta" class="text-xs text-[hsl(var(--muted-foreground))] leading-tight flex items-center gap-2 truncate">
           <slot name="meta">
             {{ meta }}
           </slot>
@@ -63,7 +63,7 @@ defineSlots<{
     <!-- Divider - very subtle or none -->
     <div 
         v-if="divider" 
-        class="w-full border-b border-[hsl(var(--border)/0.3)] mt-3 mb-2"
+        class="w-full border-b border-[hsl(var(--border)/0.3)] mt-2 mb-1"
     />
 
     <!-- Optional Toolbar -->

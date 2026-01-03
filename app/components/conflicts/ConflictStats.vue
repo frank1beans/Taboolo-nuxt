@@ -20,18 +20,18 @@ const emit = defineEmits<{
       <span class="text-[10px] text-[hsl(var(--muted-foreground))] uppercase">Conflitti</span>
     </div>
     <div 
-      class="flex flex-col items-center p-2 rounded-lg bg-amber-500/10 border border-amber-500/20 cursor-pointer hover:bg-amber-500/20 transition-colors"
+      class="flex flex-col items-center p-2 rounded-lg bg-[hsl(var(--warning)/0.1)] border border-[hsl(var(--warning)/0.2)] cursor-pointer hover:bg-[hsl(var(--warning)/0.2)] transition-colors"
       @click="emit('open-pending')"
     >
-      <span class="text-xl font-bold text-amber-500">{{ pendingCount }}</span>
-      <span class="text-[10px] text-amber-600 uppercase">Sospesi</span>
+      <span class="text-xl font-bold text-[hsl(var(--warning))]">{{ pendingCount }}</span>
+      <span class="text-[10px] text-[hsl(var(--warning))] uppercase">Sospesi</span>
     </div>
     <div 
-      class="flex flex-col items-center p-2 rounded-lg bg-blue-500/10 border border-blue-500/20 cursor-pointer hover:bg-blue-500/20 transition-colors"
+      class="flex flex-col items-center p-2 rounded-lg bg-[hsl(var(--info)/0.1)] border border-[hsl(var(--info)/0.2)] cursor-pointer hover:bg-[hsl(var(--info)/0.2)] transition-colors"
       @click="emit('open-addendum')"
     >
-      <span class="text-xl font-bold text-blue-500">{{ addendumCount }}</span>
-      <span class="text-[10px] text-blue-600 uppercase">Addendum</span>
+      <span class="text-xl font-bold text-[hsl(var(--info))]">{{ addendumCount }}</span>
+      <span class="text-[10px] text-[hsl(var(--info))] uppercase">Addendum</span>
     </div>
   </div>
 </template>

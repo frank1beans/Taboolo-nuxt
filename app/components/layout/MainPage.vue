@@ -18,7 +18,8 @@ defineProps<Props>()
     <!-- Main Content Area -->
     <div class="flex-1 min-w-0 min-h-0 flex flex-col h-full">
       <!-- Header Slot - Notion style: clean, simple padding -->
-      <div v-if="$slots.header" class="surface-card page-header-sticky workspace-gutter flex-shrink-0">
+      <!-- Header Slot - Notion style: clean, simple padding -->
+      <div v-if="$slots.header" class="surface-card page-header-sticky px-[var(--workspace-gutter-x)] py-2 flex-shrink-0">
         <slot name="header"/>
       </div>
 
@@ -29,7 +30,7 @@ defineProps<Props>()
           <UIcon name="i-heroicons-arrow-path" class="w-8 h-8 animate-spin text-primary" />
         </div>
         <!-- Content wrapper with consistent gutter -->
-        <div class="flex-1 min-h-0 flex flex-col px-[var(--workspace-gutter-x)] pb-4">
+        <div class="flex-1 min-h-0 flex flex-col px-[var(--workspace-gutter-x)] pt-2 pb-4">
           <slot/>
         </div>
       </div>

@@ -28,10 +28,10 @@ const emit = defineEmits<{
     leave-from-class="translate-x-0" 
     leave-to-class="translate-x-full"
   >
-    <div v-if="isOpen && selectedPoint" class="absolute top-0 right-0 h-full w-80 bg-white dark:bg-gray-900 shadow-2xl border-l border-gray-200 dark:border-gray-800 z-50 flex flex-col">
+    <div v-if="isOpen && selectedPoint" class="absolute top-0 right-0 h-full w-80 bg-[hsl(var(--card))] shadow-2xl border-l border-[hsl(var(--border))] z-50 flex flex-col">
       
       <!-- Header -->
-      <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-800 flex justify-between items-center bg-gray-50/80 dark:bg-gray-800/50">
+      <div class="px-4 py-3 border-b border-[hsl(var(--border))] flex justify-between items-center bg-[hsl(var(--secondary)/0.8)]">
         <div class="flex items-center gap-2 min-w-0">
           <span class="w-3 h-3 rounded-full flex-shrink-0" :style="{ backgroundColor: getClusterColor(selectedPoint.cluster) }"/>
           <span class="font-bold text-sm truncate">Cluster {{ selectedPoint.cluster }}</span>
@@ -62,53 +62,53 @@ const emit = defineEmits<{
         
         <!-- Description -->
         <div>
-          <p class="text-sm text-gray-700 dark:text-gray-200 leading-relaxed">
+          <p class="text-sm text-[hsl(var(--foreground))] leading-relaxed">
             {{ selectedPoint.label }}
           </p>
         </div>
 
         <!-- Key Info Cards -->
         <div class="grid grid-cols-2 gap-2">
-          <div v-if="selectedPoint.price" class="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-100 dark:border-green-800">
-            <span class="text-[10px] text-green-600 dark:text-green-400 uppercase font-bold block mb-1">Prezzo</span>
-            <span class="text-lg font-bold text-green-700 dark:text-green-300">{{ formatCurrency(selectedPoint.price) }}</span>
+          <div v-if="selectedPoint.price" class="p-3 bg-[hsl(var(--success-light))] rounded-lg border border-[hsl(var(--success)/0.3)]">
+            <span class="text-micro text-[hsl(var(--success))] uppercase font-bold block mb-1">Prezzo</span>
+            <span class="text-lg font-bold text-[hsl(var(--success))]">{{ formatCurrency(selectedPoint.price) }}</span>
           </div>
-          <div v-if="selectedPoint.unit" class="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-            <span class="text-[10px] text-gray-500 uppercase font-bold block mb-1">Unità</span>
-            <span class="text-lg font-bold text-gray-700 dark:text-gray-300">{{ selectedPoint.unit }}</span>
+          <div v-if="selectedPoint.unit" class="p-3 bg-[hsl(var(--secondary))] rounded-lg border border-[hsl(var(--border))]">
+            <span class="text-micro text-[hsl(var(--muted-foreground))] uppercase font-bold block mb-1">Unità</span>
+            <span class="text-lg font-bold text-[hsl(var(--foreground))]">{{ selectedPoint.unit }}</span>
           </div>
         </div>
 
         <!-- Nearest Neighbors -->
         <div v-if="currentNeighbors.length > 0">
           <div class="flex items-center justify-between mb-2">
-            <h4 class="text-[10px] font-bold uppercase text-gray-400">Articoli simili</h4>
-            <span class="text-[10px] text-gray-400">distanza embedding</span>
+            <h4 class="panel-section-header">Articoli simili</h4>
+            <span class="text-micro text-[hsl(var(--muted-foreground))]">distanza embedding</span>
           </div>
           <div class="space-y-1.5">
             <button 
               v-for="neighbor in currentNeighbors" 
               :key="neighbor.id"
-              class="w-full text-left p-2 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-primary-300 dark:hover:border-primary-600 transition-colors group"
+              class="w-full text-left p-2 bg-[hsl(var(--secondary))] rounded-lg border border-[hsl(var(--border))] hover:border-[hsl(var(--primary))] transition-colors group"
               @click="onNavigateNeighbor(neighbor.id)"
             >
               <div class="flex items-center justify-between mb-1">
                 <span class="flex items-center gap-1.5">
                   <span class="w-2 h-2 rounded-full" :style="{ backgroundColor: getClusterColor(neighbor.clusterId ?? neighbor.cluster) }"/>
-                  <span class="text-[10px] font-mono text-gray-400">{{ neighbor.id.slice(-6) }}</span>
+                  <span class="text-micro font-mono text-[hsl(var(--muted-foreground))]">{{ neighbor.id.slice(-6) }}</span>
                 </span>
-                <span class="text-[10px] text-gray-400">{{ neighbor.distance.toFixed(3) }}</span>
+                <span class="text-micro text-[hsl(var(--muted-foreground))]">{{ neighbor.distance.toFixed(3) }}</span>
               </div>
-              <p class="text-xs text-gray-700 dark:text-gray-300 line-clamp-2 group-hover:text-primary-600">{{ neighbor.label }}</p>
-              <span v-if="neighbor.amount" class="text-[10px] text-green-600 mt-1 block">{{ formatCurrency(neighbor.amount) }}</span>
+              <p class="text-xs text-[hsl(var(--foreground))] line-clamp-2 group-hover:text-[hsl(var(--primary))]">{{ neighbor.label }}</p>
+              <span v-if="neighbor.amount" class="text-micro text-[hsl(var(--success))] mt-1 block">{{ formatCurrency(neighbor.amount) }}</span>
             </button>
           </div>
         </div>
 
         <!-- Technical Details (Collapsible) -->
         <details class="text-xs">
-          <summary class="text-gray-400 cursor-pointer hover:text-gray-600">Dettagli tecnici</summary>
-          <div class="mt-2 p-2 bg-gray-50 dark:bg-gray-800 rounded font-mono text-[10px] text-gray-500 space-y-1">
+          <summary class="text-[hsl(var(--muted-foreground))] cursor-pointer hover:text-[hsl(var(--foreground))]">Dettagli tecnici</summary>
+          <div class="mt-2 p-2 bg-[hsl(var(--secondary))] rounded font-mono text-micro text-[hsl(var(--muted-foreground))] space-y-1">
             <div>ID: {{ selectedPoint.id }}</div>
             <div>Coord: [{{ selectedPoint.x?.toFixed(4) }}, {{ selectedPoint.y?.toFixed(4) }}{{ mode === '3d' ? `, ${selectedPoint.z?.toFixed(4)}` : '' }}]</div>
           </div>

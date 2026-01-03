@@ -59,11 +59,11 @@ const AlertTypeRenderer = {
       const type = String(props.params.value ?? '');
       const label = typeLabels[type] || type;
       let iconName = 'i-heroicons-exclamation-circle';
-      let colorClass = 'text-yellow-500';
+      let colorClass = 'text-[hsl(var(--warning))]';
 
-      if (type === 'price_mismatch') { iconName = 'i-heroicons-currency-euro'; colorClass = 'text-orange-500'; }
-      if (type === 'quantity_mismatch') { iconName = 'i-heroicons-scale'; colorClass = 'text-blue-500'; }
-      if (type === 'code_mismatch') { iconName = 'i-heroicons-qr-code'; colorClass = 'text-purple-500'; }
+      if (type === 'price_mismatch') { iconName = 'i-heroicons-currency-euro'; colorClass = 'text-[hsl(var(--warning))]'; }
+      if (type === 'quantity_mismatch') { iconName = 'i-heroicons-scale'; colorClass = 'text-[hsl(var(--info))]'; }
+      if (type === 'code_mismatch') { iconName = 'i-heroicons-qr-code'; colorClass = 'text-[hsl(var(--primary))]'; }
       
       return h('div', { class: 'flex items-center gap-2' }, [
         h(UIcon, { name: iconName, class: `w-5 h-5 ${colorClass}` }),
@@ -94,7 +94,7 @@ const ActionsRenderer = {
               variant: 'ghost',
               icon: 'i-heroicons-check-circle',
               size: 'xs',
-              class: "text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-950/30",
+              class: "text-[hsl(var(--success))] hover:bg-[hsl(var(--success-light))]",
               onClick: (e: Event) => { e.stopPropagation(); emit('resolve', row); }
             })
         }));
@@ -108,7 +108,7 @@ const ActionsRenderer = {
               variant: 'ghost',
               icon: 'i-heroicons-eye-slash',
               size: 'xs',
-              class: "text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800",
+              class: "text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]",
               onClick: (e: Event) => { e.stopPropagation(); emit('ignore', row); }
             })
         }));
@@ -122,7 +122,7 @@ const ActionsRenderer = {
               variant: 'ghost',
               icon: 'i-heroicons-arrow-path',
               size: 'xs',
-              class: "text-blue-400 hover:text-blue-600 hover:bg-blue-50",
+              class: "text-[hsl(var(--info))] hover:bg-[hsl(var(--info-light))]",
                onClick: (e: Event) => { e.stopPropagation(); emit('reopen', row); }
             })
         }));
@@ -211,7 +211,7 @@ const gridConfig = computed<DataGridConfig>(() => ({
          const expectedLabel = d.type === 'price_mismatch' ? 'Listino' : 'Target';
          
          const isNegative = d.delta !== null && typeof d.delta === 'number' && d.delta < 0;
-         const deltaColor = isNegative ? 'text-emerald-600' : 'text-red-500'; // Lower price is usually better/green? Depends on context. For price mismatch usually we want match.
+         const deltaColor = isNegative ? 'text-[hsl(var(--success))]' : 'text-[hsl(var(--destructive))]'; // Lower price is usually better/green? Depends on context. For price mismatch usually we want match.
          // If price mismatch: Actual (Offer) vs Target (Estimate). 
          // If Offer < Estimate -> Green (Savings). If Offer > Estimate -> Red (Over budget).
          // Delta = Actual - Expected. So negative delta = Savings.
@@ -246,9 +246,9 @@ const gridConfig = computed<DataGridConfig>(() => ({
         const status = String(params.value || 'open');
         const label = statusLabels[status];
         
-        let bgClass = "bg-yellow-50 text-yellow-600 border-yellow-200";
-        if (status === 'resolved') bgClass = "bg-emerald-50 text-emerald-600 border-emerald-200";
-        if (status === 'ignored') bgClass = "bg-gray-50 text-gray-500 border-gray-200";
+        let bgClass = "bg-[hsl(var(--warning-light))] text-[hsl(var(--warning))] border-[hsl(var(--warning)/0.3)]";
+        if (status === 'resolved') bgClass = "bg-[hsl(var(--success-light))] text-[hsl(var(--success))] border-[hsl(var(--success)/0.3)]";
+        if (status === 'ignored') bgClass = "bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))] border-[hsl(var(--border))]";
         
         return `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${bgClass}">${label}</span>`;
       }
@@ -289,13 +289,14 @@ const emitGridReady = (params: GridReadyEvent<ApiOfferAlert>) => emit('grid-read
 </script>
 
 <template>
-  <div class="flex-1 min-h-0 w-full rounded-xl overflow-hidden border border-[hsl(var(--border))] bg-[hsl(var(--card))] shadow-sm flex flex-col">
+  <div class="flex-1 min-h-0 w-full rounded-[var(--card-radius)] overflow-hidden border border-[hsl(var(--border))] bg-[hsl(var(--card))] shadow-sm flex flex-col">
     <DataGrid
       :config="gridConfig"
       :row-data="alerts"
       :loading="loading"
       :custom-components="customComponents"
       row-selection="multiple"
+      selection-key="conflicts"
       height="100%"
       class="flex-1 min-h-0"
       @grid-ready="emitGridReady"

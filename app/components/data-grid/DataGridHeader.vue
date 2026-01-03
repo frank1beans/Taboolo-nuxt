@@ -1,37 +1,21 @@
 <template>
   <!-- Root container with group class for hover detection -->
-  <div class="flex items-center gap-2 h-full group/header">
-    <div class="flex items-center gap-1 text-[11px] font-semibold whitespace-nowrap">
-      <!-- Column Label -->
-      <span class="text-[11px] font-semibold uppercase tracking-wide text-[hsl(var(--muted-foreground))]">
-        {{ params.displayName }}
-      </span>
-      
-      <!-- Active Filter Indicator Dot - Always visible when filter is active -->
-      <span
-        v-if="isFilterActive"
-        class="w-1.5 h-1.5 rounded-full bg-[hsl(var(--acc-primary,152_60%_45%))] flex-shrink-0"
-        :title="filterTooltip"
-      />
-      
-      <!-- Active Sort Indicator Dot - Always visible when sorted -->
-      <span
-        v-if="sortState && !isFilterActive"
-        class="w-1.5 h-1.5 rounded-full bg-[hsl(var(--primary))] flex-shrink-0"
-        :title="`Ordinato: ${sortState === 'asc' ? 'A-Z' : 'Z-A'}`"
-      />
-    </div>
-
-    <!-- Hover-only controls container -->
-    <div class="flex items-center gap-0.5 opacity-0 group-hover/header:opacity-100 transition-opacity duration-150">
-      <!-- Sort Button -->
+  <div class="flex items-center gap-1.5 h-full w-full min-w-0 group/header">
+    <!-- Column Label - flexible to allow truncation -->
+    <span class="text-xs font-semibold uppercase tracking-wide text-[hsl(var(--muted-foreground))] truncate flex-1 min-w-0">
+      {{ params.displayName }}
+    </span>
+    
+    <!-- Controls container - always visible -->
+    <div class="flex items-center gap-0.5 flex-shrink-0">
+      <!-- Sort Button - Always visible, low opacity when inactive -->
       <button
         v-if="isSortable"
         :class="[
           'inline-flex items-center justify-center w-5 h-5 rounded transition-all duration-100 focus:outline-none',
           sortState
-            ? 'text-[hsl(var(--primary))] hover:bg-[hsl(var(--primary)/0.1)]'
-            : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted)/0.5)]'
+            ? 'opacity-100 text-[hsl(var(--primary))] hover:bg-[hsl(var(--primary)/0.1)]'
+            : 'opacity-35 hover:opacity-100 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted)/0.5)]'
         ]"
         type="button"
         :aria-label="`Ordina per ${params.displayName}`"
@@ -44,14 +28,14 @@
         />
       </button>
       
-      <!-- Filter Button -->
+      <!-- Filter Button - Always visible, low opacity when inactive -->
       <button
         v-if="isFilterable"
         :class="[
           'inline-flex items-center justify-center w-5 h-5 rounded transition-all duration-100 focus:outline-none',
           isFilterActive
-            ? 'text-[hsl(var(--acc-primary,152_60%_45%))] hover:bg-[hsl(var(--acc-primary,152_60%_45%)/0.1)]'
-            : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted)/0.5)]'
+            ? 'opacity-100 text-[hsl(var(--acc-primary,152_60%_45%))] hover:bg-[hsl(var(--acc-primary,152_60%_45%)/0.1)]'
+            : 'opacity-35 hover:opacity-100 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted)/0.5)]'
         ]"
         type="button"
         :aria-label="filterTooltip"
@@ -121,8 +105,8 @@ const cycleSort = () => {
 };
 
 const sortIconName = computed(() => {
-  if (sortState.value === 'asc') return 'heroicons:bars-arrow-up';
-  if (sortState.value === 'desc') return 'heroicons:bars-arrow-down';
+  if (sortState.value === 'asc') return 'heroicons:bars-arrow-down';
+  if (sortState.value === 'desc') return 'heroicons:bars-arrow-up';
   return 'heroicons:arrows-up-down';
 });
 

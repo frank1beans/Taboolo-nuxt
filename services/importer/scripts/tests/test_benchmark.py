@@ -13,20 +13,20 @@ IMPORTER_DIR = os.path.abspath(os.path.join(SCRIPT_DIR, "..", ".."))
 if IMPORTER_DIR not in sys.path:
     sys.path.append(IMPORTER_DIR)
 
-from logic.extraction.llm_extractor import LLMExtractor
-from logic.extraction.router import FamilyRouter
-from logic.extraction.schemas.core import CoreProperties
-from logic.extraction.schemas.cartongesso import CartongessoProperties
-from logic.extraction.schemas.serramenti import SerramentiProperties
-from logic.extraction.schemas.pavimenti import PavimentiProperties
-from logic.extraction.schemas.controsoffitti import ControsoffittiProperties
-from logic.extraction.schemas.rivestimenti import RivestimentiProperties
-from logic.extraction.schemas.coibentazione import CoibentazioneProperties
-from logic.extraction.schemas.impermeabilizzazione import ImpermeabilizzazioneProperties
-from logic.extraction.schemas.opere_murarie import OpereMurarieProperties
-from logic.extraction.schemas.facciate_cappotti import FacciateCappottiProperties
-from logic.extraction.schemas.apparecchi_sanitari import ApparecchiSanitariProperties
-from logic.extraction.postprocessor import postprocess_properties
+from embedding.extraction.llm_extractor import LLMExtractor
+from embedding.extraction.router import FamilyRouter
+from embedding.extraction.schemas.core import CoreProperties
+from embedding.extraction.schemas.cartongesso import CartongessoProperties
+from embedding.extraction.schemas.serramenti import SerramentiProperties
+from embedding.extraction.schemas.pavimenti import PavimentiProperties
+from embedding.extraction.schemas.controsoffitti import ControsoffittiProperties
+from embedding.extraction.schemas.rivestimenti import RivestimentiProperties
+from embedding.extraction.schemas.coibentazione import CoibentazioneProperties
+from embedding.extraction.schemas.impermeabilizzazione import ImpermeabilizzazioneProperties
+from embedding.extraction.schemas.opere_murarie import OpereMurarieProperties
+from embedding.extraction.schemas.facciate_cappotti import FacciateCappottiProperties
+from embedding.extraction.schemas.apparecchi_sanitari import ApparecchiSanitariProperties
+from embedding.extraction.postprocessor import postprocess_properties
 
 # Logging
 logging.basicConfig(level=logging.INFO)
@@ -129,7 +129,7 @@ async def run_benchmark():
     script_dir = os.path.dirname(os.path.abspath(__file__))
     candidates_path = os.getenv("BENCHMARK_INPUT")
     if not candidates_path:
-        candidates_path = os.path.join(IMPORTER_DIR, "logic", "extraction", "goldenset_candidates.json")
+        candidates_path = os.path.join(IMPORTER_DIR, "embedding", "extraction", "goldenset_candidates.json")
         if not os.path.exists(candidates_path):
             candidates_path = os.path.join(IMPORTER_DIR, "scripts", "benchmark_data", "goldenset_candidates.json")
 
@@ -239,3 +239,4 @@ async def run_benchmark():
 
 if __name__ == "__main__":
     asyncio.run(run_benchmark())
+

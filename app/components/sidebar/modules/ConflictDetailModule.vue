@@ -106,14 +106,14 @@ const resolveWithCandidate = async () => {
 
 <template>
   <SidebarModule title="Dettagli" icon="i-heroicons-document-magnifying-glass" default-open>
-    <div v-if="selectedAlert" class="space-y-5">
+    <div v-if="selectedAlert" class="space-y-6">
       <!-- Status Banner -->
       <div 
         class="rounded-lg p-3 border"
         :class="{
-          'bg-yellow-50 border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-800': (selectedAlert.status || 'open') === 'open',
-          'bg-emerald-50 border-emerald-200 dark:bg-emerald-900/20 dark:border-emerald-800': selectedAlert.status === 'resolved',
-          'bg-gray-50 border-gray-200 dark:bg-gray-800/40 dark:border-gray-700': selectedAlert.status === 'ignored',
+          'bg-[hsl(var(--warning-light))] border-[hsl(var(--warning)/0.3)]': (selectedAlert.status || 'open') === 'open',
+          'bg-[hsl(var(--success-light))] border-[hsl(var(--success)/0.3)]': selectedAlert.status === 'resolved',
+          'bg-[hsl(var(--muted))] border-[hsl(var(--border))]': selectedAlert.status === 'ignored',
         }"
       >
         <div class="flex flex-col">
@@ -214,7 +214,7 @@ const resolveWithCandidate = async () => {
           </div>
           <div class="p-2 rounded bg-[hsl(var(--muted)/0.2)] border border-[hsl(var(--border))]">
             <div class="text-[9px] text-[hsl(var(--muted-foreground))] uppercase mb-0.5">Delta</div>
-            <div class="font-mono font-bold text-xs" :class="selectedAlert.delta !== 0 ? 'text-red-500' : 'text-gray-500'">
+            <div class="font-mono font-bold text-xs" :class="selectedAlert.delta !== 0 ? 'text-[hsl(var(--destructive))]' : 'text-[hsl(var(--muted-foreground))]'">
               {{ formatValue(selectedAlert.delta, selectedAlert.type) }}
             </div>
           </div>

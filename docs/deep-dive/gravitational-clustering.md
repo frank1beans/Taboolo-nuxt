@@ -10,7 +10,7 @@ Il modulo è pensato per:
 
 ## 23.1 - Dove sta
 
-File: `services/importer/logic/gravitational_clustering.py`
+File: `services/importer/analytics/gravitational_clustering.py`
 
 Classe principale: `GravitationalClustering`
 
@@ -302,7 +302,7 @@ df_out, reports = gc.fit_predict(df, strict_basins=True)
 ## 23.10 - Esempio completo
 
 ```python
-from logic.gravitational_clustering import GravitationalClustering
+from analytics.gravitational_clustering import GravitationalClustering
 import pandas as pd
 
 # Dati: item con embedding e wbs6
@@ -385,4 +385,5 @@ L'output del clustering viene usato da `price_analysis.py` per:
 similar_items = df_out[df_out["cluster_id"] == target_cluster_id]
 estimated_price = weighted_median(similar_items["price"], similar_items["attraction_score"])
 ```
+
 

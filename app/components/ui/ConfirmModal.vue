@@ -35,26 +35,26 @@ const variantConfig = computed(() => {
   switch (props.variant) {
     case 'warning':
       return {
-        bgHeader: 'bg-amber-50 dark:bg-amber-950/30',
-        iconBg: 'bg-amber-100 dark:bg-amber-900/50',
-        iconColor: 'text-amber-600 dark:text-amber-400',
+        bgHeader: 'bg-[hsl(var(--warning-light))]',
+        iconBg: 'bg-[hsl(var(--warning)/0.2)]',
+        iconColor: 'text-[hsl(var(--warning))]',
         icon: 'heroicons:exclamation-triangle',
         buttonColor: 'warning' as const,
       };
     case 'info':
       return {
-        bgHeader: 'bg-blue-50 dark:bg-blue-950/30',
-        iconBg: 'bg-blue-100 dark:bg-blue-900/50',
-        iconColor: 'text-blue-600 dark:text-blue-400',
+        bgHeader: 'bg-[hsl(var(--info-light))]',
+        iconBg: 'bg-[hsl(var(--info)/0.2)]',
+        iconColor: 'text-[hsl(var(--info))]',
         icon: 'heroicons:information-circle',
         buttonColor: 'primary' as const,
       };
     case 'danger':
     default:
       return {
-        bgHeader: 'bg-rose-50 dark:bg-rose-950/30',
-        iconBg: 'bg-rose-100 dark:bg-rose-900/50',
-        iconColor: 'text-rose-600 dark:text-rose-400',
+        bgHeader: 'bg-[hsl(var(--destructive-light))]',
+        iconBg: 'bg-[hsl(var(--destructive)/0.2)]',
+        iconColor: 'text-[hsl(var(--destructive))]',
         icon: 'heroicons:trash',
         buttonColor: 'error' as const,
       };
@@ -90,7 +90,7 @@ const handleBackdropClick = () => {
       />
 
       <!-- Modal Card -->
-      <div class="relative z-[105] w-full max-w-md rounded-xl shadow-2xl overflow-hidden bg-[hsl(var(--card))] border border-[hsl(var(--border))] flex flex-col">
+      <div class="relative z-[105] w-full max-w-md rounded-[var(--card-radius)] shadow-2xl overflow-hidden bg-[hsl(var(--card))] border border-[hsl(var(--border))] flex flex-col">
         
         <!-- Header -->
         <div :class="['px-6 py-4 border-b border-[hsl(var(--border))] flex items-center gap-3', variantConfig.bgHeader]">

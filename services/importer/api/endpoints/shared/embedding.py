@@ -63,7 +63,7 @@ def compute_embeddings_for_items(
         
         # Choose embedding strategy
         if extract_properties:
-            from logic.extraction.embedding_composer import EmbeddingComposer
+            from embedding.extraction.embedding_composer import EmbeddingComposer
             composer = EmbeddingComposer(
                 base_weight=base_weight,
                 detail_weight=detail_weight,
@@ -73,7 +73,7 @@ def compute_embeddings_for_items(
             )
             vectors = composer.batch_compose(items_to_embed)
         else:
-            from logic.embedding import get_embedder
+            from embedding import get_embedder
             embedder = get_embedder()
             texts = []
             for item in items_to_embed:
@@ -111,3 +111,4 @@ def get_used_pli_ids(estimate) -> Set[str]:
             if est_item.price_list_item_id:
                 used_ids.add(est_item.price_list_item_id)
     return used_ids
+

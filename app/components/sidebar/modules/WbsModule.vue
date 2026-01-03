@@ -219,17 +219,18 @@ const clearSearch = () => {
           v-model="searchQuery"
           type="text"
           placeholder="Cerca..."
-          class="w-full h-7 pl-7 pr-7 text-[11px] bg-[hsl(var(--muted)/0.3)] rounded border-none focus:ring-1 focus:ring-[hsl(var(--primary))] placeholder:text-[hsl(var(--muted-foreground)/0.6)]"
+          class="w-full h-7 pl-7 pr-7 text-xs bg-[hsl(var(--muted)/0.3)] rounded border-none focus:ring-1 focus:ring-[hsl(var(--primary))] placeholder:text-[hsl(var(--muted-foreground)/0.6)]"
         >
         <button
           v-if="searchQuery"
           class="absolute right-2 top-1/2 -translate-y-1/2 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
+          aria-label="Cancella ricerca"
           @click="clearSearch"
         >
           <Icon name="heroicons:x-mark" class="w-3 h-3" />
         </button>
       </div>
-      <div v-if="searchQuery && filteredNodes.length !== resolvedNodes.length" class="mt-1 text-[9px] text-[hsl(var(--muted-foreground))]">
+      <div v-if="searchQuery && filteredNodes.length !== resolvedNodes.length" class="mt-1 text-micro text-[hsl(var(--muted-foreground))]">
         {{ filteredNodes.length }}/{{ resolvedNodes.length }}
       </div>
     </div>
@@ -252,16 +253,16 @@ const clearSearch = () => {
     <!-- Empty states -->
     <div v-else-if="searchQuery" class="text-center py-6">
       <Icon name="heroicons:magnifying-glass" class="w-6 h-6 text-[hsl(var(--muted-foreground))] mb-2 mx-auto opacity-50" />
-      <p class="text-[11px] text-[hsl(var(--muted-foreground))] mb-2">Nessun nodo trovato</p>
+      <p class="text-xs text-[hsl(var(--muted-foreground))] mb-2">Nessun nodo trovato</p>
       <button 
-        class="text-[11px] text-[hsl(var(--primary))] hover:underline"
+        class="text-xs text-[hsl(var(--primary))] hover:underline"
         @click="clearSearch"
       >
         Cancella ricerca
       </button>
     </div>
     <div v-else class="text-center py-6">
-      <p class="text-[11px] text-[hsl(var(--muted-foreground))]">Nessuna struttura WBS</p>
+      <p class="text-xs text-[hsl(var(--muted-foreground))]">Nessuna struttura WBS</p>
     </div>
   </SidebarModule>
 </template>

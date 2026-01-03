@@ -12,11 +12,11 @@ dotenv_path = base_dir.parent.parent / '.env'
 print(f"Loading .env from: {dotenv_path}")
 load_dotenv(dotenv_path)
 
-# 2. Setup Python Path to import logic.embedding
+# 2. Setup Python Path to import embedding
 sys.path.append(str(base_dir))
 
 try:
-    from logic.embedding import JinaEmbedder
+    from embedding import JinaEmbedder
 except ImportError as e:
     print(f"Error importing JinaEmbedder: {e}")
     sys.exit(1)
@@ -48,3 +48,4 @@ def test_jina():
 
 if __name__ == "__main__":
     test_jina()
+

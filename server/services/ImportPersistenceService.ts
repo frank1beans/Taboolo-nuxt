@@ -167,6 +167,8 @@ type OfferAlertInsert = {
 
 type PendingAlert = OfferAlertInsert & { itemIndex: number };
 
+const isImportDebug = process.env.IMPORT_DEBUG === '1';
+
 export async function persistImportResult(payload: PythonImportResult, projectId: string) {
     // Branch based on estimate type
     const estType = payload.estimate?.type; // 'project' | 'offer'
@@ -191,13 +193,10 @@ async function persistProjectEstimate(payload: PythonImportResult, projectId: st
 
     // 1. Groups (WBS) per estimate
     const groupMap = new Map<string, Types.ObjectId>();
-    const debugGroupIds: string[] = [];
-
     for (const g of payload.groups) {
         const newId = new Types.ObjectId();
         const sourceId = g._id || g.id || '';
         if (sourceId) groupMap.set(sourceId, newId);
-        if (debugGroupIds.length < 20 && sourceId) debugGroupIds.push(sourceId);
     }
 
     const wbsDocs = payload.groups.map(g => {
@@ -297,7 +296,7 @@ async function persistProjectEstimate(payload: PythonImportResult, projectId: st
                     .filter((g): g is Types.ObjectId => g !== undefined);
 
                 // DEBUG: Log first 3 items to see what's coming from Python
-                if (idx < 3) {
+                if (isImportDebug && idx < 3) {
                     console.log(`[DEBUG] Raw PLI #${idx}:`, {
                         code: item.code,
                         description: item.description?.substring(0, 50),
@@ -310,7 +309,7 @@ async function persistProjectEstimate(payload: PythonImportResult, projectId: st
 
                 const { short_description, long_description, unit } = normalizeTextFields(item);
 
-                if (idx < 3) {
+                if (isImportDebug && idx < 3) {
                     console.log(`[DEBUG] After normalize #${idx}:`, {
                         short_description: (short_description as string)?.substring(0, 50),
                         long_description: (long_description as string)?.substring(0, 50),
@@ -390,7 +389,7 @@ async function persistProjectEstimate(payload: PythonImportResult, projectId: st
         const itemPrice = item.unitPrice ?? item.unit_price ?? ((rawPliId && priceValueMap.get(rawPliId)) || 0);
 
         // Debug: log first 10 items to verify prices
-        if (idx < 10) {
+        if (isImportDebug && idx < 10) {
             console.log(`[Server Debug] EstItem #${idx}: unitPrice=${item.unitPrice}, unit_price=${item.unit_price}, fallback=${priceValueMap.get(rawPliId!)}, FINAL=${itemPrice}`);
         }
         const { short_description, long_description, unit } = normalizeTextFields(item);
@@ -418,7 +417,7 @@ async function persistProjectEstimate(payload: PythonImportResult, projectId: st
     }).filter(Boolean);
 
     if (itemDocs.length) {
-        await EstimateItem.insertMany(itemDocs);
+        await EstimateItem.insertMany(itemDocs, { ordered: false });
     }
 
     return {
@@ -709,7 +708,7 @@ export async function persistOffer(payload: PythonImportResult, projectId: strin
             const shortDescMatches: Types.ObjectId[] = lookupNormDesc && plDescMap ? (plDescMap.get(lookupNormDesc) || []) : [];
 
             // Debug logging for first 5 items
-            if (itemIndex < 5) {
+            if (isImportDebug && itemIndex < 5) {
                 console.log(`[Persistence DEBUG] Item #${itemIndex}:`, {
                     code,
                     normCodeForLookup,
@@ -724,7 +723,7 @@ export async function persistOffer(payload: PythonImportResult, projectId: strin
                     plCodeMapSize: plCodeMap?.size ?? 0,
                 });
                 // Log a few sample keys from plDescMap
-                if (plDescMap && itemIndex === 0) {
+                if (isImportDebug && plDescMap && itemIndex === 0) {
                     const sampleKeys = Array.from(plDescMap.keys()).slice(0, 5);
                     console.log(`[Persistence DEBUG] Sample plDescMap keys:`, sampleKeys.map(k => k?.substring(0, 60)));
                 }
@@ -805,15 +804,16 @@ export async function persistOffer(payload: PythonImportResult, projectId: strin
                     });
                 }
 
+                // Only alert on missing or zero prices, not on price differences
+                // Offers are expected to have different prices than baseline - that's the point!
                 const actualUnitPrice = asNumber(item.unit_price ?? item.prezzo_unitario);
-                const expectedUnitPrice = asNumber(baselineMatch.unit_price);
-                if (hasDelta(actualUnitPrice, expectedUnitPrice)) {
+                if (actualUnitPrice === null || actualUnitPrice === 0) {
                     addAlert({
                         type: 'price_mismatch',
-                        severity: 'warning',
+                        severity: 'error',
+                        message: 'Prezzo mancante o nullo',
                         actual: actualUnitPrice,
-                        expected: expectedUnitPrice,
-                        delta: actualUnitPrice !== null && expectedUnitPrice !== null ? actualUnitPrice - expectedUnitPrice : null,
+                        expected: asNumber(baselineMatch.unit_price),
                         code: code ?? null,
                         baseline_code: baselineMatch.code ?? null
                     });
@@ -877,17 +877,16 @@ export async function persistOffer(payload: PythonImportResult, projectId: strin
                     });
                 }
 
+                // Only alert on missing or zero prices, not on price differences
+                // Offers are expected to have different prices than baseline - that's the point!
                 const actualUnitPrice = asNumber(item.unit_price ?? item.prezzo_unitario);
-                const baselineUnitPrice = baselineAgg && baselineAgg.totalQuantity > 0
-                    ? baselineAgg.totalAmount / baselineAgg.totalQuantity
-                    : asNumber(meta?.price ?? null);
-                if (hasDelta(actualUnitPrice, baselineUnitPrice)) {
+                if (actualUnitPrice === null || actualUnitPrice === 0) {
                     addAlert({
                         type: 'price_mismatch',
-                        severity: 'warning',
+                        severity: 'error',
+                        message: 'Prezzo mancante o nullo',
                         actual: actualUnitPrice,
-                        expected: baselineUnitPrice,
-                        delta: actualUnitPrice !== null && baselineUnitPrice !== null ? actualUnitPrice - baselineUnitPrice : null,
+                        expected: asNumber(meta?.price ?? null),
                         code: code ?? null,
                         baseline_code: meta?.code ?? null
                     });

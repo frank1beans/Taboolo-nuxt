@@ -15,7 +15,7 @@ PROJECT_ROOT = os.path.abspath(os.path.join(IMPORTER_DIR, "..", ".."))
 if IMPORTER_DIR not in sys.path:
     sys.path.append(IMPORTER_DIR)
 
-from logic.extraction.families.registry import WBS6_FAMILY_SIGNALS
+from embedding.extraction.families.registry import WBS6_FAMILY_SIGNALS
 
 
 def _compile(patterns: List[str]) -> List[re.Pattern]:
@@ -187,3 +187,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+

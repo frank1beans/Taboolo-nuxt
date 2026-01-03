@@ -9,6 +9,7 @@ export interface TreeNode {
   to?: string
   children?: TreeNode[]
   meta?: Record<string, any>
+  defaultOpen?: boolean
 }
 
 export const useProjectTree = (
@@ -22,6 +23,8 @@ export const useProjectTree = (
     if (!project) return []
 
     const estimates = project.estimates ?? []
+
+    // Build detailed hierarchical structure for each estimate
     const estimateNodes: TreeNode[] = estimates.map((est) => {
       const estId = est.id ? String(est.id) : null
       const isActive = est.id === estimate?.id
@@ -30,54 +33,74 @@ export const useProjectTree = (
       const roundCount = est.roundsCount ?? rounds.length
       const companyCount = est.companiesCount ?? companies.length
 
-      const children: TreeNode[] | undefined = isActive
-        ? [
-          {
-            id: `price-list-${est.id}`,
-            label: est.priceCatalog?.name || 'Listino',
-            icon: 'heroicons:tag',
-            to: estId ? `/projects/${project.id}/pricelist?estimateId=${estId}` : undefined,
-          },
-          {
-            id: `comparison-${est.id}`,
-            label: 'Confronto',
-            icon: 'heroicons:arrow-path-rounded-square',
-            to: estId ? `/projects/${project.id}/estimate/${estId}/comparison` : undefined,
-          },
-          {
-            id: `rounds-${est.id}`,
-            label: 'Rounds',
-            icon: 'heroicons:arrows-up-down',
-            count: roundCount,
-            children: rounds.map((round, idx) => ({
-              id: `round-${est.id}-${round.id || idx}`,
-              label: round.name || `Round ${idx + 1}`,
-              icon: 'heroicons:queue-list',
-              to: estId ? `/projects/${project.id}/estimate/${estId}/offer?round=${round.id}` : undefined,
-            })),
-          },
-          {
-            id: `companies-${est.id}`,
-            label: 'Imprese',
-            icon: 'heroicons:building-office-2',
-            count: companyCount,
-            children: companies.map((company, idx) => ({
-              id: `company-${est.id}-${company.id || idx}`,
-              label: company.name || `Impresa ${idx + 1}`,
+      // Build detailed children for each estimate
+      const estimateChildren: TreeNode[] = [
+        // Documents section
+        {
+          id: `docs-${est.id}`,
+          label: 'Documenti preventivo',
+          icon: 'heroicons:folder-open',
+          defaultOpen: isActive,
+          children: [
+            {
+              id: `detail-${est.id}`,
+              label: 'Scheda preventivo',
+              icon: 'heroicons:document-text',
+              to: estId ? `/projects/${project.id}/estimate/${estId}/detail` : undefined,
+            },
+            {
+              id: `worklist-${est.id}`,
+              label: 'Lista lavorazioni',
+              icon: 'heroicons:list-bullet',
+              to: estId ? `/projects/${project.id}/pricelist?estimateId=${estId}` : undefined,
+            },
+          ],
+        },
+        // Gare e offerte section
+        {
+          id: `tenders-${est.id}`,
+          label: 'Gare e offerta',
+          icon: 'heroicons:shopping-bag',
+          defaultOpen: isActive,
+          children: rounds.map((round, idx) => ({
+            id: `round-${est.id}-${round.id || idx}`,
+            label: round.name ? `Gara: ${round.name}` : `Gara: Round ${idx + 1}`,
+            icon: 'heroicons:flag',
+            defaultOpen: isActive,
+            children: (round.companies || companies).map((company, cIdx) => ({
+              id: `company-${est.id}-${round.id || idx}-${company.id || cIdx}`,
+              label: company.name ? `Impresa: ${company.name}` : `Impresa ${cIdx + 1}`,
               icon: 'heroicons:building-office',
-              to: estId ? `/projects/${project.id}/estimate/${estId}/offer?company=${encodeURIComponent(company.id)}` : undefined,
+              children: [
+                {
+                  id: `offer-worklist-${est.id}-${round.id || idx}-${company.id || cIdx}`,
+                  label: 'Lista lavorazioni',
+                  icon: 'heroicons:list-bullet',
+                  to: estId && round.id && company.id
+                    ? `/projects/${project.id}/pricelist?estimateId=${estId}&round=${round.id}&company=${encodeURIComponent(company.id)}`
+                    : undefined,
+                },
+              ],
             })),
-          },
-        ]
-        : undefined
+          })),
+        },
+        // Comparison
+        {
+          id: `comparison-${est.id}`,
+          label: 'Confronto offerte',
+          icon: 'heroicons:scale',
+          to: estId ? `/projects/${project.id}/estimate/${estId}/comparison` : undefined,
+        },
+      ]
 
       return {
         id: `estimate-${est.id}`,
         label: est.name || 'Preventivo',
-        icon: isActive ? 'heroicons:document-check' : 'heroicons:document',
+        icon: isActive ? 'heroicons:document-check' : 'heroicons:document-text',
         to: estId ? `/projects/${project.id}/estimate/${estId}` : undefined,
+        defaultOpen: isActive,
         count: roundCount || companyCount ? Math.max(roundCount, companyCount) : undefined,
-        children,
+        children: estimateChildren,
       }
     })
 
@@ -85,31 +108,10 @@ export const useProjectTree = (
       {
         id: `project-${project.id}`,
         label: project.name || 'Progetto',
-        icon: 'heroicons:folder',
+        icon: 'heroicons:folder-open',
         to: `/projects/${project.id}`,
-        children: [
-          {
-            id: 'pricelist',
-            label: 'Listini',
-            icon: 'heroicons:currency-euro',
-            count: estimates.length,
-            children: estimates.map(est => ({
-              id: `pricelist-${est.id}`,
-              label: est.priceCatalog?.name || est.name || 'Listino',
-              icon: 'heroicons:tag',
-              to: `/projects/${project.id}/pricelist?estimateId=${est.id}`,
-            })),
-            // Fallback link if no children (optional, but good for UX if empty)
-            to: estimates.length === 0 ? `/projects/${project.id}/pricelist` : undefined,
-          },
-          {
-            id: 'estimates',
-            label: 'Preventivi',
-            icon: 'heroicons:document-duplicate',
-            count: estimates.length,
-            children: estimateNodes,
-          },
-        ],
+        defaultOpen: true,
+        children: estimateNodes,
       },
     ]
   })

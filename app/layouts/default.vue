@@ -1,20 +1,24 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, watch } from 'vue'
+import { storeToRefs } from 'pinia'
 import Sidebar from '~/components/layout/Sidebar.vue'
 import Topbar from '~/components/layout/Topbar.vue'
 import Breadcrumb from '~/components/layout/Breadcrumb.vue'
 import AppShell from '~/components/layout/AppShell.vue'
 import SidebarShell from '~/components/sidebar/SidebarShell.vue'
 import AssetsModule from '~/components/sidebar/modules/AssetsModule.vue'
+import CommandPalette from '~/components/command-palette/CommandPalette.vue'
 
 import { useSidebarLayout } from '~/composables/useSidebarLayout'
 import { useSidebarModules } from '~/composables/useSidebarModules'
 import { useCurrentContext } from '~/composables/useCurrentContext'
 import { useNavigation } from '~/composables/useNavigation'
+import { useProjectTree } from '~/composables/useProjectTree'
 import { useAppSidebar } from '~/composables/useAppSidebar'
+import { useCommandPaletteStore } from '~/stores/commandPalette'
 
 const { showDefaultSidebar } = useAppSidebar()
-const { hasModules, registerModule, unregisterModule } = useSidebarModules()
+const { hasModules, registerLayoutModule, unregisterModule } = useSidebarModules()
 const route = useRoute()
 const {
   isCollapsed,
@@ -29,12 +33,20 @@ const sidebarHidden = computed(() =>
 )
 
 const { currentProject, currentEstimate, hydrateFromApi, loading: contextLoading } = useCurrentContext()
-const { globalNodes, contextNodes } = useNavigation(currentProject, currentEstimate)
+const { globalNodes } = useNavigation(currentProject, currentEstimate)
+const commandPaletteStore = useCommandPaletteStore()
+const { isOpen: isPaletteOpen } = storeToRefs(commandPaletteStore)
+
+// Use useProjectTree for detailed tree structure
+const { treeNodes: contextNodes } = useProjectTree(currentProject, currentEstimate)
 
 onMounted(() => {
   hydrateFromApi()
   if (showDefaultSidebar.value) {
     registerAssetsModule()
+  }
+  if (import.meta.client) {
+    window.addEventListener('keydown', onCommandPaletteShortcut)
   }
 })
 
@@ -54,6 +66,9 @@ watch(showDefaultSidebar, (showDefault) => {
 
 onUnmounted(() => {
   unregisterModule(assetsModuleId)
+  if (import.meta.client) {
+    window.removeEventListener('keydown', onCommandPaletteShortcut)
+  }
 })
 
 // Active node logic can be simplified or extracted, but kept here for now as it couples with route
@@ -116,7 +131,7 @@ const hasProject = computed(() => Boolean(currentProject.value))
 const assetsModuleId = 'assets'
 
 const registerAssetsModule = () => {
-  registerModule({
+  registerLayoutModule({
     id: assetsModuleId,
     label: 'Assets',
     icon: 'heroicons:folder-open',
@@ -129,6 +144,20 @@ const registerAssetsModule = () => {
       loading: contextLoading,
     },
   })
+}
+
+function onCommandPaletteShortcut(event: KeyboardEvent) {
+  const key = event.key.toLowerCase()
+  if (key !== 'k') return
+  if (!event.ctrlKey && !event.metaKey) return
+  if (event.altKey) return
+
+  event.preventDefault()
+  if (isPaletteOpen.value) {
+    commandPaletteStore.closePalette({ clearQuery: false })
+    return
+  }
+  commandPaletteStore.openPalette()
 }
 </script>
 
@@ -188,7 +217,7 @@ const registerAssetsModule = () => {
 
         <!-- Bottombar Left (empty) -->
         <template #bottombar-left>
-           <div class="flex items-center gap-2 px-4 text-[10px] text-[hsl(var(--muted-foreground))]">
+           <div class="flex items-center gap-2 px-4 text-micro text-[hsl(var(--muted-foreground))]">
              <span class="flex items-center gap-1">
                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"/>
                Online
@@ -207,6 +236,8 @@ const registerAssetsModule = () => {
            <div id="app-bottombar-right" class="flex items-center h-full px-4"/>
         </template>
       </AppShell>
+
+      <CommandPalette />
     </UApp>
   </div>
 </template>

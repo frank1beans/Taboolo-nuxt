@@ -10,7 +10,7 @@ Il modulo è pensato per essere:
 
 ## 22.1 - Dove sta e com'è organizzato
 
-Cartella: `services/importer/logic/extraction/`
+Cartella: `services/importer/embedding/extraction/`
 
 Struttura:
 
@@ -70,7 +70,7 @@ La famiglia `core` contiene proprietà trans-categoriche che valgono per tutte:
 
 ## 22.3 - FamilyRouter: instradamento debole
 
-File: `services/importer/logic/extraction/router.py`
+File: `services/importer/embedding/extraction/router.py`
 
 Il router classifica una descrizione nelle famiglie candidate **prima** di chiamare l'LLM. Questo permette di:
 
@@ -118,7 +118,7 @@ matches = router.route("Parete in cartongesso Knauf GKB con isolamento", top_k=2
 
 ## 22.4 - LLMExtractor: estrazione strutturata
 
-File: `services/importer/logic/extraction/llm_extractor.py`
+File: `services/importer/embedding/extraction/llm_extractor.py`
 
 ### Provider supportati
 
@@ -244,7 +244,7 @@ class CartongessoProperties(CoreProperties):
 
 ## 22.6 - PostProcessor: normalizzazione
 
-File: `services/importer/logic/extraction/postprocessor.py`
+File: `services/importer/embedding/extraction/postprocessor.py`
 
 Dopo l'estrazione LLM, i valori vengono normalizzati:
 
@@ -258,7 +258,7 @@ Dopo l'estrazione LLM, i valori vengono normalizzati:
 Esempio:
 
 ```python
-from logic.extraction.postprocessor import postprocess_properties
+from embedding.extraction.postprocessor import postprocess_properties
 
 raw = {"thickness_mm": {"value": "1.25 cm", "evidence": "sp. 1,25 cm", "confidence": 1.0}}
 processed = postprocess_properties(raw)
@@ -267,7 +267,7 @@ processed = postprocess_properties(raw)
 
 ## 22.7 - EmbeddingComposer: embedding arricchito
 
-File: `services/importer/logic/extraction/embedding_composer.py`
+File: `services/importer/embedding/extraction/embedding_composer.py`
 
 Dopo l'estrazione, si può calcolare un embedding "arricchito" che combina:
 
@@ -326,7 +326,7 @@ extractor = LLMExtractor(provider="openai", model="gpt-4o-mini")
 extracted = extractor.extract(description, template, family)
 
 # 5. Postprocess
-from logic.extraction.postprocessor import postprocess_properties
+from embedding.extraction.postprocessor import postprocess_properties
 processed = postprocess_properties(extracted)
 
 # 6. Compute embedding
@@ -337,7 +337,7 @@ embedding = composer.compute_weighted_embedding(base, detail)
 
 ## 22.9 - Benchmark e test
 
-Cartella: `services/importer/logic/extraction/tests/`
+Cartella: `services/importer/embedding/extraction/tests/`
 
 File di test disponibili:
 
@@ -419,4 +419,5 @@ FAMILY_SIGNALS["impianti"] = {
 ```
 
 3. Nel codice di estrazione, aggiungi il mapping.
+
 

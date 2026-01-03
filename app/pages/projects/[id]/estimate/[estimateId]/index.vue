@@ -1,71 +1,73 @@
 <script setup lang="ts">
 import { useRoute } from 'vue-router';
 import type { GridApi, GridReadyEvent } from 'ag-grid-community';
-import { computed, onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, onBeforeUnmount, reactive, ref, defineAsyncComponent } from 'vue';
 import type { DataGridConfig } from '~/types/data-grid';
 import type { ApiEstimate, ApiOfferSummary } from '~/types/api';
+import { queryApi } from '~/utils/queries';
+import { QueryKeys } from '~/types/queries';
 import { useCurrentContext } from '~/composables/useCurrentContext';
 import DataGridActions from '~/components/data-grid/DataGridActions.vue';
-import { getStatusConfig } from '~/utils/status-mappings';
+import { getStatusConfig } from '~/utils/status-config';
 import DataGridPage from '~/components/layout/DataGridPage.vue';
 import PageToolbar from '~/components/layout/PageToolbar.vue';
 import { formatCurrency as formatCurrencyLib, formatDelta } from '~/lib/formatters';
+import { getDeltaCellClass } from '~/utils/delta-styling';
+import { useActionsStore } from '~/stores/actions';
+import type { Action } from '~/types/actions';
 
-import ImportWizard from '~/components/projects/ImportWizard.vue';
+// Lazy load heavy ImportWizard component (31KB)
+const ImportWizard = defineAsyncComponent(() => import('~/components/projects/ImportWizard.vue'));
 
 const route = useRoute();
 
 const projectId = route.params.id as string;
 const estimateId = route.params.estimateId as string;
 
-// Use explicit key in useFetch to avoid conflicts
-const { data: context, status, refresh } = await useFetch(`/api/projects/${projectId}/context`, {
-  key: `project-context-${projectId}`,
-});
-
-const { data: offersResponse, status: offersStatus, refresh: refreshOffers } = await useFetch(
-  `/api/projects/${projectId}/offers`,
-  {
-    key: `project-${projectId}-offers-${estimateId}`,
-    query: { estimate_id: estimateId },
-  },
+// 1. Fetch Estimate Details (Baseline Context)
+const { data: currentEstimate, status: estimateStatus, refresh: refreshEstimate } = await useAsyncData<ApiEstimate>(
+    `estimate-details-${estimateId}`,
+    () => queryApi.fetch(QueryKeys.ESTIMATE_DETAILS, { id: estimateId })
 );
 
+// 2. Fetch Offers linked to this Estimate
+const { data: offersData, status: offersStatus, refresh: refreshOffers } = await useAsyncData(
+    `estimate-offers-${estimateId}`,
+    () => queryApi.fetch(QueryKeys.PROJECT_OFFERS, { project_id: projectId, estimate_id: estimateId })
+);
+
+// 3. Keep Alert Summary legacy for now (Plan to refactor)
 const { data: alertSummary, status: alertStatus, refresh: refreshAlertSummary } = await useFetch(
   `/api/projects/${projectId}/offers/alerts/summary`,
   {
     key: `project-${projectId}-estimate-${estimateId}-alert-summary`,
     query: { group_by: 'offer', estimate_id: estimateId, status: 'open' },
-  },
+  }
 );
 
 const { setCurrentEstimate } = useCurrentContext();
+const actionsStore = useActionsStore();
+const actionOwner = 'page:estimate-detail';
 
 // Ensure context matches URL
 onMounted(() => {
   console.log('Mounting Estimate Dashboard', estimateId);
   setCurrentEstimate(estimateId);
-  loadStats();
 });
 
-const loading = computed(() => status.value === 'pending');
-const estimates = computed(() => context.value?.estimates || []);
-const currentEstimate = computed<ApiEstimate | undefined>(() => estimates.value.find((e: ApiEstimate) => e.id === estimateId));
+onBeforeUnmount(() => {
+  actionsStore.unregisterOwner(actionOwner);
+});
 
-type StatsResponse = {
-  project_total?: number;
-  total_amount?: number | null;
-  offers?: Array<{
-    id: string;
-    total_amount?: number | null;
-    round_number?: number | null;
-    company_name?: string | null;
-    name?: string | null;
-  }>;
-};
+const loading = computed(() => estimateStatus.value === 'pending');
+const offersLoading = computed(() => offersStatus.value === 'pending');
+const alertsLoading = computed(() => alertStatus.value === 'pending');
 
-const stats = ref<StatsResponse | null>(null);
-const statsLoading = ref(false);
+const offerRows = computed<ApiOfferSummary[]>(() => offersData.value?.items || []);
+const offersCount = computed(() => offerRows.value.length);
+
+// Baseline Total comes from the Estimate itself
+const baselineTotal = computed(() => currentEstimate.value?.total_amount || 0);
 
 const formatCurrency = (value?: number | string | null) => {
   const numeric = typeof value === 'string' ? Number(value) : value;
@@ -74,27 +76,6 @@ const formatCurrency = (value?: number | string | null) => {
 };
 
 const formatDeltaPerc = (value?: number | null) => (value === null || value === undefined ? '-' : formatDelta(value));
-
-const loadStats = async () => {
-  if (!import.meta.client) return;
-  statsLoading.value = true;
-  try {
-    stats.value = await $fetch(`/api/projects/${projectId}/analytics/stats`, {
-      params: { estimate_id: estimateId },
-    });
-  } catch (e) {
-    console.error('Failed to load stats', e);
-    stats.value = null;
-  } finally {
-    statsLoading.value = false;
-  }
-};
-
-const baselineTotal = computed(() => stats.value?.project_total || 0);
-const offerRows = computed(() => offersResponse.value?.offers || []);
-const offersLoading = computed(() => offersStatus.value === 'pending');
-const offersCount = computed(() => offerRows.value.length);
-const alertsLoading = computed(() => alertStatus.value === 'pending');
 
 const alertSummaryItems = computed(() => alertSummary.value?.items || []);
 const alertSummaryTotal = computed(() => alertSummary.value?.total ?? 0);
@@ -110,12 +91,12 @@ const alertSummaryMap = computed<Record<string, number>>(() => {
 
 // Find the best offer across all rounds (lowest total_amount)
 const bestOfferId = computed(() => {
-  const offers = offerRows.value.filter((o: ApiOfferSummary) => o.total_amount !== null && o.total_amount !== undefined);
+  const offers = offerRows.value.filter(o => o.total_amount !== null && o.total_amount !== undefined);
   if (!offers.length) return null;
-  const best = offers.reduce<ApiOfferSummary | null>((acc: ApiOfferSummary | null, cur: ApiOfferSummary) => {
+  const best = offers.reduce<ApiOfferSummary | null>((acc, cur) => {
     if (!acc || (cur.total_amount ?? Infinity) < (acc.total_amount ?? Infinity)) return cur;
     return acc;
-  }, offers[0] || null);
+  }, offers[0] ?? null);
   return best?.id || null;
 });
 
@@ -140,7 +121,7 @@ const unifiedRows = computed(() => {
   });
 
   // Add all offers with computed deltas
-  offerRows.value.forEach((offer: ApiOfferSummary) => {
+  offerRows.value.forEach((offer) => {
     const amount = offer.total_amount ?? null;
     const deltaAmount = amount !== null ? amount - baselineTotal.value : null;
     const deltaPerc = deltaAmount !== null && baselineTotal.value ? (deltaAmount / baselineTotal.value) * 100 : null;
@@ -148,9 +129,10 @@ const unifiedRows = computed(() => {
     rows.push({
       ...offer,
       rowType: 'offer',
+      company_name: offer.company_name ?? '-',
       deltaAmount,
       deltaPerc,
-      alertCount: alertSummaryMap.value[offer.id] ?? 0,
+      alertCount: alertSummaryMap.value[offer.id] || 0,
       isBest: offer.id === bestOfferId.value,
       isBaseline: false,
     });
@@ -214,7 +196,7 @@ const unifiedGridConfig: DataGridConfig = {
         const value = params.value;
         if (value === null || value === undefined || params.data?.isBaseline) return '-';
         const formatted = formatCurrency(value);
-        const colorClass = value < 0 ? 'text-green-600 dark:text-green-400' : value > 0 ? 'text-red-600 dark:text-red-400' : '';
+        const colorClass = getDeltaCellClass(value);
         return `<span class="${colorClass}">${formatted}</span>`;
       },
     },
@@ -227,7 +209,7 @@ const unifiedGridConfig: DataGridConfig = {
         const value = params.value;
         if (value === null || value === undefined || params.data?.isBaseline) return '-';
         const formatted = formatDeltaPerc(value);
-        const colorClass = value < 0 ? 'text-green-600 dark:text-green-400 font-semibold' : value > 0 ? 'text-red-600 dark:text-red-400' : '';
+        const colorClass = getDeltaCellClass(value, { addFontWeight: value < 0 });
         return `<span class="${colorClass}">${formatted}</span>`;
       },
     },
@@ -265,8 +247,8 @@ const unifiedGridConfig: DataGridConfig = {
   enableQuickFilter: true,
   enableExport: true,
   getRowClass: (params: { data?: { isBaseline?: boolean; isBest?: boolean } }) => {
-    if (params.data?.isBaseline) return 'bg-blue-50/50 dark:bg-blue-950/20';
-    if (params.data?.isBest) return 'bg-green-50/50 dark:bg-green-950/20';
+    if (params.data?.isBaseline) return 'bg-[hsl(var(--info-light))]';
+    if (params.data?.isBest) return 'bg-[hsl(var(--success-light))]';
     return '';
   },
 };
@@ -309,12 +291,18 @@ const closeEditModal = () => {
 
 type OfferRow = {
   id: string;
-  name?: string;
-  company_name?: string;
+  name?: string | null;
+  company_name?: string | null;
   round_number?: number | null;
   status?: string;
-  mode?: string;
+  mode?: string | null;
   total_amount?: number | null;
+  estimate_id?: string | null;
+  rowType?: 'project' | 'offer';
+  alertCount?: number;
+  deltaAmount?: number | null;
+  deltaPerc?: number | null;
+  isBest?: boolean;
   isBaseline?: boolean;
 };
 
@@ -387,8 +375,7 @@ const saveOffer = async () => {
     closeEditModal();
     await refreshOffers();
     await refreshAlertSummary();
-    await loadStats();
-    await refresh();
+    await refreshEstimate();
   } catch (error) {
     console.error("Errore durante il salvataggio dell'offerta", error);
     window.alert("Errore durante il salvataggio dell'offerta.");
@@ -401,7 +388,7 @@ const saveOffer = async () => {
 const isDeleteModalOpen = ref(false);
 const offerToDelete = ref<OfferRow | null>(null);
 
-const openDeleteModal = (row: OfferRow | null | undefined) => {
+const openDeleteModal = (row: any | null | undefined) => {
   console.log('openDeleteModal called', { row, id: row?.id, isBaseline: row?.isBaseline });
   if (!row?.id || row.isBaseline) {
     console.log('openDeleteModal early return - no id or isBaseline');
@@ -428,8 +415,7 @@ const confirmDeleteOffer = async () => {
     closeDeleteModal();
     await refreshOffers();
     await refreshAlertSummary();
-    await loadStats();
-    await refresh();
+    await refreshEstimate();
   } catch (error) {
     console.error("Errore durante l'eliminazione dell'offerta", error);
     window.alert("Errore durante l'eliminazione dell'offerta.");
@@ -481,9 +467,68 @@ const handleReset = () => {
 }
 
 
-const handleExport = () => {
-  exportToXlsx('ritorni-gara')
-}
+const registerAction = (action: Action) => {
+  actionsStore.registerAction(action, { owner: actionOwner, overwrite: true });
+};
+
+onMounted(() => {
+  registerAction({
+    id: 'grid.exportExcel',
+    label: 'Esporta in Excel',
+    description: 'Esporta dati in Excel',
+    category: 'Tabelle',
+    scope: 'selection',
+    icon: 'i-heroicons-arrow-down-tray',
+    keywords: ['export', 'excel', 'tabella'],
+    handler: () => exportToXlsx('ritorni-gara'),
+  });
+
+  registerAction({
+    id: 'estimate.compareOffers',
+    label: 'Confronta offerte',
+    description: 'Confronta offerte del preventivo corrente',
+    category: 'Preventivi',
+    scope: 'estimate',
+    icon: 'i-heroicons-arrows-right-left',
+    keywords: ['confronto', 'offerte'],
+    handler: () => navigateTo(`/projects/${projectId}/estimate/${estimateId}/comparison`),
+  });
+
+  registerAction({
+    id: 'estimate.importOffers',
+    label: 'Importa offerte',
+    description: 'Apri la procedura di import offerte',
+    category: 'Preventivi',
+    scope: 'estimate',
+    icon: 'i-heroicons-arrow-up-tray',
+    keywords: ['import', 'offerte'],
+    handler: () => {
+      isImportModalOpen.value = true
+    },
+  })
+
+  registerAction({
+    id: 'grid.resetFilters',
+    label: 'Reset filtri tabella',
+    description: 'Cancella filtri e ricerca della tabella',
+    category: 'Tabelle',
+    scope: 'selection',
+    icon: 'i-heroicons-arrow-path',
+    keywords: ['reset', 'filtri', 'search'],
+    handler: () => handleReset(),
+  })
+
+  registerAction({
+    id: 'estimate.openConflicts',
+    label: 'Apri conflitti preventivo',
+    description: 'Vai ai conflitti del preventivo corrente',
+    category: 'Preventivi',
+    scope: 'estimate',
+    icon: 'i-heroicons-exclamation-triangle',
+    keywords: ['conflitti', 'alert'],
+    handler: () => navigateTo(`/projects/${projectId}/conflicts?estimateId=${estimateId}`),
+  })
+});
 
 // ---------------------------------------------------------------------------
 // Import Modal
@@ -494,7 +539,6 @@ const handleImportSuccess = async () => {
   isImportModalOpen.value = false;
   await refreshOffers();
   await refreshAlertSummary();
-  await loadStats();
 };
 </script>
 
@@ -504,7 +548,7 @@ const handleImportSuccess = async () => {
       title="Ritorni di Gara"
       :grid-config="unifiedGridConfig"
       :row-data="unifiedRows"
-      :loading="loading || statsLoading || offersLoading || alertsLoading"
+      :loading="loading || offersLoading || alertsLoading"
       empty-state-title="Nessun dato"
       empty-state-message="Non ci sono ancora offerte o dati di progetto."
       :custom-components="{ actionsRenderer: DataGridActions }"
@@ -537,7 +581,7 @@ const handleImportSuccess = async () => {
         <ClientOnly>
           <Teleport to="#app-bottombar-right">
             <div v-if="alertSummaryTotal > 0" class="flex items-center gap-4 text-xs">
-              <div class="flex items-center gap-2 text-amber-500 font-medium animate-pulse">
+              <div class="flex items-center gap-2 text-[hsl(var(--warning))] font-medium animate-pulse">
                 <Icon name="heroicons:exclamation-triangle" class="w-4 h-4" />
                 <span>{{ alertSummaryTotal }} Alert da risolvere</span>
               </div>
@@ -562,44 +606,16 @@ const handleImportSuccess = async () => {
               class="!py-0"
             >
               <template #right>
-                <button
-                  v-if="searchText"
-                  class="flex items-center justify-center h-9 px-4 rounded-full text-sm font-medium text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--background))] hover:text-[hsl(var(--foreground))] transition-colors"
-                  @click="handleReset"
-                >
-                  <Icon name="heroicons:arrow-path" class="w-4 h-4 mr-2" />
-                  Reset
-                </button>     
-
-                <UButton
-                  color="gray"
-                  variant="ghost"
-                  icon="i-heroicons-arrow-down-tray"
-                  class="text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
-                  @click="handleExport"
-                >
-                  Esporta
-                </UButton>
-                
-                <UButton
-                  color="gray"
-                  variant="ghost" 
-                  icon="i-heroicons-arrow-up-tray"
-                  class="text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
-                  @click="isImportModalOpen = true"
-                >
-                  Importa
-                </UButton>
-
-                <UButton
-                  color="primary"
-                  variant="solid"
-                  icon="i-heroicons-plus"
-                  size="xs"
-                  @click="navigateTo(`/projects/${projectId}/estimate/${estimateId}/comparison`)"
-                >
-                  Confronto
-                </UButton>
+                <ActionList
+                  layout="toolbar"
+                  :action-ids="[
+                    'grid.resetFilters',
+                    'grid.exportExcel',
+                    'estimate.importOffers',
+                    'estimate.compareOffers',
+                  ]"
+                  :primary-action-ids="['estimate.compareOffers']"
+                />
               </template>
             </PageToolbar>
           </Teleport>
@@ -618,7 +634,7 @@ const handleImportSuccess = async () => {
         />
 
         <!-- Modal Card -->
-        <div class="relative z-[105] w-full max-w-lg rounded-xl shadow-2xl overflow-hidden bg-[hsl(var(--card))] border border-[hsl(var(--border))] flex flex-col max-h-[90vh]">
+        <div class="relative z-[105] w-full max-w-lg rounded-[var(--card-radius)] shadow-2xl overflow-hidden bg-[hsl(var(--card))] border border-[hsl(var(--border))] flex flex-col max-h-[90vh]">
           
           <!-- Header -->
           <div class="px-6 py-4 border-b border-[hsl(var(--border))] bg-[hsl(var(--muted)/0.5)] flex items-center justify-between shrink-0">
@@ -632,7 +648,7 @@ const handleImportSuccess = async () => {
           </div>
 
           <!-- Scrollable Body -->
-          <div class="p-6 space-y-5 overflow-y-auto">
+          <div class="p-6 space-y-6 overflow-y-auto">
              <div class="grid grid-cols-1 gap-4">
                 <UFormField label="Impresa" name="company">
                   <UInput v-model="editForm.company_name" placeholder="Impresa" />
@@ -685,7 +701,7 @@ const handleImportSuccess = async () => {
           class="absolute inset-0 bg-black/50 dark:bg-black/60 backdrop-blur-sm transition-opacity"
           @click="isImportModalOpen = false"
         />
-        <div class="relative z-[105] w-full max-w-5xl h-[85vh] rounded-xl shadow-2xl overflow-hidden bg-[hsl(var(--card))] border border-[hsl(var(--border))] flex flex-col">
+        <div class="relative z-[105] w-full max-w-5xl h-[85vh] rounded-[var(--card-radius)] shadow-2xl overflow-hidden bg-[hsl(var(--card))] border border-[hsl(var(--border))] flex flex-col">
            <ImportWizard 
              :project-id="projectId"
              :estimate-id="estimateId"

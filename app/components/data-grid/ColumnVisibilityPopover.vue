@@ -182,7 +182,7 @@ onBeforeUnmount(() => {
       <div
         v-if="open"
         ref="popoverRef"
-        class="fixed z-[100] rounded-xl border shadow-2xl overflow-hidden bg-[hsl(var(--card))] border-[hsl(var(--border))] text-[hsl(var(--foreground))]"
+        class="fixed z-[100] rounded-[var(--card-radius)] border shadow-2xl overflow-hidden bg-[hsl(var(--card))] border-[hsl(var(--border))] text-[hsl(var(--foreground))]"
         :style="stylePosition"
       >
         <!-- Header -->

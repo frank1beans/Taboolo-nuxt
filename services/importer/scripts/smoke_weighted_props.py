@@ -1,4 +1,4 @@
-from logic.extraction.props_text import build_weighted_props_text, get_category_weights
+from embedding.extraction.props_text import build_weighted_props_text, get_category_weights
 
 
 def _count_token(text: str, token: str) -> int:
@@ -47,3 +47,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+

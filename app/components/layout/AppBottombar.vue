@@ -83,7 +83,7 @@ const gridColumns = computed(() => {
   align-items: center;
   justify-content: center;
   height: 100%;
-  padding: 0 1rem;
+  padding-inline: var(--workspace-gutter-x);
   min-width: 0;
 }
 

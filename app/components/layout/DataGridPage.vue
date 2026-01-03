@@ -104,7 +104,7 @@ const onGridReady = (params: GridReadyEvent<Record<string, unknown>>) => {
           :row-data="rowData"
           :loading="loading"
           :height="gridHeight"
-          class="flex-1 min-h-0 mt-2 rounded-lg overflow-hidden"
+          class="flex-1 min-h-0 rounded-lg overflow-hidden"
           :toolbar-placeholder="toolbarPlaceholder"
           :export-filename="exportFilename"
           :empty-state-title="emptyStateTitle"

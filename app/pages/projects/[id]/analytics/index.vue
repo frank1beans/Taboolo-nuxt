@@ -9,7 +9,7 @@
 
       <template #default>
         <!-- Full-screen map container -->
-        <div class="h-full relative rounded-xl overflow-hidden bg-[hsl(var(--muted)/0.2)] border border-[hsl(var(--border))]">
+        <div class="h-full relative rounded-[var(--card-radius)] overflow-hidden bg-[hsl(var(--muted)/0.2)] border border-[hsl(var(--border))]">
           
           <!-- Loading State with Chart Skeleton -->
           <ChartLoadingState 
@@ -88,19 +88,19 @@
 
           <!-- Search Panel -->
           <div class="absolute top-4 right-4 left-4 sm:left-auto sm:w-80 z-20">
-            <div class="bg-[hsl(var(--card))] shadow-xl rounded-xl border border-[hsl(var(--border))] overflow-hidden">
+            <div class="bg-[hsl(var(--card))] shadow-xl rounded-[var(--card-radius)] border border-[hsl(var(--border))] overflow-hidden">
               <div class="flex items-center gap-2 px-3 py-2 border-b border-[hsl(var(--border))]">
                 <UIcon name="i-heroicons-magnifying-glass" class="w-4 h-4 text-[hsl(var(--muted-foreground))]" />
                 <input
                   v-model="searchInput"
                   type="text"
                   placeholder="Cerca voci simili..."
-                  class="flex-1 bg-transparent text-sm focus:outline-none placeholder:text-[hsl(var(--muted-foreground))]"
+                  class="flex-1 bg-transparent text-sm focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] rounded placeholder:text-[hsl(var(--muted-foreground))]"
                 >
                 <button
                   v-if="searchInput"
                   class="text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] transition-colors"
-                  title="Cancella ricerca"
+                  aria-label="Cancella ricerca"
                   @click="clearSearch"
                 >
                   <UIcon name="i-heroicons-x-mark" class="w-4 h-4" />
@@ -127,7 +127,7 @@
               </div>
 
               <div v-if="hasSearchQuery" class="max-h-80 overflow-y-auto">
-                <div class="px-3 py-2 text-[10px] uppercase tracking-wider text-[hsl(var(--muted-foreground))] bg-[hsl(var(--muted)/0.3)] flex items-center justify-between">
+                <div class="px-3 py-2 text-micro uppercase tracking-wider text-[hsl(var(--muted-foreground))] bg-[hsl(var(--muted)/0.3)] flex items-center justify-between">
                   <span>Voci simili</span>
                   <div class="flex items-center gap-2">
                     <UIcon v-if="semanticLoading" name="i-heroicons-arrow-path" class="w-3.5 h-3.5 animate-spin text-[hsl(var(--muted-foreground))]" />
@@ -143,7 +143,7 @@
                 </div>
 
                 <div v-for="group in searchGroups" :key="group.clusterId" class="border-t border-[hsl(var(--border))]">
-                  <div class="px-3 py-2 text-[10px] uppercase tracking-wider text-[hsl(var(--muted-foreground))] flex items-center justify-between">
+                  <div class="px-3 py-2 text-micro uppercase tracking-wider text-[hsl(var(--muted-foreground))] flex items-center justify-between">
                     <div class="flex items-center gap-2 min-w-0">
                       <span class="w-2 h-2 rounded-full flex-shrink-0" :style="{ backgroundColor: getClusterColor(group.clusterId) }" />
                       <span class="truncate">Cluster {{ group.clusterId }}</span>
@@ -163,7 +163,7 @@
                         <div class="text-xs font-medium text-[hsl(var(--foreground))] truncate">
                           {{ hit.point.label }}
                         </div>
-                        <div class="text-[10px] text-[hsl(var(--muted-foreground))] truncate">
+                        <div class="text-micro text-[hsl(var(--muted-foreground))] truncate">
                           {{ hit.point.code || hit.point.id }} - {{ hit.point.project_name }}
                         </div>
                       </div>
@@ -185,7 +185,7 @@
           >
             <div 
               v-if="hoveredPoint" 
-                class="absolute bottom-4 right-4 z-20 bg-[hsl(var(--card))] shadow-xl rounded-lg border border-[hsl(var(--border))] p-3 max-w-xs"
+                class="absolute bottom-4 right-4 z-20 bg-[hsl(var(--card))] shadow-xl rounded-[var(--card-radius)] border border-[hsl(var(--border))] p-3 max-w-xs"
               >              
               <div class="flex items-start gap-3">
                 <div class="w-3 h-3 rounded-full flex-shrink-0 mt-1 shadow-sm" :style="{ backgroundColor: getProjectColor(hoveredPoint.project_id) }"/>
@@ -194,7 +194,7 @@
                   <div class="text-xs text-[hsl(var(--muted-foreground))] mt-0.5">
                     {{ hoveredPoint.project_name }} · {{ hoveredPoint.code }}
                   </div>
-                  <div v-if="hoveredPoint.price" class="text-sm font-bold text-green-600 dark:text-green-400 mt-1">
+                  <div v-if="hoveredPoint.price" class="text-sm font-bold text-[hsl(var(--success))] mt-1">
                     {{ formatCurrency(hoveredPoint.price) }}
                   </div>
                 </div>
@@ -229,6 +229,8 @@ import AnalyticsDataModule from '~/components/sidebar/modules/AnalyticsDataModul
 import AnalyticsLegendModule from '~/components/sidebar/modules/AnalyticsLegendModule.vue'
 import AnalyticsUmapModule from '~/components/sidebar/modules/AnalyticsUmapModule.vue'
 import AnalysisResultsModule from '~/components/sidebar/modules/AnalysisResultsModule.vue'
+import { useActionsStore } from '~/stores/actions'
+import type { Action } from '~/types/actions'
 
 // Capture route info for Project Context
 const route = useRoute()
@@ -258,6 +260,12 @@ const clickedPoint = ref<GlobalPoint | PropertyPoint | null>(null)
 
 const { registerModule, unregisterModule, setActiveModule } = useSidebarModules()
 const { showDefaultSidebar } = useAppSidebar()
+const actionsStore = useActionsStore()
+const actionOwner = 'page:project-analytics'
+
+const registerAction = (action: Action) => {
+  actionsStore.registerAction(action, { owner: actionOwner, overwrite: true })
+}
 
 
 const resetFilters = () => {
@@ -1090,6 +1098,91 @@ watch(clickedPoint, (point) => {
 
 // Initial fetch
 onMounted(async () => {
+  registerAction({
+    id: 'analytics.refresh',
+    label: 'Aggiorna analytics',
+    description: 'Ricarica i dati analytics del progetto',
+    category: 'Analytics',
+    scope: 'project',
+    icon: 'i-heroicons-arrow-path',
+    keywords: ['refresh', 'analytics'],
+    handler: () => fetchData(),
+  })
+
+  registerAction({
+    id: 'analytics.resetFilters',
+    label: 'Reset filtri analytics',
+    description: 'Ripristina i filtri analytics',
+    category: 'Analytics',
+    scope: 'project',
+    icon: 'i-heroicons-arrow-path',
+    keywords: ['reset', 'filtri'],
+    handler: () => resetFilters(),
+  })
+
+  registerAction({
+    id: 'analytics.clearSearch',
+    label: 'Cancella ricerca',
+    description: 'Pulisce la ricerca semantica',
+    category: 'Analytics',
+    scope: 'project',
+    icon: 'i-heroicons-x-mark',
+    keywords: ['search', 'clear'],
+    isEnabled: () => hasSearchQuery.value,
+    disabledReason: 'Nessuna ricerca attiva',
+    handler: () => clearSearch(),
+  })
+
+  registerAction({
+    id: 'analytics.zoomToResults',
+    label: 'Zoom risultati ricerca',
+    description: 'Zoom sui risultati della ricerca',
+    category: 'Analytics',
+    scope: 'project',
+    icon: 'i-heroicons-magnifying-glass-plus',
+    keywords: ['zoom', 'ricerca'],
+    isEnabled: () => hasSearchQuery.value && searchMatches.value.length > 0,
+    disabledReason: 'Nessun risultato disponibile',
+    handler: () => zoomToSearchResults(),
+  })
+
+  registerAction({
+    id: 'analytics.resetMapView',
+    label: 'Reset vista mappa',
+    description: 'Reimposta la vista della mappa',
+    category: 'Analytics',
+    scope: 'project',
+    icon: 'i-heroicons-arrows-pointing-out',
+    keywords: ['reset', 'mappa'],
+    handler: () => resetMapView(),
+  })
+
+  registerAction({
+    id: 'analytics.runAnalysis',
+    label: 'Esegui analisi prezzi',
+    description: 'Avvia analisi prezzi',
+    category: 'Analytics',
+    scope: 'project',
+    icon: 'i-heroicons-chart-bar',
+    keywords: ['analisi', 'prezzi'],
+    isEnabled: () => analyticsMode.value === 'global',
+    disabledReason: 'Disponibile solo in modalita globale',
+    handler: () => runPriceAnalysis(),
+  })
+
+  registerAction({
+    id: 'analytics.recalculateMap',
+    label: 'Ricalcola mappa',
+    description: 'Avvia il ricalcolo della mappa UMAP',
+    category: 'Analytics',
+    scope: 'project',
+    icon: 'i-heroicons-cpu-chip',
+    keywords: ['umap', 'mappa'],
+    isEnabled: () => analyticsMode.value === 'global',
+    disabledReason: 'Disponibile solo in modalita globale',
+    handler: () => handleRecalculateMap(),
+  })
+
   registerAnalyticsModules()
   await fetchData()
   // Preset project filter if in project context
@@ -1107,6 +1200,7 @@ onUnmounted(() => {
   unregisterModule('analytics-legend')
   unregisterModule('analytics-analysis')
   unregisterModule('analytics-detail')
+  actionsStore.unregisterOwner(actionOwner)
 })
 
 const fetchData = async () => {

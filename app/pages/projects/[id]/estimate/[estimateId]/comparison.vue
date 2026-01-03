@@ -1,17 +1,22 @@
 <script setup lang="ts">
-import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
+import { computed, ref, watch, defineAsyncComponent, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useCurrentContext } from '~/composables/useCurrentContext'
 import { useColorMode } from '#imports'
 import DataGridPage from '~/components/layout/DataGridPage.vue'
 import PageToolbar from '~/components/layout/PageToolbar.vue'
 import { useWbsTree } from '~/composables/useWbsTree'
-import { useSidebarModules } from '~/composables/useSidebarModules'
-import { useAppSidebar } from '~/composables/useAppSidebar'
+import { useSidebarModules, usePageSidebarModule } from '~/composables/useSidebarModules'
+import { useProjectTree } from '~/composables/useProjectTree'
 import WbsModule from '~/components/sidebar/modules/WbsModule.vue'
+import AssetsModule from '~/components/sidebar/modules/AssetsModule.vue'
 import { formatCurrency, formatNumber } from '~/lib/formatters'
+import type { Project } from '#types'
+import { useActionsStore } from '~/stores/actions'
+import type { Action } from '~/types/actions'
 
-import ImportWizard from '~/components/projects/ImportWizard.vue'
+// Lazy load heavy ImportWizard component (31KB)
+const ImportWizard = defineAsyncComponent(() => import('~/components/projects/ImportWizard.vue'))
 
 definePageMeta({
   disableDefaultSidebar: true,
@@ -24,6 +29,8 @@ const projectId = route.params.id as string
 const estimateId = route.params.estimateId as string
 const _colorMode = useColorMode()
 const { setCurrentEstimate } = useCurrentContext()
+const actionsStore = useActionsStore()
+const actionOwner = 'page:estimate-comparison'
 
 await setCurrentEstimate(estimateId).catch((err) => console.error('Failed to set current estimate', err))
 
@@ -89,6 +96,24 @@ const { data: comparison, status, refresh } = await useFetch<ComparisonResponse>
 })
 
 // ─────────────────────────────────────────────────────────────────────────────
+// PROJECT CONTEXT (for Assets sidebar)
+// ─────────────────────────────────────────────────────────────────────────────
+const { data: context, status: contextStatus } = await useFetch<Project>(
+  `/api/projects/${projectId}/context`,
+  { 
+    key: `project-context-${projectId}-comparison`,
+    immediate: !!projectId
+  },
+)
+
+const currentEstimateData = computed(() => {
+  if (!context.value?.estimates) return undefined
+  return context.value.estimates.find(e => e.id === estimateId)
+})
+
+const { treeNodes } = useProjectTree(context, currentEstimateData)
+
+// ─────────────────────────────────────────────────────────────────────────────
 // COMPUTED DATA
 // ─────────────────────────────────────────────────────────────────────────────
 const isLoading = computed(() => status.value === 'pending')
@@ -124,32 +149,34 @@ const { wbsNodes, selectedWbsNode, filteredRowData: filteredRows, onWbsNodeSelec
 
 const totalItems = computed(() => filteredRows.value.length)
 
-const wbsButtonTitle = computed(() => {
-  return sidebarVisible.value ? 'Nascondi WBS' : 'Mostra WBS'
+const { toggleVisibility, isVisible: sidebarVisible, setActiveModule, showSidebar } = useSidebarModules()
+
+// Register Assets Module using route-scoped helper
+usePageSidebarModule({
+  id: 'assets',
+  label: 'Assets',
+  icon: 'heroicons:folder-open',
+  order: 0,
+  component: AssetsModule,
+  props: {
+    nodes: treeNodes,
+    hasProject: computed(() => !!context.value),
+    loading: computed(() => contextStatus.value === 'pending'),
+  },
 })
 
-// Toggled by button in header
-
-const { registerModule, unregisterModule, toggleVisibility, isVisible: sidebarVisible, setActiveModule, showSidebar } = useSidebarModules()
-const { showDefaultSidebar } = useAppSidebar()
-
-onMounted(() => {
-  registerModule({
-    id: 'wbs',
-    label: 'WBS',
-    icon: 'heroicons:squares-2x2',
-    component: WbsModule,
-    props: {
-      nodes: wbsNodes,
-      selectedNodeId: computed(() => selectedWbsNode.value?.id ?? null),
-      onNodeSelected: (node: typeof selectedWbsNode.value | null) => onWbsNodeSelected(node),
-    },
-  })
-  setActiveModule('wbs')
-})
-
-onUnmounted(() => {
-  unregisterModule('wbs')
+// Register WBS Module using route-scoped helper
+usePageSidebarModule({
+  id: 'wbs',
+  label: 'WBS',
+  icon: 'heroicons:squares-2x2',
+  order: 1,
+  component: WbsModule,
+  props: {
+    nodes: wbsNodes,
+    selectedNodeId: computed(() => selectedWbsNode.value?.id ?? null),
+    onNodeSelected: (node: typeof selectedWbsNode.value | null) => onWbsNodeSelected(node),
+  },
 })
 
 const toggleWbsSidebar = () => {
@@ -160,6 +187,66 @@ const toggleWbsSidebar = () => {
     toggleVisibility()
   }
 }
+
+const registerAction = (action: Action) => {
+  actionsStore.registerAction(action, { owner: actionOwner, overwrite: true })
+}
+
+onMounted(() => {
+  registerAction({
+    id: 'estimate.importOffers',
+    label: 'Importa offerte',
+    description: 'Apri la procedura di import offerte',
+    category: 'Preventivi',
+    scope: 'estimate',
+    icon: 'i-heroicons-arrow-up-tray',
+    keywords: ['import', 'offerte'],
+    handler: () => {
+      isImportModalOpen.value = true
+    },
+  })
+
+  registerAction({
+    id: 'comparison.toggleWbsSidebar',
+    label: 'Mostra/Nascondi WBS',
+    description: 'Attiva o disattiva la sidebar WBS',
+    category: 'Preventivi',
+    scope: 'estimate',
+    icon: 'i-heroicons-view-columns',
+    keywords: ['wbs', 'sidebar'],
+    handler: () => toggleWbsSidebar(),
+  })
+
+  registerAction({
+    id: 'comparison.resetFilters',
+    label: 'Reset filtri confronto',
+    description: 'Pulisce round, impresa e filtro WBS',
+    category: 'Preventivi',
+    scope: 'estimate',
+    icon: 'i-heroicons-arrow-path',
+    keywords: ['reset', 'filtri', 'confronto'],
+    handler: () => {
+      selectedRound.value = null
+      selectedCompany.value = null
+      selectedWbsNode.value = null
+    },
+  })
+
+  registerAction({
+    id: 'comparison.refresh',
+    label: 'Aggiorna confronto',
+    description: 'Ricarica i dati di confronto',
+    category: 'Preventivi',
+    scope: 'estimate',
+    icon: 'i-heroicons-arrow-path',
+    keywords: ['refresh', 'confronto'],
+    handler: () => refresh(),
+  })
+})
+
+onUnmounted(() => {
+  actionsStore.unregisterOwner(actionOwner)
+})
 
 // ─────────────────────────────────────────────────────────────────────────────
 // FORMATTERS
@@ -439,23 +526,9 @@ const handleImportSuccess = async () => {
          </div>
       </template>
       <template #actions>
-        <UButton
-          color="primary"
-          variant="solid"
-          icon="i-heroicons-arrow-up-tray"
-          size="sm"
-          @click="isImportModalOpen = true"
-        >
-          Importa Offerta
-        </UButton>
-        <UButton
-          :icon="sidebarVisible ? 'i-heroicons-view-columns' : 'i-heroicons-view-columns'"
-          :color="sidebarVisible ? 'primary' : 'neutral'"
-          variant="ghost"
-          size="sm"
-          :title="wbsButtonTitle"
-          label="WBS"
-          @click="toggleWbsSidebar"
+        <ActionList
+          layout="toolbar"
+          :action-ids="['estimate.importOffers', 'comparison.toggleWbsSidebar']"
         />
       </template>
 
@@ -599,7 +672,7 @@ const handleImportSuccess = async () => {
           class="absolute inset-0 bg-black/50 dark:bg-black/60 backdrop-blur-sm transition-opacity"
           @click="isImportModalOpen = false"
         />
-        <div class="relative z-[105] w-full max-w-5xl h-[85vh] rounded-xl shadow-2xl overflow-hidden bg-[hsl(var(--card))] border border-[hsl(var(--border))] flex flex-col">
+        <div class="relative z-[105] w-full max-w-5xl h-[85vh] rounded-[var(--card-radius)] shadow-2xl overflow-hidden bg-[hsl(var(--card))] border border-[hsl(var(--border))] flex flex-col">
            <ImportWizard 
              :project-id="projectId"
              :estimate-id="estimateId"

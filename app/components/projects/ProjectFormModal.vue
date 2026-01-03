@@ -39,7 +39,7 @@ const statusOptions = [
 
       <!-- Modal Card -->
       <div
-        class="relative z-[105] w-full max-w-xl rounded-xl shadow-2xl border overflow-hidden bg-[hsl(var(--card))] border-[hsl(var(--border))]"
+        class="relative z-[105] w-full max-w-xl rounded-[var(--card-radius)] shadow-2xl border overflow-hidden bg-[hsl(var(--card))] border-[hsl(var(--border))]"
       >
         <!-- Header -->
         <div class="px-6 py-4 border-b flex items-center justify-between border-[hsl(var(--border))] bg-[hsl(var(--secondary))]">

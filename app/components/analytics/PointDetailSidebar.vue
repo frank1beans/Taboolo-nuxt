@@ -97,7 +97,7 @@ const longDescription = computed(() => {
 
       <!-- Info Cards -->
       <div class="grid grid-cols-2 gap-2">
-        <div v-if="resolvedPoint.price != null" class="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800 text-green-700 dark:text-green-400 font-bold text-sm">
+        <div v-if="resolvedPoint.price != null" class="p-3 bg-[hsl(var(--success-light))] rounded-lg border border-[hsl(var(--success)/0.3)] text-[hsl(var(--success))] font-bold text-sm">
           {{ formatCurrency(resolvedPoint.price) }}
         </div>
         <div v-if="resolvedPoint.unit" class="p-3 bg-[hsl(var(--muted)/0.3)] rounded-lg border border-[hsl(var(--border))] text-sm font-medium">

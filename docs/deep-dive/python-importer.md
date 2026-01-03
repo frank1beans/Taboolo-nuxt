@@ -23,7 +23,9 @@ Cartelle importanti:
 
 - `services/importer/api/endpoints/`: endpoint HTTP (raw, returns)
 - `services/importer/parsers/`: parser per formati (six, excel, lx, mx)
-- `services/importer/logic/`: servizi di parsing/trasformazione (es. raw_import_service)
+- `services/importer/ingestion/`: pipeline import (preview, raw_import_service, loaders)
+- `services/importer/embedding/`: embedding + extraction (LLM, schemas, composer)
+- `services/importer/analytics/`: analisi prezzi e clustering
 - `services/importer/schemas/`: modelli Pydantic e schemi dati
 - `services/importer/registry.py`: registry dei parser e compatibilità legacy
 

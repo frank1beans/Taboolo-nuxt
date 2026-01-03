@@ -4,6 +4,11 @@ import math
 import os
 from typing import Any, Dict, List, Optional
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DEFAULT_CANDIDATES_PATH = os.path.join(BASE_DIR, "embedding", "extraction", "goldenset_candidates.json")
+DEFAULT_PREDICTIONS_PATH = os.path.join(BASE_DIR, "embedding", "extraction", "benchmark_results.json")
+DEFAULT_OUTPUT_PATH = os.path.join(BASE_DIR, "embedding", "extraction", "goldenset_metrics.json")
+
 
 def _load_json(path: str) -> Any:
     with open(path, "r", encoding="utf-8") as handle:
@@ -174,17 +179,17 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Evaluate extraction against labeled goldenset.")
     parser.add_argument(
         "--candidates",
-        default=os.path.join("logic", "extraction", "goldenset_candidates.json"),
+        default=DEFAULT_CANDIDATES_PATH,
         help="Path to goldenset candidates JSON.",
     )
     parser.add_argument(
         "--predictions",
-        default=os.path.join("logic", "extraction", "benchmark_results.json"),
+        default=DEFAULT_PREDICTIONS_PATH,
         help="Path to benchmark results JSON.",
     )
     parser.add_argument(
         "--output",
-        default=os.path.join("logic", "extraction", "goldenset_metrics.json"),
+        default=DEFAULT_OUTPUT_PATH,
         help="Path to write metrics JSON.",
     )
     parser.add_argument(

@@ -36,13 +36,14 @@ const selectModule = (moduleId: string) => {
           type="button"
           class="module-tab-icon"
           :class="{ 'module-tab-icon--active': activeModuleId === mod.id }"
+          :aria-label="`Seleziona modulo ${mod.label}`"
           @click="selectModule(mod.id)"
         >
           <Icon :name="mod.icon" class="w-5 h-5" />
           <!-- Badge for collapsed -->
           <span 
             v-if="mod.badge"
-            class="absolute -top-0.5 -right-0.5 flex items-center justify-center min-w-[14px] h-3.5 px-0.5 text-[8px] font-bold rounded-full bg-[hsl(var(--primary))] text-white"
+            class="absolute -top-0.5 -right-0.5 flex items-center justify-center min-w-[14px] h-3.5 px-0.5 text-micro font-bold rounded-full bg-[hsl(var(--primary))] text-white"
           >
             {{ mod.badge }}
           </span>
@@ -58,6 +59,7 @@ const selectModule = (moduleId: string) => {
         type="button"
         class="module-folder-tab"
         :class="{ 'module-folder-tab--active': activeModuleId === mod.id }"
+        :aria-label="`Seleziona modulo ${mod.label}`"
         @click="selectModule(mod.id)"
       >
         <Icon :name="mod.icon" class="w-4 h-4" />
@@ -65,7 +67,7 @@ const selectModule = (moduleId: string) => {
         <!-- Badge for expanded -->
         <span 
           v-if="mod.badge"
-          class="ml-1 flex items-center justify-center min-w-[16px] h-4 px-1 text-[9px] font-bold rounded-full bg-[hsl(var(--primary))] text-white"
+          class="ml-1 flex items-center justify-center min-w-[18px] h-4 px-1 text-micro font-bold rounded-full bg-[hsl(var(--primary))] text-white"
         >
           {{ mod.badge }}
         </span>

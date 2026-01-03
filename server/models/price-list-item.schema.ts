@@ -10,6 +10,15 @@ export interface IPriceListItem {
   unit?: string;
   price?: number;
 
+  // Denormalized Fields
+  project_name?: string;
+  project_code?: string;
+  business_unit?: string;
+  wbs6_code?: string;
+  wbs6_description?: string;
+  wbs7_code?: string;
+  wbs7_description?: string;
+
   // Metadata
   wbs_ids?: Types.ObjectId[];
   price_list_id?: string;
@@ -42,6 +51,15 @@ const PriceListItemSchema = new Schema<IPriceListItem>({
   unit: { type: String },
   price: { type: Number },
 
+  // Denormalized
+  project_name: { type: String },
+  project_code: { type: String },
+  business_unit: { type: String },
+  wbs6_code: { type: String },
+  wbs6_description: { type: String },
+  wbs7_code: { type: String },
+  wbs7_description: { type: String },
+
   wbs_ids: [{ type: Schema.Types.ObjectId, ref: 'WbsNode' }],
   price_list_id: { type: String },
   import_run_id: { type: String, index: true },
@@ -70,5 +88,10 @@ const PriceListItemSchema = new Schema<IPriceListItem>({
 // Text index - include extended_description for richer search
 PriceListItemSchema.index({ code: 'text', description: 'text', long_description: 'text', extended_description: 'text' });
 PriceListItemSchema.index({ project_id: 1, estimate_id: 1 });
+// Compound index for catalog queries
+PriceListItemSchema.index({ project_id: 1, estimate_id: 1, wbs6_code: 1, wbs7_code: 1 });
+// Sort index for Catalog
+PriceListItemSchema.index({ project_id: 1, code: 1 });
+PriceListItemSchema.index({ code: 1 });
 
 export const PriceListItem = model<IPriceListItem>('PriceListItem', PriceListItemSchema);

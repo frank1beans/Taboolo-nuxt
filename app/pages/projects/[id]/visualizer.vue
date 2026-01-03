@@ -1,55 +1,55 @@
 <template>
   <!-- Root container -->
-  <div class="absolute inset-0 m-4 rounded-xl flex overflow-hidden bg-slate-50 dark:bg-slate-950 border border-gray-200 dark:border-gray-800 shadow-sm text-slate-800 dark:text-slate-100">
+  <div class="absolute inset-0 m-4 rounded-xl flex overflow-hidden bg-[hsl(var(--background))] border border-[hsl(var(--border))] shadow-sm text-[hsl(var(--foreground))]">
     
     <!-- Sidebar (Minimal) -->
-    <div class="w-64 flex-shrink-0 flex flex-col border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50 backdrop-blur-sm">
+    <div class="w-64 flex-shrink-0 flex flex-col border-r border-[hsl(var(--border))] bg-[hsl(var(--card))] backdrop-blur-sm">
       
       <!-- Header -->
-      <div class="p-4 border-b border-gray-200 dark:border-gray-800 flex justify-between items-center">
+      <div class="p-4 border-b border-[hsl(var(--border))] flex justify-between items-center">
         <div>
           <h2 class="font-bold text-base mb-0.5">Mappa Semantica</h2>
-          <p class="text-[10px] text-gray-500 uppercase tracking-wider">{{ filteredPoints.length.toLocaleString() }} punti • {{ poles.length }} poli</p>
+          <p class="text-micro text-[hsl(var(--muted-foreground))] uppercase tracking-wider">{{ filteredPoints.length.toLocaleString() }} punti • {{ poles.length }} poli</p>
         </div>
         <!-- Settings Toggle -->
         <UPopover>
           <UButton icon="i-heroicons-cog-6-tooth" size="xs" variant="ghost" color="neutral" />
           <template #content>
             <div class="p-4 w-56 space-y-4">
-              <h4 class="font-bold text-xs uppercase text-gray-500">Impostazioni</h4>
+              <h4 class="font-bold text-xs uppercase text-[hsl(var(--muted-foreground))]">Impostazioni</h4>
               
               <!-- View Mode -->
               <div class="space-y-2">
-                <label class="text-xs text-gray-600 dark:text-gray-400">Modalità vista</label>
-                <div class="bg-gray-200 dark:bg-gray-800 p-1 rounded-lg flex">
+                <label class="text-xs text-[hsl(var(--muted-foreground))]">Modalità vista</label>
+                <div class="bg-[hsl(var(--secondary))] p-1 rounded-lg flex">
                   <button 
-                    :class="['flex-1 py-1 px-2 rounded-md text-xs font-semibold transition-all', mode === '2d' ? 'bg-white dark:bg-gray-700 shadow text-primary-600' : 'text-gray-500']"
+                    :class="['flex-1 py-1 px-2 rounded-md text-xs font-semibold transition-all', mode === '2d' ? 'bg-[hsl(var(--card))] shadow text-[hsl(var(--primary))]' : 'text-[hsl(var(--muted-foreground))]']"
                     @click="setMode('2d')"
                   >2D</button>
                   <button 
-                    :class="['flex-1 py-1 px-2 rounded-md text-xs font-semibold transition-all', mode === '3d' ? 'bg-white dark:bg-gray-700 shadow text-indigo-600' : 'text-gray-500']"
+                    :class="['flex-1 py-1 px-2 rounded-md text-xs font-semibold transition-all', mode === '3d' ? 'bg-[hsl(var(--card))] shadow text-[hsl(var(--info))]' : 'text-[hsl(var(--muted-foreground))]']"
                     @click="setMode('3d')"
-                  >3D <span class="text-[9px] opacity-60">beta</span></button>
+                  >3D <span class="text-micro opacity-60">beta</span></button>
                 </div>
               </div>
               
               <!-- Point Size -->
               <div class="space-y-2">
                 <div class="flex justify-between items-center">
-                  <label class="text-xs text-gray-600 dark:text-gray-400">Dimensione punti</label>
-                  <span class="text-xs font-mono bg-gray-200 dark:bg-gray-700 px-1 rounded">{{ pointSize }}px</span>
+                  <label class="text-xs text-[hsl(var(--muted-foreground))]">Dimensione punti</label>
+                  <span class="value-badge">{{ pointSize }}px</span>
                 </div>
                 <input 
                   v-model.number="pointSize" 
                   type="range" 
                   min="2" max="20" step="1"
-                  class="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer dark:bg-gray-600 accent-primary-500"
+                  class="slider-theme"
                 >
               </div>
 
               <!-- Show Poles Toggle -->
               <div class="flex items-center justify-between">
-                <label class="text-xs text-gray-600 dark:text-gray-400">Mostra Poli</label>
+                <label class="text-xs text-[hsl(var(--muted-foreground))]">Mostra Poli</label>
                 <UToggle v-model="showPoles" />
               </div>
               
@@ -70,10 +70,10 @@
       </div>
 
       <!-- Tab Switch -->
-      <div class="flex border-b border-gray-200 dark:border-gray-800">
+      <div class="flex border-b border-[hsl(var(--border))]">
         <button 
           :class="['flex-1 py-2.5 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors', 
-            activeTab === 'explore' ? 'border-b-2 border-primary-500 text-primary-600' : 'text-gray-500 hover:text-gray-700']"
+            activeTab === 'explore' ? 'border-b-2 border-[hsl(var(--primary))] text-[hsl(var(--primary))]' : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]']"
           @click="activeTab = 'explore'"
         >
           <UIcon name="i-heroicons-magnifying-glass" class="w-3.5 h-3.5" />
@@ -81,14 +81,17 @@
         </button>
         <button 
           :class="['flex-1 py-2.5 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors', 
-            activeTab === 'analysis' ? 'border-b-2 border-primary-500 text-primary-600' : 'text-gray-500 hover:text-gray-700']"
+            activeTab === 'analysis' ? 'border-b-2 border-[hsl(var(--primary))] text-[hsl(var(--primary))]' : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]']"
           @click="activeTab = 'analysis'"
         >
           <UIcon name="i-heroicons-chart-bar" class="w-3.5 h-3.5" />
           Analisi
-          <span v-if="priceAnalysis.analysisResult.value?.outliers_found" class="bg-red-500 text-white text-[9px] px-1 rounded-full">
-            {{ priceAnalysis.analysisResult.value.outliers_found }}
-          </span>
+          <CountBadge 
+            v-if="priceAnalysis.analysisResult.value?.outliers_found" 
+            :count="priceAnalysis.analysisResult.value.outliers_found" 
+            color="destructive"
+            size="xs"
+          />
         </button>
       </div>
 
@@ -96,22 +99,22 @@
       <template v-if="activeTab === 'explore'">
 
       <!-- Search -->
-      <div class="p-3 border-b border-gray-200 dark:border-gray-800">
+      <div class="p-3 border-b border-[hsl(var(--border))]">
         <div class="relative">
           <input 
             v-model="searchQuery" 
             type="text"
             placeholder="Cerca..." 
-            class="w-full pl-8 pr-2 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 border-none text-sm focus:ring-2 focus:ring-primary-500 placeholder-gray-400" 
+            class="w-full pl-8 pr-2 py-2 rounded-lg bg-[hsl(var(--secondary))] border-none text-sm focus:ring-2 focus:ring-[hsl(var(--primary))] placeholder-[hsl(var(--muted-foreground))]" 
             @keydown.enter="handleSearch"
           >
-          <UIcon name="i-heroicons-magnifying-glass" class="absolute left-2.5 top-2.5 text-gray-400" />
+          <UIcon name="i-heroicons-magnifying-glass" class="absolute left-2.5 top-2.5 text-[hsl(var(--muted-foreground))]" />
         </div>
       </div>
 
       <!-- Color By -->
-      <div class="p-3 border-b border-gray-200 dark:border-gray-800">
-        <label class="text-[10px] font-bold text-gray-400 uppercase mb-2 block">Colora per</label>
+      <div class="p-3 border-b border-[hsl(var(--border))]">
+        <label class="panel-section-header mb-2 block">Colora per</label>
         <USelectMenu
           v-model="colorBy"
           :items="colorByOptions"
@@ -123,10 +126,10 @@
       <!-- Clusters (Compact) -->
       <div class="flex-1 overflow-y-auto p-3">
         <div class="flex items-center justify-between mb-2">
-          <h3 class="font-bold text-[10px] uppercase tracking-wider text-gray-400">Clusters</h3>
+          <h3 class="panel-section-header">Clusters</h3>
           <button 
             v-if="clusters.length > 5" 
-            class="text-[10px] text-primary-500 hover:underline"
+            class="text-micro text-primary-500 hover:underline"
             @click="showAllClusters = !showAllClusters"
           >
             {{ showAllClusters ? 'Mostra meno' : `+${clusters.length - 5} altri` }}
@@ -143,21 +146,21 @@
 :class="['px-2 py-1.5 rounded flex justify-between items-center text-xs transition-colors', 
                 selectedCluster === cluster.id 
                     ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400' 
-                    : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400']"
+                    : 'hover:bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]']"
             >
               <span class="flex items-center gap-2 truncate">
                 <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" :style="{ backgroundColor: getClusterColor(cluster.id) }"/>
                 <span class="truncate">Cluster {{ cluster.id }}</span>
               </span>
-              <span class="text-[10px] opacity-60 bg-gray-200 dark:bg-gray-700 px-1.5 rounded-full">{{ cluster.count }}</span>
+              <span class="text-micro opacity-60 bg-[hsl(var(--secondary))] px-1.5 rounded-full">{{ cluster.count }}</span>
             </div>
           </button>
         </div>
       </div>
 
       <!-- Actions Section -->
-      <div class="p-3 border-t border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50 space-y-2">
-        <h3 class="font-bold text-[10px] uppercase tracking-wider text-gray-400 mb-2">Azioni</h3>
+      <div class="p-3 border-t border-[hsl(var(--border))] bg-[hsl(var(--secondary)/0.5)] space-y-2">
+        <h3 class="panel-section-header mb-2">Azioni</h3>
         
         <UButton
           icon="i-heroicons-arrow-down-tray"
@@ -203,47 +206,47 @@
         <div class="flex-1 overflow-y-auto p-3 space-y-4">
           <!-- Parameters -->
           <div class="space-y-3">
-            <h3 class="font-bold text-[10px] uppercase tracking-wider text-gray-400">Parametri</h3>
+            <h3 class="panel-section-header">Parametri</h3>
             
             <!-- Top K -->
             <div>
               <div class="flex justify-between items-center mb-1">
-                <label class="text-[10px] text-gray-500">Top K Neighbors</label>
-                <span class="text-[10px] font-mono bg-gray-200 dark:bg-gray-700 px-1 rounded">{{ priceAnalysis.params.topK }}</span>
+                <label class="text-micro text-[hsl(var(--muted-foreground))]">Top K Neighbors</label>
+                <span class="value-badge">{{ priceAnalysis.params.topK }}</span>
               </div>
               <input 
                 v-model.number="priceAnalysis.params.topK" 
                 type="range" 
                 min="10" max="50" step="5"
-                class="w-full h-1.5 bg-gray-300 rounded-lg appearance-none cursor-pointer dark:bg-gray-600 accent-primary-500"
+                class="slider-theme"
               >
             </div>
             
             <!-- Min Similarity -->
             <div>
               <div class="flex justify-between items-center mb-1">
-                <label class="text-[10px] text-gray-500">Min Similarity</label>
-                <span class="text-[10px] font-mono bg-gray-200 dark:bg-gray-700 px-1 rounded">{{ priceAnalysis.params.minSimilarity.toFixed(2) }}</span>
+                <label class="text-micro text-[hsl(var(--muted-foreground))]">Min Similarity</label>
+                <span class="value-badge">{{ priceAnalysis.params.minSimilarity.toFixed(2) }}</span>
               </div>
               <input 
                 v-model.number="priceAnalysis.params.minSimilarity" 
                 type="range" 
                 min="0.3" max="0.9" step="0.05"
-                class="w-full h-1.5 bg-gray-300 rounded-lg appearance-none cursor-pointer dark:bg-gray-600 accent-primary-500"
+                class="slider-theme"
               >
             </div>
             
             <!-- MAD Threshold -->
             <div>
               <div class="flex justify-between items-center mb-1">
-                <label class="text-[10px] text-gray-500">MAD Threshold</label>
-                <span class="text-[10px] font-mono bg-gray-200 dark:bg-gray-700 px-1 rounded">{{ priceAnalysis.params.madThreshold }}</span>
+                <label class="text-micro text-[hsl(var(--muted-foreground))]">MAD Threshold</label>
+                <span class="value-badge">{{ priceAnalysis.params.madThreshold }}</span>
               </div>
               <input 
                 v-model.number="priceAnalysis.params.madThreshold" 
                 type="range" 
                 min="1" max="4" step="0.5"
-                class="w-full h-1.5 bg-gray-300 rounded-lg appearance-none cursor-pointer dark:bg-gray-600 accent-primary-500"
+                class="slider-theme"
               >
             </div>
             
@@ -260,49 +263,49 @@
           </div>
           
           <!-- Results Summary -->
-          <div v-if="priceAnalysis.analysisResult.value" class="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 space-y-2">
-            <h4 class="font-bold text-[10px] uppercase text-gray-400">Risultati</h4>
+          <div v-if="priceAnalysis.analysisResult.value" class="bg-[hsl(var(--secondary))] rounded-lg p-3 space-y-2">
+            <h4 class="panel-section-header">Risultati</h4>
             <div class="grid grid-cols-2 gap-2 text-xs">
-              <div><span class="text-gray-500">Analizzati:</span> <span class="font-bold">{{ priceAnalysis.analysisResult.value.total_items }}</span></div>
-              <div><span class="text-gray-500">Categorie:</span> <span class="font-bold">{{ priceAnalysis.analysisResult.value.categories_analyzed }}</span></div>
+              <div><span class="text-[hsl(var(--muted-foreground))]">Analizzati:</span> <span class="font-bold">{{ priceAnalysis.analysisResult.value.total_items }}</span></div>
+              <div><span class="text-[hsl(var(--muted-foreground))]">Categorie:</span> <span class="font-bold">{{ priceAnalysis.analysisResult.value.categories_analyzed }}</span></div>
               <div class="col-span-2">
-                <span class="text-gray-500">Outliers:</span> 
-                <span class="font-bold text-red-500">{{ priceAnalysis.analysisResult.value.outliers_found }}</span>
-                <span class="text-gray-400">({{ priceAnalysis.outlierPercent.value }}%)</span>
+                <span class="text-[hsl(var(--muted-foreground))]">Outliers:</span> 
+                <span class="font-bold text-[hsl(var(--destructive))]">{{ priceAnalysis.analysisResult.value.outliers_found }}</span>
+                <span class="text-[hsl(var(--muted-foreground))]">({{ priceAnalysis.outlierPercent.value }}%)</span>
               </div>
             </div>
           </div>
           
           <!-- Outlier List -->
           <div v-if="priceAnalysis.outlierItems.value.length > 0" class="space-y-1">
-            <h4 class="font-bold text-[10px] uppercase text-gray-400 mb-2">Outliers</h4>
+            <h4 class="panel-section-header mb-2">Outliers</h4>
             <button 
               v-for="item in priceAnalysis.outlierItems.value.slice(0, 10)" 
               :key="item.item_id"
-              class="w-full text-left p-2 bg-red-50 dark:bg-red-900/20 rounded-lg text-xs hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors border border-red-200 dark:border-red-800"
+              class="w-full text-left p-2 bg-[hsl(var(--destructive-light))] rounded-lg text-xs hover:bg-[hsl(var(--destructive-light))] hover:opacity-80 transition-colors border border-[hsl(var(--destructive)/0.3)]"
               @click="navigateToOutlier(item.item_id)"
             >
               <div class="flex justify-between items-center">
                 <span class="font-mono font-medium">{{ item.code }}</span>
-                <span :class="(item.delta || 0) > 0 ? 'text-red-600' : 'text-green-600'" class="font-semibold">
+                <span :class="(item.delta || 0) > 0 ? 'text-[hsl(var(--destructive))]' : 'text-[hsl(var(--success))]'" class="font-semibold">
                   {{ (item.delta || 0) > 0 ? '+' : '' }}{{ ((item.delta || 0) * 100).toFixed(0) }}%
                 </span>
               </div>
-              <div class="text-gray-500 truncate mt-0.5">{{ item.description }}</div>
+              <div class="text-[hsl(var(--muted-foreground))] truncate mt-0.5">{{ item.description }}</div>
             </button>
-            <div v-if="priceAnalysis.outlierItems.value.length > 10" class="text-center text-[10px] text-gray-400 pt-1">
+            <div v-if="priceAnalysis.outlierItems.value.length > 10" class="text-center text-micro text-[hsl(var(--muted-foreground))] pt-1">
               +{{ priceAnalysis.outlierItems.value.length - 10 }} altri
             </div>
           </div>
           
           <!-- Empty State -->
           <div v-else-if="priceAnalysis.analysisResult.value && priceAnalysis.outlierItems.value.length === 0" class="text-center py-6">
-            <UIcon name="i-heroicons-check-circle" class="w-8 h-8 text-green-500 mx-auto mb-2" />
-            <p class="text-xs text-gray-500">Nessun outlier trovato!</p>
+            <UIcon name="i-heroicons-check-circle" class="w-8 h-8 text-[hsl(var(--success))] mx-auto mb-2" />
+            <p class="text-xs text-[hsl(var(--muted-foreground))]">Nessun outlier trovato!</p>
           </div>
           
           <!-- Error -->
-          <div v-if="priceAnalysis.error.value" class="bg-red-50 dark:bg-red-900/20 text-red-600 rounded-lg p-3 text-xs">
+          <div v-if="priceAnalysis.error.value" class="bg-[hsl(var(--destructive-light))] text-[hsl(var(--destructive))] rounded-lg p-3 text-xs">
             {{ priceAnalysis.error.value }}
           </div>
         </div>
@@ -310,7 +313,7 @@
     </div>
 
     <!-- Main Chart Area -->
-    <div class="flex-1 relative flex flex-col h-full bg-slate-50 dark:bg-slate-950/50">
+    <div class="flex-1 relative flex flex-col h-full bg-[hsl(var(--background))] dark:bg-[hsl(var(--background)/0.5)]">
       
       <VisualizerOverlays
         :hovered-point="hoveredPoint"
@@ -363,12 +366,20 @@ import { useSemanticMap, type Point } from '~/composables/useSemanticMap';
   } from '~/composables/useSemanticMapAnalytics';
   import { usePriceAnalysis } from '~/composables/usePriceAnalysis';
   import { formatCurrency } from '~/lib/formatters';
+import { useActionsStore } from '~/stores/actions';
+import type { Action } from '~/types/actions';
 
 const route = useRoute();
 const projectId = route.params.id as string;
 const toast = useToast();
+const actionsStore = useActionsStore();
+const actionOwner = 'page:visualizer';
   type Neighbor = Point & { distance: number; clusterId?: number };
   const { copyToClipboard: copyToClipboardBase } = useCopyToClipboard();
+
+const registerAction = (action: Action) => {
+  actionsStore.registerAction(action, { owner: actionOwner, overwrite: true });
+};
 
 // UI State
 const activeTab = ref<'explore' | 'analysis'>('explore');
@@ -478,10 +489,98 @@ watch(showPoles, (val) => {
 });
 
 onMounted(() => {
+    registerAction({
+        id: 'visualizer.exportCsv',
+        label: 'Esporta CSV',
+        description: 'Esporta i dati della mappa in CSV',
+        category: 'Visualizer',
+        scope: 'project',
+        icon: 'i-heroicons-arrow-down-tray',
+        keywords: ['export', 'csv'],
+        handler: () => handleExportCsv(),
+    });
+
+    registerAction({
+        id: 'visualizer.copySelectedIds',
+        label: 'Copia ID selezionati',
+        description: 'Copia gli ID selezionati negli appunti',
+        category: 'Visualizer',
+        scope: 'selection',
+        icon: 'i-heroicons-clipboard-document',
+        keywords: ['copia', 'selezione'],
+        isEnabled: () => analytics.selectedPointIds.value.size > 0,
+        disabledReason: 'Nessuna selezione attiva',
+        handler: () => copySelectedIds(),
+    });
+
+    registerAction({
+        id: 'visualizer.resetView',
+        label: 'Reset vista',
+        description: 'Resetta filtri, selezione e zoom',
+        category: 'Visualizer',
+        scope: 'project',
+        icon: 'i-heroicons-arrow-path',
+        keywords: ['reset', 'vista'],
+        isEnabled: () =>
+            hasActiveFilters.value ||
+            hasZoomed.value ||
+            analytics.selectedPointIds.value.size > 0,
+        disabledReason: 'Nessun filtro o selezione attiva',
+        handler: () => resetView(),
+    });
+
+    registerAction({
+        id: 'visualizer.runPriceAnalysis',
+        label: 'Esegui analisi',
+        description: 'Avvia analisi prezzi',
+        category: 'Visualizer',
+        scope: 'project',
+        icon: 'i-heroicons-chart-bar',
+        keywords: ['analisi', 'prezzi'],
+        handler: () => runPriceAnalysis(),
+    });
+
+    registerAction({
+        id: 'visualizer.toggleMode2d',
+        label: 'Vista 2D',
+        description: 'Passa alla vista 2D',
+        category: 'Visualizer',
+        scope: 'project',
+        icon: 'i-heroicons-square-2-stack',
+        keywords: ['2d', 'vista'],
+        handler: () => setMode('2d'),
+    });
+
+    registerAction({
+        id: 'visualizer.toggleMode3d',
+        label: 'Vista 3D',
+        description: 'Passa alla vista 3D',
+        category: 'Visualizer',
+        scope: 'project',
+        icon: 'i-heroicons-cube',
+        keywords: ['3d', 'vista'],
+        handler: () => setMode('3d'),
+    });
+
+    registerAction({
+        id: 'visualizer.fetchPoles',
+        label: 'Ricarica poli',
+        description: 'Ricarica i poli della mappa',
+        category: 'Visualizer',
+        scope: 'project',
+        icon: 'i-heroicons-arrow-path',
+        keywords: ['poli', 'refresh'],
+        handler: () => fetchPoles(),
+    });
+
     // Retry once after mount to cover slow map hydration.
     setTimeout(() => {
         if (poles.value.length === 0) fetchPoles();
     }, 1000);
+});
+
+onUnmounted(() => {
+    actionsStore.unregisterOwner(actionOwner);
 });
 
 const plotData = computed(() => {

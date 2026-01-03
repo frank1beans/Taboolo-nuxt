@@ -1,19 +1,25 @@
 <script setup lang="ts">
-import { h, computed, resolveComponent } from 'vue';
+import { h, computed, resolveComponent, ref } from 'vue';
 import type { Project } from '#types';
 import type { DataGridConfig } from '~/types/data-grid';
 import DataGridPage from '~/components/layout/DataGridPage.vue';
-import ProjectStatusBadge from '~/components/projects/ProjectStatusBadge.vue';
+import StatusBadge from '~/components/ui/StatusBadge.vue';
 import PageToolbar from '~/components/layout/PageToolbar.vue';
+import SelectionBar from '~/components/ui/SelectionBar.vue';
 
 type ProjectCellParams = { value?: unknown; data?: Project };
 type ProjectRowNode = { data?: Project };
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   projects: Project[];
   loading?: boolean;
   lastActiveProjectId?: string | null;
-}>();
+  selectionKey?: string;
+  selectionActionIds?: string[];
+}>(), {
+  selectionKey: undefined,
+  selectionActionIds: () => ['projects.exportSelected', 'projects.deleteSelected'],
+});
 
 const emit = defineEmits<{
   (e: 'open' | 'edit' | 'remove' | 'analytics', project: Project): void;
@@ -21,6 +27,7 @@ const emit = defineEmits<{
 }>();
 
 const searchText = ref('');
+const selectionMode = computed(() => (props.selectionKey ? 'multiple' : 'single'));
 
 // --- Custom Actions Renderer (Inline) ---
 const ProjectActionsRenderer = {
@@ -54,7 +61,7 @@ const ProjectActionsRenderer = {
           variant: 'ghost',
           icon: 'i-heroicons-chart-bar',
           size: 'xs',
-          class: btnBaseClass + " text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/30",
+          class: btnBaseClass + " text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--info))] hover:bg-[hsl(var(--info-light))]",
           onClick: (e: Event) => { e.stopPropagation(); emit('analytics', row); }
         })
       });
@@ -66,7 +73,7 @@ const ProjectActionsRenderer = {
           variant: 'ghost',
           icon: 'i-heroicons-pencil-square',
           size: 'xs',
-          class: btnBaseClass + " text-gray-400 hover:text-gray-900 hover:bg-gray-100 dark:hover:bg-gray-800",
+          class: btnBaseClass + " text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]",
           onClick: (e: Event) => { e.stopPropagation(); emit('edit', row); }
         })
       });
@@ -78,7 +85,7 @@ const ProjectActionsRenderer = {
           variant: 'ghost',
           icon: 'i-heroicons-trash',
           size: 'xs',
-          class: btnBaseClass + " text-gray-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30",
+          class: btnBaseClass + " text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--destructive))] hover:bg-[hsl(var(--destructive-light))]",
           onClick: (e: Event) => { e.stopPropagation(); emit('remove', row); }
         })
       });
@@ -87,7 +94,7 @@ const ProjectActionsRenderer = {
         analyticsBtn,
         editBtn,
         removeBtn,
-        h('div', { class: 'w-px h-4 bg-gray-200 dark:bg-gray-800 mx-1' }),
+        h('div', { class: 'w-px h-4 bg-[hsl(var(--border))] mx-1' }),
         openBtn
       ]);
     };
@@ -148,7 +155,7 @@ const gridConfig = computed<DataGridConfig>(() => ({
       field: 'status',
       headerName: 'Stato',
       width: 140,
-      cellRenderer: 'ProjectStatusBadge',
+      cellRenderer: 'StatusBadge',
       valuesGetter: () => ['setup', 'in_progress', 'closed', 'warning'],
     },
     {
@@ -202,7 +209,7 @@ const gridConfig = computed<DataGridConfig>(() => ({
 }));
 
 const customComponents = {
-  ProjectStatusBadge: ProjectStatusBadge,
+  StatusBadge: StatusBadge,
   ProjectActionsRenderer: ProjectActionsRenderer
 };
 
@@ -222,7 +229,8 @@ const handleGridReady = (params: unknown) => {
     :grid-config="gridConfig"
     :row-data="projects"
     :loading="loading"
-    row-selection="single"
+    :row-selection="selectionMode"
+    :selection-key="selectionKey"
     :show-toolbar="false"
     :filter-text="searchText"
     :custom-components="customComponents"
@@ -251,17 +259,25 @@ const handleGridReady = (params: unknown) => {
           </PageToolbar>
         </Teleport>
       </ClientOnly>
+
+      <SelectionBar
+        v-if="selectionKey"
+        :selection-key="selectionKey"
+        :action-ids="selectionActionIds"
+        label-singular="Progetto"
+        label-plural="Progetti"
+      />
     </template>
   </DataGridPage>
 </template>
 
 <style>
 .projects-table-container .ag-header {
-  @apply border-b border-[hsl(var(--border)/0.6)] bg-[hsl(var(--background))];
+  @apply border-b border-[hsl(var(--table-border))] bg-[hsl(var(--table-header-bg))];
 }
 
 .projects-table-container .ag-row {
-  @apply border-b border-[hsl(var(--border)/0.4)] transition-colors duration-150;
+  @apply border-b border-[hsl(var(--table-border)/0.5)] transition-colors duration-150;
 }
 
 .projects-table-container .ag-cell {
@@ -269,7 +285,7 @@ const handleGridReady = (params: unknown) => {
 }
 
 .projects-table-container .ag-pinned-right-cols-container {
-  @apply border-l border-[hsl(var(--border)/0.4)] bg-[hsl(var(--background)/0.5)];
+  @apply border-l border-[hsl(var(--table-border))] bg-[hsl(var(--card)/0.9)];
   backdrop-filter: blur(4px);
 }
 </style>

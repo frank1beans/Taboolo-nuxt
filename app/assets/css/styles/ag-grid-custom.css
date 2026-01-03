@@ -9,21 +9,21 @@
   --ag-border-radius: var(--radius-xl);
   --ag-card-radius: var(--radius-xl);
   --ag-header-height: 44px;
-  --ag-row-height: 44px;
+  --ag-row-height: var(--density-row-height-comfortable, 44px);
 
-  /* Header - Light mode: soft blue-gray */
-  --ag-header-background-color: hsl(228 20% 97%);
+  /* Header - Light mode: using table tokens */
+  --ag-header-background-color: hsl(var(--table-header-bg));
   --ag-header-foreground-color: hsl(var(--foreground));
-  --ag-header-column-separator-color: hsl(var(--border) / 0.15);
+  --ag-header-column-separator-color: hsl(var(--table-border) / 0.5);
 
-  /* Rows - Light mode hover */
-  --ag-row-hover-color: hsl(228 25% 96%);
-  --ag-selected-row-background-color: hsl(152 50% 95%);
-  --ag-odd-row-background-color: transparent;
+  /* Rows - Light mode: using table tokens */
+  --ag-row-hover-color: hsl(var(--table-row-hover));
+  --ag-selected-row-background-color: hsl(var(--table-row-selected));
+  --ag-odd-row-background-color: hsl(var(--table-stripe));
 
   /* Cell - No borders */
   --ag-cell-horizontal-border: none;
-  --ag-row-border-color: hsl(var(--border) / 0.15);
+  --ag-row-border-color: hsl(var(--table-border));
 
   /* Inputs */
   --ag-input-border-color: hsl(var(--border) / 0.3);
@@ -59,21 +59,21 @@
   --ag-border-radius: var(--radius-xl);
   --ag-card-radius: var(--radius-xl);
   --ag-header-height: 44px;
-  --ag-row-height: 44px;
+  --ag-row-height: var(--density-row-height-comfortable, 44px);
 
-  /* Header - Dark mode: noticeably lighter for contrast */
-  --ag-header-background-color: hsl(220 15% 20%);
+  /* Header - Dark mode: using table tokens */
+  --ag-header-background-color: hsl(var(--table-header-bg));
   --ag-header-foreground-color: hsl(0 0% 90%);
-  --ag-header-column-separator-color: hsl(var(--border) / 0.3);
+  --ag-header-column-separator-color: hsl(var(--table-border) / 0.5);
 
-  /* Rows - Dark mode hover */
-  --ag-row-hover-color: hsl(220 15% 22%);
-  --ag-selected-row-background-color: hsl(var(--primary) / 0.2);
-  --ag-odd-row-background-color: transparent;
+  /* Rows - Dark mode: using table tokens */
+  --ag-row-hover-color: hsl(var(--table-row-hover));
+  --ag-selected-row-background-color: hsl(var(--table-row-selected));
+  --ag-odd-row-background-color: hsl(var(--table-stripe));
 
   /* Cell - Visible borders for structure */
   --ag-cell-horizontal-border: none;
-  --ag-row-border-color: hsl(var(--border) / 0.35);
+  --ag-row-border-color: hsl(var(--table-border));
 
   /* Inputs */
   --ag-input-border-color: hsl(var(--border) / 0.4);
@@ -134,15 +134,15 @@
 .ag-theme-quartz .ag-header {
   border-bottom: none;
   font-weight: 600;
-  background: hsl(228 20% 97%);
+  background: hsl(var(--table-header-bg));
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
 }
 
 /* Header styling - Dark mode with better contrast */
 .ag-theme-quartz-dark .ag-header {
-  border-bottom: 1px solid hsl(var(--border) / 0.3);
+  border-bottom: 1px solid hsl(var(--table-border) / 0.5);
   font-weight: 600;
-  background: hsl(220 15% 18%);
+  background: hsl(var(--table-header-bg));
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
 }
 
@@ -303,36 +303,36 @@
 
 /* Row styling - Light mode */
 .ag-theme-quartz .ag-row {
-  border-bottom: 1px solid hsl(var(--border) / 0.12);
+  border-bottom: 1px solid hsl(var(--table-border) / 0.5);
   background-color: hsl(var(--card));
   transition: background-color 0.12s ease;
 }
 
 .ag-theme-quartz .ag-row:hover {
-  background-color: hsl(228 25% 96%) !important;
+  background-color: hsl(var(--table-row-hover)) !important;
   cursor: pointer;
 }
 
 /* Row styling - Dark mode with better visibility */
 .ag-theme-quartz-dark .ag-row {
-  border-bottom: 1px solid hsl(var(--border) / 0.25);
-  background-color: hsl(220 15% 14%);
+  border-bottom: 1px solid hsl(var(--table-border) / 0.5);
+  background-color: hsl(var(--card));
   transition: background-color 0.12s ease;
 }
 
 .ag-theme-quartz-dark .ag-row:hover {
-  background-color: hsl(220 15% 22%) !important;
+  background-color: hsl(var(--table-row-hover)) !important;
   cursor: pointer;
 }
 
 /* Selected row styling */
 .ag-theme-quartz .ag-row-selected {
-  background-color: hsl(var(--primary) / 0.08) !important;
+  background-color: hsl(var(--table-row-selected)) !important;
   border-left: 2px solid hsl(var(--primary));
 }
 
 .ag-theme-quartz-dark .ag-row-selected {
-  background-color: hsl(var(--primary) / 0.15) !important;
+  background-color: hsl(var(--table-row-selected)) !important;
   border-left: 2px solid hsl(var(--primary));
 }
 
@@ -553,30 +553,35 @@
   width: 8px;
 }
 
-/* ============= Row Actions - Hover to Reveal ============= */
-/* Only apply on devices with hover capability (not touch) */
-@media (hover: hover) {
+/* ============= Row Actions - Always Visible ============= */
+/* Actions visible with low opacity, fully visible on row hover */
 
-  .ag-theme-quartz .ag-row .actions-cell>div,
-  .ag-theme-quartz-dark .ag-row .actions-cell>div {
-    opacity: 0;
-    transition: opacity 0.15s ease;
-  }
+.ag-theme-quartz .ag-row .actions-cell>div,
+.ag-theme-quartz-dark .ag-row .actions-cell>div,
+.ag-theme-quartz .ag-row .ag-cell[col-id="actions"]>div,
+.ag-theme-quartz-dark .ag-row .ag-cell[col-id="actions"]>div {
+  opacity: 0.5;
+  transition: opacity 0.15s ease;
+}
 
-  .ag-theme-quartz .ag-row:hover .actions-cell>div,
-  .ag-theme-quartz-dark .ag-row:hover .actions-cell>div {
-    opacity: 1;
-  }
+.ag-theme-quartz .ag-row:hover .actions-cell>div,
+.ag-theme-quartz-dark .ag-row:hover .actions-cell>div,
+.ag-theme-quartz .ag-row:hover .ag-cell[col-id="actions"]>div,
+.ag-theme-quartz-dark .ag-row:hover .ag-cell[col-id="actions"]>div {
+  opacity: 1;
+}
 
-  /* Also handle pinned right columns container */
-  .ag-theme-quartz .ag-row .ag-cell[col-id="actions"]>div,
-  .ag-theme-quartz-dark .ag-row .ag-cell[col-id="actions"]>div {
-    opacity: 0;
-    transition: opacity 0.15s ease;
-  }
+/* ============= Row Density Modifiers ============= */
+/* Apply on parent wrapper to change table density */
 
-  .ag-theme-quartz .ag-row:hover .ag-cell[col-id="actions"]>div,
-  .ag-theme-quartz-dark .ag-row:hover .ag-cell[col-id="actions"]>div {
-    opacity: 1;
-  }
+.density-compact .ag-theme-quartz,
+.density-compact .ag-theme-quartz-dark {
+  --ag-row-height: var(--density-row-height-compact, 32px);
+  --ag-header-height: 36px;
+}
+
+.density-comfortable .ag-theme-quartz,
+.density-comfortable .ag-theme-quartz-dark {
+  --ag-row-height: var(--density-row-height-comfortable, 44px);
+  --ag-header-height: 44px;
 }

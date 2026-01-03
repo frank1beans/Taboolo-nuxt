@@ -87,18 +87,18 @@
       </template>
 
       <!-- Empty State -->
-  <DataGridEmptyState
-    v-else
-    :title="emptyStateTitle"
-    :message="emptyStateMessage"
-    :show-action="showEmptyAction"
-    :action-label="emptyActionLabel"
-    :show-secondary-action="showEmptySecondaryAction"
-    :secondary-action-label="emptySecondaryActionLabel"
-    :secondary-icon="emptySecondaryActionIcon"
-    @action="$emit('empty-action')"
-    @secondary-action="$emit('empty-secondary-action')"
-  />
+      <DataGridEmptyState
+        v-else
+        :title="emptyStateTitle"
+        :message="emptyStateMessage"
+        :show-action="showEmptyAction"
+        :action-label="emptyActionLabel"
+        :show-secondary-action="showEmptySecondaryAction"
+        :secondary-action-label="emptySecondaryActionLabel"
+        :secondary-icon="emptySecondaryActionIcon"
+        @action="$emit('empty-action')"
+        @secondary-action="$emit('empty-secondary-action')"
+      />
     </div>
 
     <template #fallback>
@@ -113,7 +113,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, defineComponent, h, type PropType } from 'vue';
+import { ref, computed, defineComponent, h, onBeforeUnmount, watch, type PropType } from 'vue';
 import { AgGridVue } from 'ag-grid-vue3';
 import {
   AllCommunityModule,
@@ -135,6 +135,7 @@ import type { DataGridConfig, FilterPanelConfig } from '~/types/data-grid';
 import DataGridHeader from './DataGridHeader.vue';
 import ColumnFilterPopover from './ColumnFilterPopover.vue';
 import ColumnVisibilityPopover from './ColumnVisibilityPopover.vue';
+import { useSelectionStore } from '~/stores/selection';
 
 // Register AG Grid Modules
 ModuleRegistry.registerModules([AllCommunityModule]);
@@ -165,6 +166,7 @@ const props = withDefaults(
     rowClickable?: boolean;
     rowAriaLabel?: string;
     stickyHeader?: boolean;
+    selectionKey?: string;
     fetchRows?: (params: {
       page: number;
       pageSize: number;
@@ -202,6 +204,7 @@ const props = withDefaults(
     rowClickable: false,
     rowAriaLabel: undefined,
     stickyHeader: true,
+    selectionKey: undefined,
     fetchRows: undefined,
     cacheBlockSize: undefined,
     maxBlocksInCache: undefined,
@@ -221,6 +224,7 @@ const emit = defineEmits<{
 }>();
 
 const gridWrapper = ref<HTMLElement | null>(null);
+const selectionStore = useSelectionStore();
 const colorMode = useColorMode();
 const isDark = computed(() => colorMode.value === 'dark');
 const themeClass = computed(() => (isDark.value ? 'ag-theme-quartz-dark' : 'ag-theme-quartz'));
@@ -461,7 +465,19 @@ const handleRowDoubleClick = (event: RowDoubleClickedEvent<RowData>) => {
 const handleSelectionChange = (event: SelectionChangedEvent<RowData>) => {
   const selectedRows = event.api.getSelectedRows() as RowData[];
   emit('selection-changed', selectedRows);
+  if (props.selectionKey) {
+    selectionStore.setSelection(props.selectionKey, selectedRows);
+  }
 };
+
+watch(
+  () => (props.selectionKey ? selectionStore.getSelection(props.selectionKey).length : 0),
+  (count) => {
+    if (props.selectionKey && count === 0) {
+      gridApi.value?.deselectAll?.();
+    }
+  },
+);
 
 const onColumnResized = (_event: ColumnResizedEvent) => {
   // if (!e?.finished || e?.source === 'sizeColumnsToFit') return;
@@ -469,6 +485,12 @@ const onColumnResized = (_event: ColumnResizedEvent) => {
 };
 
 // Filter modal is now managed by UModal, no scroll listener needed
+
+onBeforeUnmount(() => {
+  if (props.selectionKey) {
+    selectionStore.clearSelection(props.selectionKey);
+  }
+});
 
 // Expose methods for parent components
 defineExpose({

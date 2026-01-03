@@ -2,7 +2,7 @@
   <div class="flex flex-col items-center justify-center h-full min-h-[400px] text-[hsl(var(--muted-foreground))]">
     <!-- Illustration -->
     <div 
-      class="w-20 h-20 rounded-2xl flex items-center justify-center mb-5 border"
+      class="w-20 h-20 rounded-2xl flex items-center justify-center mb-6 border"
       :class="hasActiveFilters 
         ? 'bg-[hsl(var(--warning-light))] border-[hsl(var(--warning)/0.2)]' 
         : 'bg-[hsl(var(--muted))] border-[hsl(var(--border))]'"

@@ -10,7 +10,7 @@ Il modulo è pensato per:
 
 ## 24.1 - Dove sta
 
-File: `services/importer/logic/price_analysis.py`
+File: `services/importer/analytics/price_analysis.py`
 
 Classi principali:
 
@@ -245,7 +245,7 @@ def analyze_project(
 Esempio:
 
 ```python
-from logic.price_analysis import PriceAnalyzer, AnalysisParams
+from analytics.price_analysis import PriceAnalyzer, AnalysisParams
 
 analyzer = PriceAnalyzer()
 
@@ -415,4 +415,5 @@ Soluzione: crea indice MongoDB:
 ```javascript
 db.pricelistitems.createIndex({ "project_id": 1, "embedding": 1 })
 ```
+
 

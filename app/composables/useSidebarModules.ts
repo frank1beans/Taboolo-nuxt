@@ -2,10 +2,11 @@
  * useSidebarModules.ts
  * 
  * Centralized state management for the modular sidebar system.
- * Allows pages to dynamically register/unregister sidebar modules (drawers).
+ * Implements route-scoped registration to prevent "ghost" modules
+ * when navigating between pages.
  */
 
-import { ref, computed, shallowRef, type Component, type ShallowRef } from 'vue'
+import { ref, computed, shallowRef, watch, onUnmounted, type Component, type ShallowRef, getCurrentInstance } from 'vue'
 import { useSidebarLayout } from '~/composables/useSidebarLayout'
 
 // Module definition
@@ -28,14 +29,50 @@ export interface SidebarModule {
     props?: Record<string, unknown>
 }
 
+// Internal module with ownership tracking
+interface SidebarModuleInternal extends SidebarModule {
+    _routePath?: string
+    _isLayout?: boolean
+}
+
 // Global state (shared across all instances)
-const modules: ShallowRef<SidebarModule[]> = shallowRef([])
+const modules: ShallowRef<SidebarModuleInternal[]> = shallowRef([])
 const activeModuleId = ref<string | null>(null)
+const currentRoutePath = ref<string>('')
+
+// Keep track if route watcher is set up
+let routeWatcherInitialized = false
 
 export function useSidebarModules() {
     const { isCollapsed, toggleCollapsed, expand, collapse } = useSidebarLayout()
+    const route = useRoute()
 
-    const sortModules = (list: SidebarModule[]) => {
+    // Initialize route watcher once (clears page modules on navigation)
+    if (!routeWatcherInitialized && import.meta.client) {
+        routeWatcherInitialized = true
+
+        watch(
+            () => route.path,
+            (newPath, oldPath) => {
+                if (oldPath && newPath !== oldPath) {
+                    // Clear all non-layout modules when route changes
+                    const layoutModules = modules.value.filter(m => m._isLayout)
+                    modules.value = layoutModules
+
+                    // Reset active module to first available
+                    if (layoutModules.length > 0 && layoutModules[0]) {
+                        activeModuleId.value = layoutModules[0].id
+                    } else {
+                        activeModuleId.value = null
+                    }
+                }
+                currentRoutePath.value = newPath
+            },
+            { immediate: true }
+        )
+    }
+
+    const sortModules = (list: SidebarModuleInternal[]) => {
         list.sort((a, b) => {
             const groupA = a.group === 'secondary' ? 1 : 0
             const groupB = b.group === 'secondary' ? 1 : 0
@@ -45,30 +82,69 @@ export function useSidebarModules() {
     }
 
     /**
-     * Register a new module in the sidebar
+     * Register a module from the layout (persists across routes)
      */
-    const registerModule = (module: SidebarModule) => {
+    const registerLayoutModule = (module: SidebarModule) => {
+        const internalModule: SidebarModuleInternal = {
+            ...module,
+            _isLayout: true,
+        }
+
         const existingIndex = modules.value.findIndex(m => m.id === module.id)
         if (existingIndex >= 0) {
             const nextModules = [...modules.value]
-            nextModules[existingIndex] = { ...nextModules[existingIndex], ...module }
+            nextModules[existingIndex] = { ...nextModules[existingIndex], ...internalModule }
             sortModules(nextModules)
             modules.value = nextModules
             return
         }
 
-        // Add module and sort by order
-        const newModules = [...modules.value, module]
+        const newModules = [...modules.value, internalModule]
         sortModules(newModules)
         modules.value = newModules
 
-        // Auto-activate first module if none active
-        if (!activeModuleId.value && newModules.length > 0) {
+        if (!activeModuleId.value && newModules.length > 0 && newModules[0]) {
             activeModuleId.value = newModules[0].id
         }
 
-        // Show sidebar when modules are registered
         expand()
+    }
+
+    /**
+     * Register a page-level module (auto-removed on route change)
+     */
+    const registerPageModule = (module: SidebarModule) => {
+        const internalModule: SidebarModuleInternal = {
+            ...module,
+            _routePath: route.path,
+            _isLayout: false,
+        }
+
+        const existingIndex = modules.value.findIndex(m => m.id === module.id)
+        if (existingIndex >= 0) {
+            const nextModules = [...modules.value]
+            nextModules[existingIndex] = { ...nextModules[existingIndex], ...internalModule }
+            sortModules(nextModules)
+            modules.value = nextModules
+            return
+        }
+
+        const newModules = [...modules.value, internalModule]
+        sortModules(newModules)
+        modules.value = newModules
+
+        if (!activeModuleId.value && newModules.length > 0 && newModules[0]) {
+            activeModuleId.value = newModules[0].id
+        }
+
+        expand()
+    }
+
+    /**
+     * Register a new module in the sidebar (legacy - defaults to page module)
+     */
+    const registerModule = (module: SidebarModule) => {
+        registerPageModule(module)
     }
 
     /**
@@ -93,7 +169,20 @@ export function useSidebarModules() {
     }
 
     /**
-     * Clear all modules (useful on page unmount)
+     * Clear all non-layout modules
+     */
+    const clearPageModules = () => {
+        const layoutModules = modules.value.filter(m => m._isLayout)
+        modules.value = layoutModules
+        if (layoutModules.length > 0 && layoutModules[0]) {
+            activeModuleId.value = layoutModules[0].id
+        } else {
+            activeModuleId.value = null
+        }
+    }
+
+    /**
+     * Clear all modules (useful for complete reset)
      */
     const clearAllModules = () => {
         modules.value = []
@@ -140,7 +229,7 @@ export function useSidebarModules() {
 
     return {
         // State
-        modules,
+        modules: computed(() => modules.value as SidebarModule[]),
         activeModuleId,
         activeModule,
         isVisible,
@@ -150,11 +239,58 @@ export function useSidebarModules() {
 
         // Actions
         registerModule,
+        registerLayoutModule,
+        registerPageModule,
         unregisterModule,
         setActiveModule,
+        clearPageModules,
         clearAllModules,
         toggleVisibility,
         showSidebar,
         hideSidebar,
+    }
+}
+
+/**
+ * Helper composable for page-level sidebar modules.
+ * Automatically registers module on setup and handles cleanup.
+ * 
+ * Usage:
+ * ```ts
+ * usePageSidebarModule({
+ *   id: 'wbs',
+ *   label: 'WBS',
+ *   icon: 'heroicons:squares-2x2',
+ *   component: WbsModule,
+ *   props: { nodes: wbsNodes }
+ * })
+ * ```
+ */
+export function usePageSidebarModule(module: SidebarModule) {
+    const { registerPageModule, unregisterModule, setActiveModule, showSidebar } = useSidebarModules()
+
+    // Register immediately
+    registerPageModule(module)
+    setActiveModule(module.id)
+
+    // Also register on mounted (in case of HMR)
+    onMounted(() => {
+        registerPageModule(module)
+        setActiveModule(module.id)
+    })
+
+    // Cleanup on unmount (backup, route watcher is primary)
+    onUnmounted(() => {
+        unregisterModule(module.id)
+    })
+
+    return {
+        show: () => {
+            setActiveModule(module.id)
+            showSidebar()
+        },
+        update: (updates: Partial<SidebarModule>) => {
+            registerPageModule({ ...module, ...updates })
+        }
     }
 }

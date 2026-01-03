@@ -23,8 +23,8 @@ from api.endpoints.analytics.schemas import (
     GlobalComputePropertyMapRequest,
     GlobalComputePropertiesRequest,
 )
-from logic.extraction.embedding_composer import EmbeddingComposer
-from logic.embedding import get_embedder
+from embedding.extraction.embedding_composer import EmbeddingComposer
+from embedding import get_embedder
 
 logger = logging.getLogger(__name__)
 
@@ -485,7 +485,7 @@ def _run_global_compute_property_map_job(payload: GlobalComputePropertyMapReques
         logger.error("UMAP or HDBSCAN libraries not installed. Skipping property map job.")
         return
 
-    from logic.price_analysis import GlobalPriceAnalyzer
+    from analytics.price_analysis import GlobalPriceAnalyzer
 
     start_time = time.time()
     analyzer = GlobalPriceAnalyzer()
@@ -732,17 +732,17 @@ def _run_global_compute_property_map_job(payload: GlobalComputePropertyMapReques
 
 
 def _get_schema_template(family: str) -> Dict[str, Any]:
-    from logic.extraction.schemas.core import CoreProperties
-    from logic.extraction.schemas.cartongesso import CartongessoProperties
-    from logic.extraction.schemas.serramenti import SerramentiProperties
-    from logic.extraction.schemas.pavimenti import PavimentiProperties
-    from logic.extraction.schemas.controsoffitti import ControsoffittiProperties
-    from logic.extraction.schemas.rivestimenti import RivestimentiProperties
-    from logic.extraction.schemas.coibentazione import CoibentazioneProperties
-    from logic.extraction.schemas.impermeabilizzazione import ImpermeabilizzazioneProperties
-    from logic.extraction.schemas.opere_murarie import OpereMurarieProperties
-    from logic.extraction.schemas.facciate_cappotti import FacciateCappottiProperties
-    from logic.extraction.schemas.apparecchi_sanitari import ApparecchiSanitariProperties
+    from embedding.extraction.schemas.core import CoreProperties
+    from embedding.extraction.schemas.cartongesso import CartongessoProperties
+    from embedding.extraction.schemas.serramenti import SerramentiProperties
+    from embedding.extraction.schemas.pavimenti import PavimentiProperties
+    from embedding.extraction.schemas.controsoffitti import ControsoffittiProperties
+    from embedding.extraction.schemas.rivestimenti import RivestimentiProperties
+    from embedding.extraction.schemas.coibentazione import CoibentazioneProperties
+    from embedding.extraction.schemas.impermeabilizzazione import ImpermeabilizzazioneProperties
+    from embedding.extraction.schemas.opere_murarie import OpereMurarieProperties
+    from embedding.extraction.schemas.facciate_cappotti import FacciateCappottiProperties
+    from embedding.extraction.schemas.apparecchi_sanitari import ApparecchiSanitariProperties
 
     schema_map = {
         "cartongesso": CartongessoProperties,
@@ -772,10 +772,10 @@ def _get_schema_template(family: str) -> Dict[str, Any]:
 
 
 def _run_global_compute_properties_job(payload: GlobalComputePropertiesRequest):
-    from logic.price_analysis import GlobalPriceAnalyzer
-    from logic.extraction.router import FamilyRouter
-    from logic.extraction.llm_extractor import LLMExtractor
-    from logic.extraction.postprocessor import postprocess_properties
+    from analytics.price_analysis import GlobalPriceAnalyzer
+    from embedding.extraction.router import FamilyRouter
+    from embedding.extraction.llm_extractor import LLMExtractor
+    from embedding.extraction.postprocessor import postprocess_properties
 
     start_time = time.time()
     analyzer = GlobalPriceAnalyzer()
@@ -886,7 +886,7 @@ async def trigger_global_compute_map(payload: GlobalComputeMapRequest, backgroun
     if not _get_umap():
         raise HTTPException(status_code=500, detail="UMAP library not installed on server.")
     
-    from logic.price_analysis import GlobalPriceAnalyzer
+    from analytics.price_analysis import GlobalPriceAnalyzer
     
     analyzer = GlobalPriceAnalyzer()
     projects = analyzer.fetch_projects(project_ids=payload.project_ids)
@@ -923,7 +923,7 @@ async def trigger_global_compute_property_map(
     if not _get_umap():
         raise HTTPException(status_code=500, detail="UMAP library not installed on server.")
 
-    from logic.price_analysis import GlobalPriceAnalyzer
+    from analytics.price_analysis import GlobalPriceAnalyzer
 
     analyzer = GlobalPriceAnalyzer()
     projects = analyzer.fetch_projects(
@@ -1080,7 +1080,7 @@ async def run_price_analysis(project_id: str, params: PriceAnalysisRequest = Pri
     Run batch price analysis for a project.
     Returns fair price estimates and outlier flags per WBS06 category.
     """
-    from logic.price_analysis import PriceAnalyzer, AnalysisParams, result_to_dict
+    from analytics.price_analysis import PriceAnalyzer, AnalysisParams, result_to_dict
     
     logger.info(f"Starting price analysis for project {project_id}")
     
@@ -1117,7 +1117,7 @@ async def run_global_price_analysis(params: GlobalAnalysisRequest = GlobalAnalys
     Run global price analysis across multiple projects.
     Returns aggregated analysis by WBS06 category across selected projects.
     """
-    from logic.price_analysis import GlobalPriceAnalyzer, GlobalAnalysisParams, global_result_to_dict
+    from analytics.price_analysis import GlobalPriceAnalyzer, GlobalAnalysisParams, global_result_to_dict
     
     logger.info(f"Starting global price analysis")
     logger.info(f"Filters: projects={params.project_ids}, year={params.year}, bu={params.business_unit}")
@@ -1156,7 +1156,7 @@ async def get_global_map_data(params: GlobalAnalysisRequest = GlobalAnalysisRequ
     Fetch semantic map data for multiple projects.
     Returns points with UMAP coordinates and cluster info.
     """
-    from logic.price_analysis import GlobalPriceAnalyzer
+    from analytics.price_analysis import GlobalPriceAnalyzer
     
     logger.info(f"Fetching global map data")
     
@@ -1341,7 +1341,7 @@ async def get_global_property_map_data(params: GlobalAnalysisRequest = GlobalAna
     Fetch property map data for multiple projects.
     Returns points with property-aware UMAP coordinates and extracted properties.
     """
-    from logic.price_analysis import GlobalPriceAnalyzer
+    from analytics.price_analysis import GlobalPriceAnalyzer
 
     logger.info("Fetching global property map data")
 
@@ -1518,3 +1518,4 @@ async def get_global_property_map_data(params: GlobalAnalysisRequest = GlobalAna
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
+

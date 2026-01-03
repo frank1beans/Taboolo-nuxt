@@ -22,7 +22,7 @@ import sys
 # Add parent dir to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from logic.price_analysis import PriceAnalyzer, AnalysisParams
+from analytics.price_analysis import PriceAnalyzer, AnalysisParams
 
 
 def format_currency(value: float) -> str:
@@ -151,3 +151,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

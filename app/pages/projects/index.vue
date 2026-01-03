@@ -1,43 +1,54 @@
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, computed } from 'vue';
+import { ref, onMounted, onBeforeUnmount, computed, watchEffect } from 'vue';
 import { useRouter } from 'vue-router';
 import type { GridApi, GridReadyEvent } from 'ag-grid-community';
 import type { Project } from '#types';
-import { useProjectCrud } from '~/composables/useProjectCrud';
+import { useProjects } from '~/composables/useProjects';
 import { useProjectForm } from '~/composables/useProjectForm';
 import ProjectFormModal from '~/components/projects/ProjectFormModal.vue';
 import { useAppSidebar } from '~/composables/useAppSidebar';
 import { useCurrentContext } from '~/composables/useCurrentContext';
-
+import { useActionsStore } from '~/stores/actions';
+import { useSelectionStore } from '~/stores/selection';
+import type { Action } from '~/types/actions';
+import * as XLSX from 'xlsx';
+import { queryApi } from '~/utils/queries';
+import { QueryKeys } from '~/types/queries';
 
 definePageMeta({
   title: 'Progetti',
   disableDefaultSidebar: true,
 });
-const { loading, fetchProjects } = useProjects();
+
 const router = useRouter();
 const { currentProject } = useCurrentContext();
 const lastActiveProjectId = ref<string | null>(null);
 
-// Reactive row data
-const rowData = ref<Project[]>([]);
-const defaultFetchParams = { page: 1, pageSize: 100 as const };
+// Query-based data fetching
+const { data: projectsData, status: projectsStatus, refresh: refreshProjects } = await useAsyncData('projects-list', () => 
+  queryApi.fetch(QueryKeys.PROJECT_LIST, { sort: 'updated_at:desc' })
+)
 
-// CRUD composable
+const rowData = computed(() => (projectsData.value?.items || []) as unknown as Project[]);
+const loading = computed(() => projectsStatus.value === 'pending');
+
 const {
   createProject,
   updateProject,
   deleteProject: deleteProjectApi,
-  reloadProjects: reloadProjectsApi,
-} = useProjectCrud(fetchProjects);
+} = useProjects();
+
 const { setCurrentProject } = useCurrentContext();
+const actionsStore = useActionsStore();
+const actionOwner = 'page:projects-index';
+const selectionStore = useSelectionStore();
+const selectedProjects = computed(() => selectionStore.getSelection('projects') as Project[]);
 
 // Modal form state
 const { showModal, formMode, form, openCreateModal, openEditModal, closeModal } = useProjectForm();
 
 const loadProjects = async () => {
-  const data = await reloadProjectsApi(defaultFetchParams);
-  rowData.value = data;
+  await refreshProjects();
 };
 
 // Load initial data
@@ -60,6 +71,7 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   clearRowClickTimeout();
+  actionsStore.unregisterOwner(actionOwner);
 });
 
 // Debounced navigation to avoid firing alongside double-click edit
@@ -126,10 +138,6 @@ const handleGridReady = (params: GridReadyEvent<Project>) => {
   gridApi.value = params.api;
 };
 
-const handleExport = () => {
-  exportToXlsx('progetti-commesse');
-};
-
 const handleAnalytics = (row: Project) => {
   router.push(`/projects/${row.id}/analytics`);
 };
@@ -137,6 +145,100 @@ const handleAnalytics = (row: Project) => {
 const activeCount = computed(() => rowData.value.filter(p => p.status === 'in_progress').length);
 const setupCount = computed(() => rowData.value.filter(p => p.status === 'setup').length);
 const warningCount = computed(() => rowData.value.filter(p => !p.description || p.status === 'setup').length);
+
+const exportSelectedProjects = () => {
+  const rows = selectedProjects.value;
+  if (!rows.length) return;
+
+  const worksheet = XLSX.utils.json_to_sheet(rows);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Progetti');
+
+  const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+  const filename = `progetti-selezionati_${timestamp}.xlsx`;
+  XLSX.writeFile(workbook, filename);
+};
+
+const deleteSelectedProjects = async () => {
+  const rows = selectedProjects.value;
+  if (!rows.length) return;
+  const ok = window.confirm(`Eliminare ${rows.length} progetti selezionati?`);
+  if (!ok) return;
+
+  const results = await Promise.allSettled(rows.map((row) => deleteProjectApi(row.id)));
+  const failed = results.filter((result) => result.status === 'rejected');
+  if (failed.length) {
+    console.error(`Failed to delete ${failed.length} projects`, failed);
+  }
+  selectionStore.clearSelection('projects');
+  await loadProjects();
+};
+
+const registerAction = (action: Action) => {
+  actionsStore.registerAction(action, { owner: actionOwner, overwrite: true });
+};
+
+onMounted(() => {
+  registerAction({
+    id: 'project.create',
+    label: 'Nuovo progetto',
+    description: 'Crea un nuovo progetto',
+    category: 'Progetti',
+    scope: 'global',
+    icon: 'i-heroicons-plus',
+    keywords: ['progetto', 'crea', 'nuovo'],
+    handler: () => openCreateModal(),
+  });
+
+  registerAction({
+    id: 'grid.exportExcel',
+    label: 'Esporta in Excel',
+    description: 'Esporta dati in Excel',
+    category: 'Tabelle',
+    scope: 'selection',
+    icon: 'i-heroicons-arrow-down-tray',
+    keywords: ['export', 'excel', 'tabella'],
+    handler: () => exportToXlsx('progetti-commesse'),
+  });
+
+  registerAction({
+    id: 'projects.refresh',
+    label: 'Aggiorna elenco progetti',
+    description: 'Ricarica la lista dei progetti',
+    category: 'Progetti',
+    scope: 'global',
+    icon: 'i-heroicons-arrow-path',
+    keywords: ['refresh', 'aggiorna'],
+    handler: () => loadProjects(),
+  });
+
+  registerAction({
+    id: 'projects.exportSelected',
+    label: 'Esporta selezionati',
+    description: 'Esporta i progetti selezionati',
+    category: 'Progetti',
+    scope: 'selection',
+    icon: 'i-heroicons-arrow-down-tray',
+    keywords: ['export', 'selezionati'],
+    isEnabled: () => selectedProjects.value.length > 0,
+    disabledReason: 'Nessun progetto selezionato',
+    handler: () => exportSelectedProjects(),
+  });
+
+  registerAction({
+    id: 'projects.deleteSelected',
+    label: 'Elimina selezionati',
+    description: 'Elimina i progetti selezionati',
+    category: 'Progetti',
+    scope: 'selection',
+    icon: 'i-heroicons-trash',
+    tone: 'danger',
+    keywords: ['elimina', 'selezionati'],
+    isEnabled: () => selectedProjects.value.length > 0,
+    disabledReason: 'Nessun progetto selezionato',
+    handler: () => deleteSelectedProjects(),
+  });
+});
 
 </script>
 
@@ -146,63 +248,29 @@ const warningCount = computed(() => rowData.value.filter(p => !p.description || 
       :projects="rowData"
       :loading="loading"
       :last-active-project-id="lastActiveProjectId"
+      selection-key="projects"
       @open="handleRowClick"
       @edit="openEditModal"
       @remove="deleteProject"
       @analytics="handleAnalytics"
       @grid-ready="(params: any) => handleGridReady(params)"
     >
-      <!-- Header Metrics -->
       <template #header-meta>
         <div class="flex items-center gap-2">
-          <UBadge variant="subtle" color="neutral" class="px-2 py-0.5 rounded-full ring-1 ring-[hsl(var(--border)/0.5)]">
-            <Icon name="i-heroicons-folder" class="w-3.5 h-3.5 mr-1.5 text-[hsl(var(--muted-foreground))]" />
-            <span class="font-semibold text-xs">{{ rowData.length }}</span>
-            <span class="ml-1 text-[10px] uppercase tracking-wider opacity-60 font-bold">Totali</span>
-          </UBadge>
-          <UBadge variant="subtle" color="primary" class="px-2 py-0.5 rounded-full ring-1 ring-[hsl(var(--primary)/0.2)]">
-             <Icon name="i-heroicons-play-circle" class="w-3.5 h-3.5 mr-1.5" />
-             <span class="font-semibold text-xs">{{ activeCount }}</span>
-             <span class="ml-1 text-[10px] uppercase tracking-wider opacity-60 font-bold">In corso</span>
-          </UBadge>
-          <UBadge variant="subtle" color="neutral" class="px-2 py-0.5 rounded-full ring-1 ring-[hsl(var(--border)/0.5)] text-slate-500">
-             <Icon name="i-heroicons-cog-6-tooth" class="w-3.5 h-3.5 mr-1.5" />
-             <span class="font-semibold text-xs">{{ setupCount }}</span>
-             <span class="ml-1 text-[10px] uppercase tracking-wider opacity-60 font-bold">Setup</span>
-          </UBadge>
-          <UBadge v-if="warningCount > 0" variant="subtle" color="warning" class="px-2 py-0.5 rounded-full ring-1 ring-[hsl(var(--warning)/0.2)]">
-             <Icon name="i-heroicons-exclamation-triangle" class="w-3.5 h-3.5 mr-1.5" />
-             <span class="font-semibold text-xs">{{ warningCount }}</span>
-             <span class="ml-1 text-[10px] uppercase tracking-wider opacity-60 font-bold">Attenzione</span>
-          </UBadge>
+          <CountBadge :count="rowData.length" label="Totali" icon="i-heroicons-folder" />
+          <CountBadge :count="activeCount" label="In corso" icon="i-heroicons-play-circle" color="primary" />
+          <CountBadge :count="setupCount" label="Setup" icon="i-heroicons-cog-6-tooth" />
+          <CountBadge v-if="warningCount > 0" :count="warningCount" label="Attenzione" icon="i-heroicons-exclamation-triangle" color="warning" />
         </div>
       </template>
 
       <!-- Toolbar Actions -->
       <template #toolbar-actions>
-        <div class="flex items-center gap-2">
-          <UButton 
-            color="neutral" 
-            variant="ghost" 
-            size="sm" 
-            icon="i-heroicons-arrow-down-tray" 
-            class="text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
-            @click="handleExport"
-          >
-            Esporta
-          </UButton>
-
-          <UButton 
-            color="primary" 
-            variant="solid"
-            size="sm" 
-            icon="i-heroicons-plus" 
-            class="shadow-sm shadow-primary/20"
-            @click="openCreateModal"
-          >
-            Nuovo progetto
-          </UButton>
-        </div>
+        <ActionList
+          layout="toolbar"
+          :action-ids="['grid.exportExcel', 'project.create']"
+          :primary-action-ids="['project.create']"
+        />
       </template>
     </ProjectsTable>
 

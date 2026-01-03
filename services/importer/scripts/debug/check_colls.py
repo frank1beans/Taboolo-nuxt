@@ -8,15 +8,15 @@ load_dotenv()
 def check_collections():
     uri = os.getenv("MONGODB_URI", "mongodb://localhost:27017/taboolo")
     client = pymongo.MongoClient(uri)
-    db = client.get_database()
+    db = client.get_database("test")
     
     print(f"Database: {db.name}")
     print("Collections:", db.list_collection_names())
     
-    if "price_list_items" in db.list_collection_names():
-        print("Found 'price_list_items' collection.")
+    if "pricelistitems" in db.list_collection_names():
+        print("Found 'pricelistitems' collection.")
         # Check one doc for structure
-        doc = db.price_list_items.find_one()
+        doc = db.pricelistitems.find_one()
         if doc:
             print("Sample doc keys:", doc.keys())
             if "embedding" in doc:
@@ -24,7 +24,7 @@ def check_collections():
             else:
                 print("'embedding' field NOT found in sample.")
     else:
-        print("'price_list_items' collection NOT found.")
+        print("'pricelistitems' collection NOT found.")
 
 if __name__ == "__main__":
     check_collections()

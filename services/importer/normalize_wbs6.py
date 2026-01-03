@@ -17,7 +17,7 @@ print(f"Loaded .env from: {env_path}")
 
 import pymongo
 from bson import ObjectId
-from logic.embedding import get_embedder
+from embedding import get_embedder
 
 def clean_wbs_desc(desc: str, code: str) -> str:
     """Removes the code prefix and separators from WBS description, normalizes text."""
@@ -164,3 +164,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

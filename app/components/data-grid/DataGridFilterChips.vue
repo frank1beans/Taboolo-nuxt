@@ -5,7 +5,7 @@
     class="flex items-center gap-2 px-4 py-2.5 bg-[hsl(var(--card))] border-b border-[hsl(var(--border)/0.5)]"
   >
     <!-- Filter icon and label -->
-    <div class="flex items-center gap-1.5 text-[10px] uppercase tracking-wider font-medium text-[hsl(var(--muted-foreground))] flex-shrink-0">
+    <div class="flex items-center gap-1.5 text-micro uppercase tracking-wider font-medium text-[hsl(var(--muted-foreground))] flex-shrink-0">
       <Icon name="heroicons:funnel" class="w-3.5 h-3.5" />
       <span>Filtri</span>
     </div>
@@ -17,8 +17,8 @@
         v-for="f in wbsFilters"
         :key="`wbs-${f.field}`"
         type="button"
-        class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[11px] font-medium transition-all duration-150 cursor-pointer hover:shadow-sm active:scale-[0.98] bg-[hsl(var(--acc-filter-wbs-bg,152_45%_92%))] text-[hsl(var(--acc-filter-wbs-text,152_65%_28%))] border border-[hsl(var(--acc-filter-wbs-border,152_45%_75%))] hover:bg-[hsl(var(--acc-filter-wbs-bg,152_45%_92%)/0.7)] group"
-        :title="`Rimuovi filtro: ${f.label}`"
+        class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium transition-all duration-150 cursor-pointer hover:shadow-sm active:scale-[0.98] bg-[hsl(var(--acc-filter-wbs-bg,152_45%_92%))] text-[hsl(var(--acc-filter-wbs-text,152_65%_28%))] border border-[hsl(var(--acc-filter-wbs-border,152_45%_75%))] hover:bg-[hsl(var(--acc-filter-wbs-bg,152_45%_92%)/0.7)] group"
+        :aria-label="`Rimuovi filtro: ${f.label}`"
         @click="$emit('remove', f.field)"
       >
         <Icon name="heroicons:squares-2x2" class="w-3 h-3 opacity-70" />
@@ -32,8 +32,8 @@
         v-for="f in columnFilters"
         :key="`col-${f.field}`"
         type="button"
-        class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[11px] font-medium transition-all duration-150 cursor-pointer hover:shadow-sm active:scale-[0.98] bg-[hsl(var(--acc-filter-column-bg,210_50%_93%))] text-[hsl(var(--acc-filter-column-text,210_65%_35%))] border border-[hsl(var(--acc-filter-column-border,210_45%_78%))] hover:bg-[hsl(var(--acc-filter-column-bg,210_50%_93%)/0.7)] group"
-        :title="`Rimuovi filtro: ${f.label}`"
+        class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium transition-all duration-150 cursor-pointer hover:shadow-sm active:scale-[0.98] bg-[hsl(var(--acc-filter-column-bg,210_50%_93%))] text-[hsl(var(--acc-filter-column-text,210_65%_35%))] border border-[hsl(var(--acc-filter-column-border,210_45%_78%))] hover:bg-[hsl(var(--acc-filter-column-bg,210_50%_93%)/0.7)] group"
+        :aria-label="`Rimuovi filtro: ${f.label}`"
         @click="$emit('remove', f.field)"
       >
         <Icon name="heroicons:table-cells" class="w-3 h-3 opacity-70" />
@@ -46,7 +46,7 @@
     <!-- Clear all button -->
     <button
       type="button"
-      class="flex-shrink-0 text-[11px] font-medium text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] underline underline-offset-2 transition-colors"
+      class="flex-shrink-0 text-xs font-medium text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] underline underline-offset-2 transition-colors"
       @click="$emit('clear-all')"
     >
       Pulisci tutti

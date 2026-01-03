@@ -19,8 +19,8 @@
 
       <template #default>
         <!-- Scrollable Container -->
-        <div class="h-full overflow-y-auto custom-scrollbar p-6">
-          <div class="max-w-5xl mx-auto space-y-8 pb-10">
+        <div class="h-full overflow-y-auto custom-scrollbar">
+          <div class="max-w-5xl mx-auto space-y-6 pb-10">
             
             <!-- Search Input -->
             <div class="bg-[hsl(var(--card))] rounded-xl border border-[hsl(var(--border))] p-6 shadow-sm">
@@ -150,8 +150,8 @@
             </div>
 
             <!-- Error Message -->
-            <div v-if="error" class="bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800 rounded-xl p-4 animate-fade-in">
-              <div class="flex items-center gap-3 text-red-600 dark:text-red-400">
+            <div v-if="error" class="bg-[hsl(var(--destructive-light))] border border-[hsl(var(--destructive)/0.3)] rounded-xl p-4 animate-fade-in">
+              <div class="flex items-center gap-3 text-[hsl(var(--destructive))]">
                 <UIcon name="i-heroicons-exclamation-triangle" class="w-6 h-6 flex-shrink-0" />
                 <span class="text-sm font-medium">{{ error }}</span>
               </div>
@@ -175,7 +175,7 @@
               enter-from-class="opacity-0 translate-y-4"
               enter-to-class="opacity-100 translate-y-0"
             >
-              <div v-if="result && !isLoading" class="space-y-8">
+              <div v-if="result && !isLoading" class="space-y-6">
                 
                 <!-- Main Estimate Card -->
                  <div class="grid md:grid-cols-3 gap-6">
@@ -272,7 +272,7 @@
                                 :class="[
                                   'text-[10px] px-2 py-1 rounded-full border transition-colors',
                                   match.is_match 
-                                    ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-700 dark:text-green-400' 
+                                    ? 'bg-[hsl(var(--success-light))] border-[hsl(var(--success)/0.3)] text-[hsl(var(--success))]' 
                                     : 'bg-[hsl(var(--muted)/0.3)] border-transparent text-[hsl(var(--muted-foreground))]'
                                 ]"
                               >
@@ -290,7 +290,7 @@
                             </div>
                             <div class="mt-1 flex items-center sm:justify-end gap-1 text-xs text-[hsl(var(--muted-foreground))]">
                               <span>Score:</span>
-                              <span class="font-mono font-medium" :class="item.combined_score > 0.8 ? 'text-emerald-600' : 'text-amber-600'">
+                              <span class="font-mono font-medium" :class="item.combined_score > 0.8 ? 'text-[hsl(var(--success))]' : 'text-[hsl(var(--warning))]'">
                                 {{ Math.round(item.combined_score * 100) }}%
                               </span>
                             </div>
@@ -324,6 +324,8 @@
 <script setup lang="ts">
 import MainPage from '~/components/layout/MainPage.vue'
 import PageHeader from '~/components/layout/PageHeader.vue'
+import { useActionsStore } from '~/stores/actions'
+import type { Action } from '~/types/actions'
 
 const {
   query,
@@ -339,7 +341,59 @@ const {
   formatConfidence,
 } = usePriceEstimator()
 
+const actionsStore = useActionsStore()
+const actionOwner = 'page:price-estimator'
+
+const registerAction = (action: Action) => {
+  actionsStore.registerAction(action, { owner: actionOwner, overwrite: true })
+}
+
 const showAdvanced = ref(false)
+
+onMounted(() => {
+  registerAction({
+    id: 'priceEstimator.estimate',
+    label: 'Stima prezzo',
+    description: 'Esegue la stima prezzo',
+    category: 'Price Estimator',
+    scope: 'global',
+    icon: 'i-heroicons-sparkles',
+    keywords: ['stima', 'prezzo'],
+    isEnabled: () => Boolean(query.value && query.value.length >= 3),
+    disabledReason: 'Inserisci una descrizione di almeno 3 caratteri',
+    handler: () => estimate(),
+  })
+
+  registerAction({
+    id: 'priceEstimator.reset',
+    label: 'Nuova ricerca',
+    description: 'Resetta la ricerca corrente',
+    category: 'Price Estimator',
+    scope: 'global',
+    icon: 'i-heroicons-arrow-path',
+    keywords: ['reset', 'ricerca'],
+    isEnabled: () => Boolean(result.value),
+    disabledReason: 'Nessun risultato da resettare',
+    handler: () => reset(),
+  })
+
+  registerAction({
+    id: 'priceEstimator.toggleAdvanced',
+    label: 'Opzioni avanzate',
+    description: 'Mostra o nasconde le opzioni avanzate',
+    category: 'Price Estimator',
+    scope: 'global',
+    icon: 'i-heroicons-adjustments-horizontal',
+    keywords: ['opzioni', 'avanzate'],
+    handler: () => {
+      showAdvanced.value = !showAdvanced.value
+    },
+  })
+})
+
+onUnmounted(() => {
+  actionsStore.unregisterOwner(actionOwner)
+})
 
 // Valid units options derived from result
 const unitOptions = computed(() => {

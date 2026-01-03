@@ -10,7 +10,7 @@ Questa funzionalità permette di generare vettori di embedding semantici per gli
     *   La richiesta viene inviata al backend Python con il parametro `compute_embeddings=true`.
 
 2.  **Backend (Python - Importer Service)**:
-    *   **Logic**: Il modulo `services/importer/logic/embedding.py` gestisce l'interazione con le API di Jina AI.
+    *   **Logic**: Il modulo `services/importer/embedding/client.py` gestisce l'interazione con le API di Jina AI.
     *   **Endpoints**: Gli endpoint `/import-six` e `/import-xpwe` intercettano il flag.
     *   **Elaborazione**:
         *   Se attivo, per ogni `PriceListItem` viene creato un testo combinando `description` e `long_description`.
@@ -54,3 +54,4 @@ class PriceListItem(BaseModel):
 
 - La generazione è opzionale perché richiede tempo e consuma crediti API.
 - In caso di errore API (es. timeout o chiave mancante), l'importazione prosegue senza embedding (warning nei log).
+

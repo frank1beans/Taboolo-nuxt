@@ -143,7 +143,7 @@
 
     --sidebar-min-width: 240px;
     --sidebar-max-width: 360px;
-/* Fixed header height */
+    /* Fixed header height */
     --workspace-gutter-x: 1.25rem;
     --workspace-gutter-y: 1.75rem;
     --workspace-header-offset: 0.75rem;
@@ -275,7 +275,7 @@
 
     /* === MUTED === */
     --muted: 230 15% 18%;
-    --muted-foreground: 220 10% 60%;
+    --muted-foreground: 220 10% 70%;
 
     /* === ACCENT === */
     --accent: 152 50% 45%;
@@ -502,7 +502,15 @@
     line-height: 1.4;
     color: hsl(var(--foreground));
   }
-*:focus-visible {
+
+  /* Micro labels: badges, counters, very small text */
+  .text-micro {
+    font-size: 0.625rem;
+    /* ~10px */
+    line-height: 1.4;
+  }
+
+  *:focus-visible {
     outline: 3px solid hsl(var(--ring));
     outline-offset: 3px;
     border-radius: 6px;
@@ -523,7 +531,8 @@
     padding-left: var(--workspace-gutter-x);
     padding-right: var(--workspace-gutter-x);
   }
-@media (prefers-reduced-motion: reduce) {
+
+  @media (prefers-reduced-motion: reduce) {
 
     *,
     *::before,
@@ -550,8 +559,9 @@
     border-right: none;
     color: hsl(var(--sidebar-foreground));
   }
-/* Large content surface - Clean with subtle structure */
-.surface-card {
+
+  /* Large content surface - Clean with subtle structure */
+  .surface-card {
     background: hsl(var(--card));
     border: 1px solid hsl(var(--border));
     border-left: none;
@@ -562,7 +572,7 @@
   }
 
   /* Card with left border when no sidebar is present */
-/* Sticky page header inside card */
+  /* Sticky page header inside card */
   .page-header-sticky {
     position: sticky;
     top: 0;
@@ -749,7 +759,18 @@
     font-weight: 600;
     color: hsl(var(--foreground));
   }
-.btn-outline-theme {
+
+  /* Standard container radius - use on cards, modals, panels, popovers */
+  .radius-container {
+    border-radius: var(--card-radius);
+  }
+
+  /* Container with left side flush (for sidebar-attached cards) */
+  .radius-container-attached {
+    border-radius: 0 var(--card-radius) var(--card-radius) 0;
+  }
+
+  .btn-outline-theme {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -821,7 +842,7 @@
     border: none;
   }
 
-/* Value display badge (for sliders, counters) */
+  /* Value display badge (for sliders, counters) */
   .value-badge {
     font-size: 0.625rem;
     font-family: ui-monospace, monospace;

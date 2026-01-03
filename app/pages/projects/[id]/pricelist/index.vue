@@ -15,11 +15,14 @@ import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import type { GridApi, GridReadyEvent, RowNode } from 'ag-grid-community'
 import { useCurrentContext } from '~/composables/useCurrentContext'
 import { useWbsTree, type WithWbsHierarchy } from '~/composables/useWbsTree'
-import { useSidebarModules } from '~/composables/useSidebarModules'
+import { useSidebarModules, usePageSidebarModule } from '~/composables/useSidebarModules'
+import { useAppSidebar } from '~/composables/useAppSidebar'
 import WbsModule from '~/components/sidebar/modules/WbsModule.vue'
 import DataGridPage from '~/components/layout/DataGridPage.vue'
 import PageToolbar from '~/components/layout/PageToolbar.vue'
 import { formatCurrency } from '~/lib/formatters'
+import { useActionsStore } from '~/stores/actions'
+import type { Action } from '~/types/actions'
 
 // ---------------------------------------------------------------------------
 // Layout & Page Meta
@@ -37,6 +40,8 @@ const rawEstimateId = computed(() => {
 })
 const selectedEstimateId = ref<string | null>(rawEstimateId.value)
 const { setCurrentEstimate } = useCurrentContext()
+const actionsStore = useActionsStore()
+const actionOwner = 'page:pricelist-index'
 
 // ---------------------------------------------------------------------------
 // Project Context
@@ -251,34 +256,74 @@ const handleReset = () => {
   gridApi.value?.setGridOption('quickFilterText', '')
 }
 
-const handleExport = () => {
-  exportToXlsx('listino-items')
+const registerAction = (action: Action) => {
+  actionsStore.registerAction(action, { owner: actionOwner, overwrite: true })
 }
 
-const { registerModule, unregisterModule, toggleVisibility, isVisible: sidebarVisible, setActiveModule, showSidebar } = useSidebarModules()
-const { showDefaultSidebar } = useAppSidebar()
-
-const wbsButtonTitle = computed(() => {
-  return sidebarVisible.value ? 'Nascondi WBS' : 'Mostra WBS'
-})
-
 onMounted(() => {
-  registerModule({
-    id: 'wbs',
-    label: 'WBS',
-    icon: 'heroicons:squares-2x2',
-    component: WbsModule,
-    props: {
-      nodes: wbsNodes,
-      selectedNodeId: computed(() => selectedWbsNode.value?.id ?? null),
-      onNodeSelected: (node: typeof selectedWbsNode.value | null) => onWbsNodeSelected(node),
-    },
+  registerAction({
+    id: 'grid.exportExcel',
+    label: 'Esporta in Excel',
+    description: 'Esporta dati in Excel',
+    category: 'Tabelle',
+    scope: 'selection',
+    icon: 'i-heroicons-arrow-down-tray',
+    keywords: ['export', 'excel', 'tabella'],
+    handler: () => exportToXlsx('listino-items'),
   })
-  setActiveModule('wbs')
+
+  registerAction({
+    id: 'grid.resetFilters',
+    label: 'Reset filtri tabella',
+    description: 'Cancella filtri e ricerca della tabella',
+    category: 'Tabelle',
+    scope: 'selection',
+    icon: 'i-heroicons-arrow-path',
+    keywords: ['reset', 'filtri', 'search'],
+    handler: () => handleReset(),
+  })
+
+  registerAction({
+    id: 'pricelist.toggleWbsSidebar',
+    label: 'Mostra/Nascondi WBS',
+    description: 'Attiva o disattiva la sidebar WBS',
+    category: 'Listini',
+    scope: 'global',
+    icon: 'i-heroicons-view-columns',
+    keywords: ['wbs', 'sidebar'],
+    handler: () => toggleWbsSidebar(),
+  })
+
+  registerAction({
+    id: 'pricelist.clearWbsSelection',
+    label: 'Rimuovi filtro WBS',
+    description: 'Deseleziona il nodo WBS attivo',
+    category: 'Listini',
+    scope: 'selection',
+    icon: 'i-heroicons-x-mark',
+    keywords: ['wbs', 'filtro'],
+    handler: () => onWbsNodeSelected(null),
+  })
 })
 
 onUnmounted(() => {
-  unregisterModule('wbs')
+  actionsStore.unregisterOwner(actionOwner)
+})
+
+const { toggleVisibility, isVisible: sidebarVisible, setActiveModule, showSidebar } = useSidebarModules()
+const { showDefaultSidebar } = useAppSidebar()
+
+// Register WBS Module using route-scoped helper
+usePageSidebarModule({
+  id: 'wbs',
+  label: 'WBS',
+  icon: 'heroicons:squares-2x2',
+  component: WbsModule,
+  props: {
+    nodes: wbsNodes,
+    selectedNodeId: computed(() => selectedWbsNode.value?.id ?? null),
+    onNodeSelected: (node: typeof selectedWbsNode.value | null) => onWbsNodeSelected(node),
+  },
 })
 
 const toggleWbsSidebar = () => {
@@ -325,14 +370,9 @@ const toggleWbsSidebar = () => {
 
     <!-- Header Actions (WBS/View Controls) -->
     <template #actions>
-      <UButton
-        :icon="sidebarVisible ? 'i-heroicons-view-columns' : 'i-heroicons-view-columns'"
-        :color="sidebarVisible ? 'primary' : 'neutral'"
-        variant="ghost"
-        size="sm"
-        :label="sidebarVisible ? 'WBS' : 'Mostra WBS'"
-        :title="wbsButtonTitle"
-        @click="toggleWbsSidebar"
+      <ActionList
+        layout="toolbar"
+        :action-ids="['pricelist.toggleWbsSidebar']"
       />
     </template>
 
@@ -388,30 +428,16 @@ const toggleWbsSidebar = () => {
                   size="xs"
                   title="Rimuovi filtro WBS"
                   class="hover:bg-[hsl(var(--primary)/0.2)]"
-                  @click="onWbsNodeSelected(null)"
+                  @click="actionsStore.executeAction('pricelist.clearWbsSelection')"
                 />
               </UBadge>
           </template>
 
           <template #right>
-            <button
-               v-if="searchText || selectedWbsNode"
-               class="flex items-center justify-center h-9 px-4 rounded-full text-sm font-medium text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--background))] hover:text-[hsl(var(--foreground))] transition-colors"
-               @click="handleReset"
-            >
-              <Icon name="heroicons:arrow-path" class="w-4 h-4 mr-2" />
-              Reset
-            </button>     
-
-            <UButton
-               color="neutral"
-               variant="ghost"
-               icon="i-heroicons-arrow-down-tray"
-               class="text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
-               @click="handleExport"
-            >
-               Esporta
-            </UButton>
+            <ActionList
+              layout="toolbar"
+              :action-ids="['grid.resetFilters', 'grid.exportExcel']"
+            />
           </template>
         </PageToolbar>
           </Teleport>

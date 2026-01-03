@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useRoute } from 'vue-router';
 import type { GridApi, GridReadyEvent } from 'ag-grid-community';
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, onMounted, onBeforeUnmount, ref, watch } from 'vue';
 import type { DataGridConfig } from '~/types/data-grid';
 import { useCurrentContext } from '~/composables/useCurrentContext';
 import DataGridActions from '~/components/data-grid/DataGridActions.vue';
@@ -10,30 +10,50 @@ import PageToolbar from '~/components/layout/PageToolbar.vue';
 import type { ApiOfferSummary } from '~/types/api';
 import type { Estimate, Project } from '#types';
 import { formatCurrency as formatCurrencyLib, formatDelta } from '~/lib/formatters';
+import { useActionsStore } from '~/stores/actions';
+import type { Action } from '~/types/actions';
+import { queryApi } from '~/utils/queries';
+import { QueryKeys } from '~/types/queries';
 
 const route = useRoute();
 const projectId = route.params.id as string;
 
-// Explicitly type the useFetch result or cast it
-const { data: context, status, refresh } = await useFetch<Project>(`/api/projects/${projectId}/context`, {
-    key: `project-context-dashboard-${projectId}`
-});
+// Fetch Project Context
+const { data: projectDetails, status: projectStatus } = await useAsyncData(`project-${projectId}-details`, () => 
+  queryApi.fetch(QueryKeys.PROJECT_GET, { id: projectId })
+)
 
-const { data: alertSummary, status: alertStatus, refresh: refreshAlertSummary } = await useFetch(
+// Fetch Estimates
+const { data: estimatesData, status: estimatesStatus, refresh: refreshEstimates } = await useAsyncData(`project-${projectId}-estimates`, () => 
+  queryApi.fetch(QueryKeys.PROJECT_ESTIMATES, { project_id: projectId, type: 'project' })
+)
+
+const alertSummary = ref<any>(null); // Placeholder for alerts query if needed or use old API for now if not ported
+const alertStatus = ref('idle');
+
+// TODO: Port alerts summary to queryApi. For now keeping it specific or assuming separate handling.
+// Actually, let's keep the old alerts fetch for now to minimize breakage until we make that query.
+const { data: alertSummaryRaw, status: alertStatusRaw, refresh: refreshAlertSummary } = await useFetch(
   `/api/projects/${projectId}/offers/alerts/summary`,
   {
     key: `project-${projectId}-alert-summary`,
     query: { group_by: 'estimate', status: 'open' },
   },
 );
+alertSummary.value = alertSummaryRaw.value;
+alertStatus.value = alertStatusRaw.value;
 
-const loading = computed(() => status.value === 'pending');
-const project = computed(() => context.value);
 
-// Safely access estimates with optional chaining and type assertion if needed
-const estimates = computed(() => project.value?.estimates || []);
+const loading = computed(() => projectStatus.value === 'pending' || estimatesStatus.value === 'pending');
+// Cast to Project to satisfy typechecker if needed, though they should match mostly
+const project = computed(() => projectDetails.value as unknown as Project);
+
+// Helper to map EstimateListItem to Estimate type expected by UI
+const estimates = computed(() => (estimatesData.value?.items || []) as unknown as Estimate[]);
 
 const { setProjectState, currentEstimate } = useCurrentContext();
+const actionsStore = useActionsStore();
+const actionOwner = 'page:projects-detail';
 const activeEstimateId = computed(() => currentEstimate.value?.id);
 
 type EstimateRow = Estimate & {
@@ -44,9 +64,13 @@ type EstimateRow = Estimate & {
 
 // Enforce project context (clears active estimate) using direct hydration
 onMounted(() => {
-    if (context.value) {
-        setProjectState(context.value, null);
+    if (projectDetails.value) {
+        setProjectState(projectDetails.value as unknown as Project, null);
     }
+});
+
+onBeforeUnmount(() => {
+  actionsStore.unregisterOwner(actionOwner);
 });
 
 const statsMap = ref<Record<string, {
@@ -240,7 +264,7 @@ const deleteEstimate = async (estimate?: Estimate) => {
       method: 'DELETE',
     });
     // Refresh data
-    await refresh(); // assuming refresh function is available from useFetch result
+    await refreshEstimates();
     await refreshAlertSummary();
   } catch (error) {
     console.error('Error deleting estimate:', error);
@@ -299,9 +323,58 @@ const handleReset = () => {
     gridApi.value?.setFilterModel(null);
 };
 
-const handleExport = () => {
-    exportToXlsx('preventivi');
+const registerAction = (action: Action) => {
+  actionsStore.registerAction(action, { owner: actionOwner, overwrite: true });
 };
+
+onMounted(() => {
+  registerAction({
+    id: 'grid.exportExcel',
+    label: 'Esporta in Excel',
+    description: 'Esporta dati in Excel',
+    category: 'Tabelle',
+    scope: 'selection',
+    icon: 'i-heroicons-arrow-down-tray',
+    keywords: ['export', 'excel', 'tabella'],
+    handler: () => exportToXlsx('preventivi'),
+  });
+
+  registerAction({
+    id: 'project.importOffers',
+    label: 'Importa offerte',
+    description: 'Importa offerte da Excel',
+    category: 'Progetti',
+    scope: 'project',
+    icon: 'i-heroicons-arrow-up-tray',
+    keywords: ['import', 'offerte', 'excel'],
+    handler: () => navigateTo(`/projects/${projectId}/import`),
+  });
+
+  registerAction({
+    id: 'grid.resetFilters',
+    label: 'Reset filtri tabella',
+    description: 'Cancella filtri e ricerca della tabella',
+    category: 'Tabelle',
+    scope: 'selection',
+    icon: 'i-heroicons-arrow-path',
+    keywords: ['reset', 'filtri', 'search'],
+    handler: () => handleReset(),
+  });
+
+  registerAction({
+    id: 'project.openConflicts',
+    label: 'Apri centro conflitti',
+    description: 'Vai alla pagina conflitti del progetto',
+    category: 'Progetti',
+    scope: 'project',
+    icon: 'i-heroicons-exclamation-triangle',
+    keywords: ['conflitti', 'alert'],
+    handler: () => {
+      const query = activeEstimateId.value ? `?estimateId=${activeEstimateId.value}` : ''
+      navigateTo(`/projects/${projectId}/conflicts${query}`)
+    },
+  });
+});
 </script>
 
 <template>
@@ -375,34 +448,10 @@ const handleExport = () => {
               class="!py-0"
             >
           <template #right>
-            <button
-               v-if="searchText"
-               class="flex items-center justify-center h-9 px-4 rounded-full text-sm font-medium text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--background))] hover:text-[hsl(var(--foreground))] transition-colors"
-               @click="handleReset"
-            >
-              <Icon name="heroicons:arrow-path" class="w-4 h-4 mr-2" />
-              Reset
-            </button>     
-
-            <UButton
-               color="neutral"
-               variant="ghost"
-               icon="i-heroicons-arrow-down-tray"
-               class="text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
-               @click="handleExport"
-            >
-               Esporta
-            </UButton>
-
-            <UButton
-              color="neutral"
-              variant="ghost"
-              icon="i-heroicons-arrow-up-tray"
-              class="text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
-              @click="navigateTo(`/projects/${projectId}/import`)"
-            >
-              Importa Dati
-            </UButton>
+            <ActionList
+              layout="toolbar"
+              :action-ids="['grid.resetFilters', 'grid.exportExcel', 'project.importOffers']"
+            />
           </template>
             </PageToolbar>
           </Teleport>

@@ -1,5 +1,5 @@
 import { Types } from 'mongoose';
-import { OfferAlert, OfferItem  } from '#models';
+import { OfferAlert, OfferItem } from '#models';
 
 
 
@@ -99,30 +99,9 @@ export async function resolveAlert(
         payload.price_list_item_id = selectedPliId;
     }
 
-    // Handle price_mismatch resolution with apply_approved_price
-    if (
-        existingAlert.type === 'price_mismatch' &&
-        updates.status === 'resolved' &&
-        updates.apply_approved_price &&
-        existingAlert.offer_item_id &&
-        existingAlert.expected != null
-    ) {
-        const newPrice = Number(existingAlert.expected);
-        if (!isNaN(newPrice)) {
-            console.log(`[ConflictService] Applying approved price ${newPrice} to offer item ${existingAlert.offer_item_id}`);
-
-            const oldPrice = existingAlert.actual;
-            await OfferItem.findByIdAndUpdate(existingAlert.offer_item_id, {
-                $set: { unit_price: newPrice },
-            });
-
-            if (!payload.resolution_note) {
-                payload.resolution_note = `Prezzo aggiornato: ${oldPrice} → ${newPrice}`;
-            }
-        } else {
-            console.warn(`[ConflictService] Invalid expected price value: ${existingAlert.expected} for alert ${alertId}`);
-        }
-    }
+    // Note: price_mismatch resolution does NOT overwrite offer prices.
+    // Offers are expected to have different prices than baseline - that's the point!
+    // We just mark the alert as resolved without modifying the offer item price.
 
     return OfferAlert.findOneAndUpdate(
         { _id: new Types.ObjectId(alertId), project_id: new Types.ObjectId(projectId) },

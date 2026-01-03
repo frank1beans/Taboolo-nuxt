@@ -14,6 +14,8 @@ import ConflictActionsModule from '~/components/sidebar/modules/ConflictActionsM
 import { useProjectTree } from '~/composables/useProjectTree';
 import { useSidebarModules } from '~/composables/useSidebarModules';
 import { useAppSidebar } from '~/composables/useAppSidebar';
+import { useActionsStore } from '~/stores/actions';
+import type { Action } from '~/types/actions';
 
 definePageMeta({
   breadcrumb: 'Centro conflitti',
@@ -23,6 +25,8 @@ definePageMeta({
 const route = useRoute();
 const router = useRouter();
 const projectId = route.params.id as string;
+const actionsStore = useActionsStore();
+const actionOwner = 'page:conflicts-index';
 
 const { data: context, status: contextStatus } = await useFetch<Project>(
   `/api/projects/${projectId}/context`,
@@ -126,17 +130,105 @@ onMounted(() => {
      component: ConflictActionsModule,
      props: {
        selectedCount: computed(() => selectedAlerts.value.length),
-       loading,
-       canApplyPrices: computed(() => onlyPriceMismatches.value),
-       'onBatchResolve': batchResolve,
-       'onBatchIgnore': batchIgnore,
-       'onBatchApplyPrices': batchApplyPrices,
      }
+  });
+
+  const registerAction = (action: Action) => {
+    actionsStore.registerAction(action, { owner: actionOwner, overwrite: true });
+  };
+
+  registerAction({
+    id: 'conflicts.refresh',
+    label: 'Aggiorna conflitti',
+    description: 'Ricarica conflitti e stati',
+    category: 'Conflitti',
+    scope: 'project',
+    icon: 'i-heroicons-arrow-path',
+    keywords: ['refresh', 'conflitti'],
+    handler: () => refreshAll(),
+  });
+
+  registerAction({
+    id: 'conflicts.applyAllPrices',
+    label: 'Applica prezzo a tutti',
+    description: 'Applica prezzo di listino ai conflitti filtrati',
+    category: 'Conflitti',
+    scope: 'project',
+    icon: 'i-heroicons-currency-euro',
+    tone: 'warning',
+    keywords: ['prezzi', 'batch'],
+    isEnabled: () => canApplyAll.value,
+    disabledReason: 'Nessun conflitto applicabile',
+    handler: () => applyAllPrices(),
+  });
+
+  registerAction({
+    id: 'conflicts.batchResolve',
+    label: 'Risolvi selezionati',
+    description: 'Risolvi i conflitti selezionati',
+    category: 'Conflitti',
+    scope: 'selection',
+    icon: 'i-heroicons-check',
+    tone: 'success',
+    keywords: ['resolve', 'batch'],
+    isEnabled: () => selectedAlerts.value.length > 0,
+    disabledReason: 'Nessun conflitto selezionato',
+    handler: () => batchResolve(),
+  });
+
+  registerAction({
+    id: 'conflicts.batchIgnore',
+    label: 'Ignora selezionati',
+    description: 'Ignora i conflitti selezionati',
+    category: 'Conflitti',
+    scope: 'selection',
+    icon: 'i-heroicons-eye-slash',
+    keywords: ['ignore', 'batch'],
+    isEnabled: () => selectedAlerts.value.length > 0,
+    disabledReason: 'Nessun conflitto selezionato',
+    handler: () => batchIgnore(),
+  });
+
+  registerAction({
+    id: 'conflicts.batchApplyPrices',
+    label: 'Applica prezzo ai selezionati',
+    description: 'Applica prezzo di listino ai conflitti selezionati',
+    category: 'Conflitti',
+    scope: 'selection',
+    icon: 'i-heroicons-currency-euro',
+    tone: 'warning',
+    keywords: ['prezzi', 'batch'],
+    isEnabled: () => selectedAlerts.value.length > 0 && onlyPriceMismatches.value,
+    disabledReason: 'Seleziona solo conflitti prezzo',
+    handler: () => batchApplyPrices(),
+  });
+
+  registerAction({
+    id: 'conflicts.openPending',
+    label: 'Apri offerte pending',
+    description: 'Vai alla lista offerte pending',
+    category: 'Conflitti',
+    scope: 'project',
+    icon: 'i-heroicons-clock',
+    keywords: ['pending', 'offerte'],
+    handler: () => router.push(`/projects/${projectId}/offers/pending`),
+  });
+
+  registerAction({
+    id: 'conflicts.openAddendum',
+    label: 'Apri addendum',
+    description: 'Vai alla lista addendum',
+    category: 'Conflitti',
+    scope: 'project',
+    icon: 'i-heroicons-document-plus',
+    keywords: ['addendum', 'offerte'],
+    handler: () => router.push(`/projects/${projectId}/offers/addendum`),
   });
 });
 
 onUnmounted(() => {
   moduleIds.forEach(id => unregisterModule(id));
+  actionsStore.unregisterOwner(actionOwner);
 });
 
 const estimates = computed(() => context.value?.estimates ?? []);
@@ -533,32 +625,28 @@ const refreshAll = async () => {
         </template>
 
         <template #rightSlot>
-          <UButton
-            v-if="canApplyAll"
-            color="warning"
-            variant="solid"
-            size="xs"
-            icon="i-heroicons-currency-euro"
-            class="mr-2"
-            @click="applyAllPrices"
-          >
-            Applica a tutti i filtrati
-          </UButton>
-          <UButton
-            color="neutral"
-            variant="ghost"
-            size="sm"
-            icon="i-heroicons-arrow-path"
-            @click="refreshAll"
-          >
-            Aggiorna
-          </UButton>
+          <ActionList
+            layout="toolbar"
+            :action-ids="['conflicts.applyAllPrices', 'conflicts.refresh']"
+            :primary-action-ids="['conflicts.applyAllPrices']"
+          />
         </template>
       </PageHeader>
     </template>
 
     <!-- Main Content: Full Height Table -->
     <div class="flex-1 min-h-0 relative overflow-hidden flex flex-col h-full">
+      <SelectionBar
+        selection-key="conflicts"
+        :action-ids="[
+          'conflicts.batchResolve',
+          'conflicts.batchIgnore',
+          'conflicts.batchApplyPrices',
+        ]"
+        label-singular="Conflitto"
+        label-plural="Conflitti"
+      />
+
       <ConflictsTable
         :alerts="alerts"
         :loading="alertsStatus === 'pending'"

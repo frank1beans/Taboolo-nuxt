@@ -490,7 +490,9 @@ Taboolo-nuxt/
 │   └── importer/                 # Servizio Python
 │       ├── api/                  # Endpoint FastAPI
 │       ├── parsers/              # Parser SIX/Excel
-│       └── logic/                # Logica elaborazione
+│       └── ingestion/            # Pipeline import
+│       └── embedding/            # Embedding + LLM extraction
+│       └── analytics/            # Analisi prezzi e clustering
 │
 └── docs/                         # 📚 DOCUMENTAZIONE
     ├── tutorial/                 # Percorso guidato

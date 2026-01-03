@@ -36,7 +36,7 @@ defineEmits<{
         <h3 class="text-xs font-semibold text-[hsl(var(--foreground))] truncate">
           {{ title }}
         </h3>
-        <p v-if="subtitle" class="text-[10px] text-[hsl(var(--muted-foreground))] truncate">
+        <p v-if="subtitle" class="text-micro text-[hsl(var(--muted-foreground))] truncate">
           {{ subtitle }}
         </p>
       </div>

@@ -9,7 +9,7 @@ from typing import List, Optional
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
-from logic.price_estimator import PriceEstimator
+from analytics.price_estimator import PriceEstimator
 
 logger = logging.getLogger(__name__)
 
@@ -170,3 +170,4 @@ async def estimate_price(request: EstimateRequest):
 async def health_check():
     """Health check endpoint."""
     return {"status": "ok", "service": "price-estimator"}
+

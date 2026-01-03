@@ -162,6 +162,9 @@ const gridColumns = computed(() => {
   grid-column: 2 / -1;
   grid-row: 1;
   z-index: 40;
+  height: var(--topbar-height, 56px);
+  display: flex;
+  align-items: center;
 }
 
 .app-shell-sidebar-left {

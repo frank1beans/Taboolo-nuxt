@@ -15,7 +15,7 @@ const sanitizeTo = (to?: string) => {
 </script>
 
 <template>
-  <aside class="w-[68px] h-full flex flex-col items-center py-4 bg-[hsl(var(--sidebar-background))] border-r border-[hsl(var(--sidebar-border))] z-50">
+  <aside class="h-full flex flex-col items-center py-4 bg-[hsl(var(--sidebar-background))] border-r border-[hsl(var(--sidebar-border))] z-50" style="width: var(--rail-width);">
     <!-- Logo -->
     <div class="mb-6 flex-shrink-0">
       <div class="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-[hsl(var(--primary))] to-[hsl(var(--primary-700))] text-white shadow-lg cursor-default transition-transform hover:scale-105">
@@ -35,7 +35,7 @@ const sanitizeTo = (to?: string) => {
         <NuxtLink
           v-if="sanitizeTo(item.to)"
           :to="sanitizeTo(item.to)"
-          class="group relative flex items-center justify-center w-10 h-10 mx-auto rounded-xl transition-all duration-200 outline-none"
+          class="group relative flex items-center justify-center w-10 h-10 mx-auto rounded-xl transition-all duration-200 focus-visible:ring-2 focus-visible:ring-[hsl(var(--sidebar-ring))] focus-visible:ring-offset-1"
           :class="[
             item.id === activeNodeId
               ? 'bg-[hsl(var(--primary))] text-white shadow-md'
