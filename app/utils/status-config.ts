@@ -23,37 +23,37 @@ export type UnifiedStatus = 'setup' | 'in_progress' | 'completed' | 'archived' |
 export const UNIFIED_STATUSES: Record<UnifiedStatus, StatusConfig> = {
     setup: {
         label: 'Setup',
-        color: 'bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]',
+        color: 'bg-muted text-muted-foreground',
         badgeColor: 'neutral',
         icon: 'i-heroicons-wrench-screwdriver',
     },
     in_progress: {
         label: 'In Corso',
-        color: 'bg-[hsl(var(--warning-light))] text-[hsl(var(--warning))]',
+        color: 'bg-warning-light text-warning',
         badgeColor: 'success',
         icon: 'i-heroicons-play',
     },
     completed: {
         label: 'Completo',
-        color: 'bg-[hsl(var(--success-light))] text-[hsl(var(--success))]',
+        color: 'bg-success-light text-success',
         badgeColor: 'primary',
         icon: 'i-heroicons-check-circle',
     },
     archived: {
         label: 'Archiviato',
-        color: 'bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]',
+        color: 'bg-muted text-muted-foreground',
         badgeColor: 'neutral',
         icon: 'i-heroicons-archive-box',
     },
     warning: {
         label: 'Attenzione',
-        color: 'bg-[hsl(var(--destructive-light))] text-[hsl(var(--destructive))]',
+        color: 'bg-destructive-light text-destructive',
         badgeColor: 'warning',
         icon: 'i-heroicons-exclamation-triangle',
     },
     unknown: {
         label: '-',
-        color: 'bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]',
+        color: 'bg-muted text-muted-foreground',
         badgeColor: 'neutral',
     },
 };
@@ -67,25 +67,25 @@ export type ConflictStatus = 'pending' | 'resolved' | 'ignored' | 'auto_resolved
 export const CONFLICT_STATUSES: Record<ConflictStatus, StatusConfig> = {
     pending: {
         label: 'In Attesa',
-        color: 'bg-[hsl(var(--warning-light))] text-[hsl(var(--warning))]',
+        color: 'bg-warning-light text-warning',
         badgeColor: 'warning',
         icon: 'i-heroicons-clock',
     },
     resolved: {
         label: 'Risolto',
-        color: 'bg-[hsl(var(--success-light))] text-[hsl(var(--success))]',
+        color: 'bg-success-light text-success',
         badgeColor: 'success',
         icon: 'i-heroicons-check-circle',
     },
     ignored: {
         label: 'Ignorato',
-        color: 'bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]',
+        color: 'bg-muted text-muted-foreground',
         badgeColor: 'neutral',
         icon: 'i-heroicons-eye-slash',
     },
     auto_resolved: {
         label: 'Auto-risolto',
-        color: 'bg-[hsl(var(--info-light))] text-[hsl(var(--info))]',
+        color: 'bg-info-light text-info',
         badgeColor: 'info',
         icon: 'i-heroicons-sparkles',
     },
@@ -100,31 +100,31 @@ export type OfferStatus = 'draft' | 'submitted' | 'accepted' | 'rejected' | 'exp
 export const OFFER_STATUSES: Record<OfferStatus, StatusConfig> = {
     draft: {
         label: 'Bozza',
-        color: 'bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]',
+        color: 'bg-muted text-muted-foreground',
         badgeColor: 'neutral',
         icon: 'i-heroicons-pencil-square',
     },
     submitted: {
         label: 'Inviata',
-        color: 'bg-[hsl(var(--info-light))] text-[hsl(var(--info))]',
+        color: 'bg-info-light text-info',
         badgeColor: 'info',
         icon: 'i-heroicons-paper-airplane',
     },
     accepted: {
         label: 'Accettata',
-        color: 'bg-[hsl(var(--success-light))] text-[hsl(var(--success))]',
+        color: 'bg-success-light text-success',
         badgeColor: 'success',
         icon: 'i-heroicons-check-circle',
     },
     rejected: {
         label: 'Rifiutata',
-        color: 'bg-[hsl(var(--destructive-light))] text-[hsl(var(--destructive))]',
+        color: 'bg-destructive-light text-destructive',
         badgeColor: 'error',
         icon: 'i-heroicons-x-circle',
     },
     expired: {
         label: 'Scaduta',
-        color: 'bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]',
+        color: 'bg-muted text-muted-foreground',
         badgeColor: 'neutral',
         icon: 'i-heroicons-clock',
     },
@@ -139,25 +139,25 @@ export type ImportStatus = 'pending' | 'processing' | 'completed' | 'failed';
 export const IMPORT_STATUSES: Record<ImportStatus, StatusConfig> = {
     pending: {
         label: 'In Attesa',
-        color: 'bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]',
+        color: 'bg-muted text-muted-foreground',
         badgeColor: 'neutral',
         icon: 'i-heroicons-clock',
     },
     processing: {
         label: 'In Elaborazione',
-        color: 'bg-[hsl(var(--info-light))] text-[hsl(var(--info))]',
+        color: 'bg-info-light text-info',
         badgeColor: 'info',
         icon: 'i-heroicons-arrow-path',
     },
     completed: {
         label: 'Completato',
-        color: 'bg-[hsl(var(--success-light))] text-[hsl(var(--success))]',
+        color: 'bg-success-light text-success',
         badgeColor: 'success',
         icon: 'i-heroicons-check-circle',
     },
     failed: {
         label: 'Fallito',
-        color: 'bg-[hsl(var(--destructive-light))] text-[hsl(var(--destructive))]',
+        color: 'bg-destructive-light text-destructive',
         badgeColor: 'error',
         icon: 'i-heroicons-x-circle',
     },

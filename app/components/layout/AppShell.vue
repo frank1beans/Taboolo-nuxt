@@ -159,7 +159,9 @@ const gridColumns = computed(() => {
   grid-column: 1;
   grid-row: 1 / -1; /* Full height */
   z-index: 50;
-  background: hsl(var(--primary)); /* Matches rail styling */
+  /* Updated to match sidebar background for consistency */
+  background: hsl(var(--sidebar-background));
+  border-right: 1px solid hsl(var(--sidebar-border));
 }
 
 /* Topbar area spans from column 2 to end */

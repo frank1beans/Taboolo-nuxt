@@ -35,35 +35,35 @@ const gridColumns = computed(() => {
 
 <template>
   <header 
-    class="app-topbar"
+    class="grid items-center h-[var(--topbar-height,48px)] bg-card border-b border-border/40 z-40"
     :style="{ 'grid-template-columns': gridColumns }"
   >
     <!-- Left section - Brand (aligned with sidebar) -->
-    <div class="app-topbar-brand">
+    <div class="flex items-center h-full border-r border-border/30 px-0">
       <slot name="brand">
         <div class="flex items-center gap-2 px-4">
-          <div class="w-8 h-8 rounded-lg bg-[hsl(var(--primary))] flex items-center justify-center text-[hsl(var(--primary-foreground))] font-bold text-sm shadow-sm">
+          <div class="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground font-bold text-sm shadow-sm">
             T
           </div>
-          <span class="font-semibold text-[hsl(var(--foreground))] tracking-tight">Taboolo</span>
+          <span class="font-semibold text-foreground tracking-tight">Taboolo</span>
         </div>
       </slot>
     </div>
 
     <!-- Center section - Breadcrumb, actions -->
-    <div class="app-topbar-center">
+    <div class="flex items-center justify-between h-full px-4 min-w-0">
       <slot name="center">
         <!-- Default: empty or breadcrumb -->
       </slot>
     </div>
 
     <!-- Right section - User menu, theme toggle -->
-    <div class="app-topbar-right">
+    <div class="flex items-center justify-end h-full px-3 gap-2 border-l border-border/30" :class="{ 'border-l-0 pl-0': !shellState.rightSidebarWidth.value }">
       <slot name="right">
         <!-- Default theme toggle -->
         <button
           type="button"
-          class="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] transition-colors"
+          class="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
           :aria-label="isDark ? 'Switch to light mode' : 'Switch to dark mode'"
           @click="toggleTheme"
         >
@@ -73,46 +73,3 @@ const gridColumns = computed(() => {
     </div>
   </header>
 </template>
-
-<style scoped>
-.app-topbar {
-  display: grid;
-  align-items: center;
-  height: var(--topbar-height, 48px);
-  background: hsl(var(--card));
-  border-bottom: 1px solid hsl(var(--border) / 0.4);
-  z-index: 40;
-}
-
-.app-topbar-brand {
-  display: flex;
-  align-items: center;
-  height: 100%;
-  border-right: 1px solid hsl(var(--border) / 0.3);
-}
-
-.app-topbar-center {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  height: 100%;
-  padding: 0 1rem;
-  min-width: 0;
-}
-
-.app-topbar-right {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  height: 100%;
-  padding: 0 0.75rem;
-  gap: 0.5rem;
-  border-left: 1px solid hsl(var(--border) / 0.3);
-}
-
-/* When right sidebar is not present, remove border */
-.app-topbar-right:empty {
-  border-left: none;
-  padding: 0;
-}
-</style>
