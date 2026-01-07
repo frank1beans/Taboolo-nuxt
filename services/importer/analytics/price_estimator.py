@@ -25,6 +25,76 @@ logger = logging.getLogger(__name__)
 
 
 # =============================================================================
+# Element type embeddings (semantic gating)
+# =============================================================================
+
+ELEMENT_TYPE_LABELS = {
+    "pavimento": [
+        "pavimento",
+        "pavimenti",
+        "posa pavimento",
+        "piastrella pavimento",
+        "gres porcellanato pavimento",
+        "parquet",
+    ],
+    "parete": [
+        "parete",
+        "pareti",
+        "tramezzo",
+        "muratura interna",
+        "parete in laterizio",
+    ],
+    "controsoffitto": [
+        "controsoffitto",
+        "controsoffitti",
+        "soffitto sospeso",
+        "soffitto in cartongesso",
+    ],
+    "massetto": [
+        "massetto",
+        "sottofondo",
+        "massetto cementizio",
+        "massetto autolivellante",
+    ],
+    "rivestimento": [
+        "rivestimento",
+        "rivestimenti",
+        "rivestimento parete",
+        "rivestimento ceramico",
+    ],
+    "cartongesso": [
+        "cartongesso",
+        "lastra di gesso rivestito",
+        "parete in cartongesso",
+        "controsoffitto in cartongesso",
+    ],
+    "serramenti": [
+        "serramento",
+        "infisso",
+        "porta",
+        "finestra",
+        "vetrocamera",
+    ],
+    "coibentazione": [
+        "coibentazione",
+        "isolamento termico",
+        "isolante",
+        "lana di roccia",
+    ],
+    "impermeabilizzazione": [
+        "impermeabilizzazione",
+        "guaina bituminosa",
+        "membrana impermeabile",
+    ],
+}
+
+ELEMENT_TYPE_QUERY_MIN_SCORE = 0.35
+ELEMENT_TYPE_QUERY_MIN_MARGIN = 0.05
+ELEMENT_TYPE_ITEM_MIN_SCORE = 0.33
+ELEMENT_TYPE_ITEM_MIN_MARGIN = 0.04
+
+
+# =============================================================================
 # Data Classes
 # =============================================================================
 
@@ -59,6 +129,8 @@ class SimilarItem:
     extracted_properties: Dict = field(default_factory=dict)  # Loaded in search, avoids N+1
     property_matches: List[PropertyMatch] = field(default_factory=list)
     combined_score: float = 0.0
+    element_type: Optional[str] = None
+    element_type_score: Optional[float] = None
 
 
 @dataclass
@@ -148,6 +220,7 @@ class PriceEstimator:
     """
     Estimates prices using semantic search + property interpolation.
     """
+    _element_type_cache: Optional[Tuple[List[str], np.ndarray]] = None
     
     def __init__(
         self,
@@ -220,6 +293,84 @@ class PriceEstimator:
         if self._family_router is None:
             self._family_router = FamilyRouter()
         return self._family_router
+
+    def _normalize_vector(self, vector: List[float]) -> Optional[np.ndarray]:
+        if not vector:
+            return None
+        vec = np.array(vector, dtype=np.float32)
+        norm = np.linalg.norm(vec)
+        if norm == 0:
+            return None
+        return vec / norm
+
+    def _get_element_type_matrix(self) -> Optional[Tuple[List[str], np.ndarray]]:
+        if PriceEstimator._element_type_cache is not None:
+            return PriceEstimator._element_type_cache
+
+        embedder = self._get_embedder()
+        labels = []
+        label_to_type = []
+        for type_name, type_labels in ELEMENT_TYPE_LABELS.items():
+            for label in type_labels:
+                labels.append(label)
+                label_to_type.append(type_name)
+
+        embeddings = embedder.compute_embeddings(labels) if labels else []
+        if not embeddings:
+            logger.warning("Element type embeddings not available, skipping type gating.")
+            return None
+
+        type_vectors: Dict[str, List[np.ndarray]] = {key: [] for key in ELEMENT_TYPE_LABELS.keys()}
+        for idx, vector in enumerate(embeddings):
+            if vector is None:
+                continue
+            type_name = label_to_type[idx]
+            type_vectors[type_name].append(np.array(vector, dtype=np.float32))
+
+        types = []
+        matrix = []
+        for type_name, vectors in type_vectors.items():
+            if not vectors:
+                continue
+            mean_vec = np.mean(vectors, axis=0)
+            norm = np.linalg.norm(mean_vec)
+            if norm == 0:
+                continue
+            types.append(type_name)
+            matrix.append((mean_vec / norm).astype(np.float32))
+
+        if not matrix:
+            logger.warning("Element type embeddings computed empty, skipping type gating.")
+            return None
+
+        PriceEstimator._element_type_cache = (types, np.vstack(matrix))
+        return PriceEstimator._element_type_cache
+
+    def _classify_element_type(
+        self,
+        vector: List[float],
+        min_score: float,
+        min_margin: float,
+    ) -> Optional[Tuple[str, float, float]]:
+        cache = self._get_element_type_matrix()
+        if not cache:
+            return None
+        types, matrix = cache
+        vec = self._normalize_vector(vector)
+        if vec is None or matrix.shape[1] != vec.shape[0]:
+            return None
+
+        scores = matrix.dot(vec)
+        best_idx = int(np.argmax(scores))
+        best_score = float(scores[best_idx])
+        if len(scores) > 1:
+            second_score = float(np.partition(scores, -2)[-2])
+        else:
+            second_score = -1.0
+
+        if best_score < min_score or (best_score - second_score) < min_margin:
+            return None
+        return types[best_idx], best_score, second_score
     
     def close(self):
         if self._client:
@@ -268,14 +419,38 @@ class PriceEstimator:
                     error="Failed to generate query embedding"
                 )
             query_embedding = query_embeddings[0]
+
+            # 3. Detect element type from embeddings (semantic gating)
+            query_element = self._classify_element_type(
+                query_embedding,
+                min_score=ELEMENT_TYPE_QUERY_MIN_SCORE,
+                min_margin=ELEMENT_TYPE_QUERY_MIN_MARGIN,
+            )
+            query_element_type = query_element[0] if query_element else None
+            if query_element:
+                logger.info(
+                    "Detected element type: %s (score=%.3f)",
+                    query_element[0],
+                    query_element[1],
+                )
             
-            # 3. Search similar items
+            # 4. Search similar items
             candidates = self._search_similar_items(
                 query_embedding, 
                 project_ids, 
                 limit=top_k * 3,  # Get more to filter
-                min_similarity=min_similarity
+                min_similarity=min_similarity,
+                query_element_type=query_element_type,
             )
+            if not candidates and query_element_type:
+                logger.info("No candidates after element type gating, retrying without type filter.")
+                candidates = self._search_similar_items(
+                    query_embedding,
+                    project_ids,
+                    limit=top_k * 3,
+                    min_similarity=min_similarity,
+                    query_element_type=None,
+                )
             logger.info(f"Found {len(candidates)} candidate items")
             
             if not candidates:
@@ -287,13 +462,13 @@ class PriceEstimator:
                     error="No similar items found"
                 )
             
-            # 4. Score candidates by property match
+            # 5. Score candidates by property match
             scored_items = self._score_by_properties(candidates, extracted_props)
             
-            # 5. Take top_k after scoring
+            # 6. Take top_k after scoring
             top_items = sorted(scored_items, key=lambda x: x.combined_score, reverse=True)[:top_k]
             
-            # 6. Interpolate price
+            # 7. Interpolate price
             price_estimate = self._interpolate_price(top_items, extracted_props, target_unit=unit)
             
             return EstimationResult(
@@ -393,6 +568,7 @@ class PriceEstimator:
         project_ids: Optional[List[str]],
         limit: int = 30,
         min_similarity: float = 0.4,
+        query_element_type: Optional[str] = None,
     ) -> List[SimilarItem]:
         """Search for similar items using embedding cosine similarity."""
         coll = self._get_collection("pricelistitem")
@@ -440,6 +616,7 @@ class PriceEstimator:
         project_names = self._get_project_names(project_ids)
         
         results = []
+        filtered_by_type = 0
         skipped_dim_mismatch = 0
         expected_dim = len(query_embedding)
         
@@ -459,6 +636,21 @@ class PriceEstimator:
             similarity = float(np.dot(query_vec, item_vec) / (query_norm * item_norm))
             
             if similarity >= min_similarity:
+                element_type = None
+                element_type_score = None
+                if query_element_type:
+                    item_type = self._classify_element_type(
+                        emb,
+                        min_score=ELEMENT_TYPE_ITEM_MIN_SCORE,
+                        min_margin=ELEMENT_TYPE_ITEM_MIN_MARGIN,
+                    )
+                    if item_type:
+                        element_type = item_type[0]
+                        element_type_score = item_type[1]
+                        if element_type != query_element_type:
+                            filtered_by_type += 1
+                            continue
+
                 pid_str = str(item.get("project_id", ""))
                 # Extract properties here (avoids N+1 query later)
                 item_props = item.get("extracted_properties") or {}
@@ -471,11 +663,15 @@ class PriceEstimator:
                     project_name=project_names.get(pid_str, pid_str[:8]),
                     similarity=similarity,
                     extracted_properties=item_props,
+                    element_type=element_type,
+                    element_type_score=element_type_score,
                 ))
         
         # Log if many items skipped due to dimension mismatch
         if skipped_dim_mismatch > 0:
             logger.warning(f"Skipped {skipped_dim_mismatch} items due to embedding dimension mismatch (expected {expected_dim})")
+        if query_element_type and filtered_by_type > 0:
+            logger.info("Filtered %d items due to element type mismatch (%s)", filtered_by_type, query_element_type)
         
         # Sort by similarity
         results.sort(key=lambda x: x.similarity, reverse=True)

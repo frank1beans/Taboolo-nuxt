@@ -29,9 +29,12 @@ const updateMapParam = (key: keyof MapParams, value: MapParams[keyof MapParams])
 
 <template>
   <SidebarModule title="UMAP" subtitle="Parametri" icon="heroicons:cpu-chip">
-    <div class="space-y-4">
-      <div class="space-y-2">
-        <h3 class="panel-section-header">Parametri Mappa</h3>
+    <div class="space-y-3">
+      <div class="rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--muted)/0.2)] p-2.5 space-y-3">
+        <div class="flex items-center justify-between">
+          <h3 class="panel-section-header">Parametri mappa</h3>
+          <span class="value-badge">UMAP</span>
+        </div>
 
         <div>
           <div class="flex justify-between items-center mb-1">
@@ -97,17 +100,17 @@ const updateMapParam = (key: keyof MapParams, value: MapParams[keyof MapParams])
             @input="updateMapParam('min_cluster_size', Number(($event.target as HTMLInputElement).value))"
           >
         </div>
-
-        <UButton
-          block
-          color="primary"
-          :loading="resolvedLoading"
-          icon="i-heroicons-cpu-chip"
-          @click="emit('recalculateMap')"
-        >
-          Ricalcola Mappa
-        </UButton>
       </div>
+
+      <UButton
+        block
+        color="primary"
+        :loading="resolvedLoading"
+        icon="i-heroicons-cpu-chip"
+        @click="emit('recalculateMap')"
+      >
+        Ricalcola Mappa
+      </UButton>
     </div>
   </SidebarModule>
 </template>

@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import KpiHeader from '~/components/ui/KpiHeader.vue'
-import KpiCard from '~/components/ui/KpiCard.vue'
+import { ref, computed, onMounted } from 'vue'
 import MainPage from '~/components/layout/MainPage.vue'
 import { useCurrentContext } from '~/composables/useCurrentContext'
+import { usePageSidebarModule } from '~/composables/useSidebarModules'
+import HomeQuickActionsModule from '~/components/sidebar/modules/HomeQuickActionsModule.vue'
+import HomeResourcesModule from '~/components/sidebar/modules/HomeResourcesModule.vue'
+import HomeSystemStatusModule from '~/components/sidebar/modules/HomeSystemStatusModule.vue'
 
 definePageMeta({
   title: 'Dashboard',
@@ -12,6 +14,7 @@ definePageMeta({
 
 const { setCurrentProject } = useCurrentContext()
 
+// --- Data Types ---
 type ProjectListRow = {
   id: string
   name: string
@@ -19,31 +22,20 @@ type ProjectListRow = {
   status?: string
   updated_at?: string
   estimates_count?: number
-  offers_count?: number
 }
 
-// Fetch projects for list
+// Fetch projects
 const { data: projectsData, status: projectsStatus } = await useAsyncData('dashboard-projects', () => 
   $fetch<{ data: ProjectListRow[]; total: number }>('/api/projects', {
-    query: {
-      page: 1,
-      pageSize: 50,
-      sort: 'updated_at',
-      order: 'desc',
-    },
+    query: { page: 1, pageSize: 5, sort: 'updated_at', order: 'desc' },
   })
 )
 
+// Fetch Stats
+const { data: statsData } = await useFetch('/api/dashboard/stats')
+
 const projects = computed(() => projectsData.value?.data || [])
 const totalProjects = computed(() => projectsData.value?.total || 0)
-// Simple mock stats derived from listing (or we could make a dedicated stats query if heavy)
-// For now, we count what we see or use totals
-const stats = computed(() => ({
-    active_projects: totalProjects.value,
-    loaded_estimates: 0, // Placeholder needs dedicated query or aggregate
-    offers: 0, // Placeholder
-    generated_reports: 0 // Placeholder
-}))
 
 const loading = computed(() => projectsStatus.value === 'pending')
 
@@ -55,118 +47,208 @@ const formatDate = (dateStr: string) => {
     if (!dateStr) return '-'
     return new Date(dateStr).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' })
 }
+
+const currentHour = new Date().getHours()
+const greeting = computed(() => {
+    if (currentHour < 12) return 'Buongiorno'
+    if (currentHour < 18) return 'Buon pomeriggio'
+    return 'Buonasera'
+})
+
+// Quick Actions
+const quickActions = [
+    { label: 'Nuovo Progetto', icon: 'heroicons:plus', to: '/projects?create=1', color: 'bg-primary text-primary-foreground' },
+    { label: 'Importa Dati', icon: 'heroicons:arrow-down-tray', to: '/import', color: 'bg-blue-500 text-white' },
+    { label: 'Analisi Computi', icon: 'heroicons:chart-pie', to: '/analytics', color: 'bg-orange-500 text-white' },
+]
+
+const homeResources = [
+    { label: 'Manuale Utente', icon: 'heroicons:book-open', href: '#' },
+    { label: 'Video Tutorial', icon: 'heroicons:academic-cap', href: '#' },
+    { label: 'Supporto Tecnico', icon: 'heroicons:lifebuoy', href: '#' },
+]
+
+const systemStatus = {
+    label: 'Tutti i sistemi operativi',
+    version: 'v2.4.0',
+    online: true,
+}
+
+usePageSidebarModule({
+    id: 'home-actions',
+    label: 'Azioni',
+    icon: 'heroicons:bolt',
+    order: 0,
+    component: HomeQuickActionsModule,
+    props: {
+        actions: quickActions,
+    },
+})
+
+usePageSidebarModule({
+    id: 'home-resources',
+    label: 'Risorse',
+    icon: 'heroicons:book-open',
+    order: 1,
+    component: HomeResourcesModule,
+    props: {
+        resources: homeResources,
+        description: 'Documentazione e link rapidi per aiutarti nel lavoro.',
+    },
+})
+
+usePageSidebarModule({
+    id: 'home-status',
+    label: 'Stato',
+    icon: 'heroicons:signal',
+    order: 2,
+    component: HomeSystemStatusModule,
+    props: {
+        status: systemStatus,
+    },
+})
+
 </script>
 
 <template>
-  <MainPage>
-    <div class="space-y-6 h-full overflow-y-auto">
-    <!-- Header -->
-    <div class="flex items-center justify-between">
-      <div>
-        <h1 class="text-2xl font-bold tracking-tight text-[hsl(var(--foreground))]">Bentornato</h1>
-        <p class="text-[hsl(var(--muted-foreground))]">Ecco una panoramica delle tue attività recenti e dello stato dei progetti.</p>
-      </div>
-    </div>
-
-    <!-- KPI Section -->
-    <div v-if="stats">
-        <KpiHeader :columns="4">
-            <KpiCard
-                :value="stats.active_projects"
-                label="Progetti Attivi"
-                icon="heroicons:folder-open"
-                variant="info"
-            />
-            <KpiCard
-                :value="stats.loaded_estimates"
-                label="Computi Caricati"
-                icon="heroicons:document-text"
-                variant="info"
-            />
-            <KpiCard
-                :value="stats.offers"
-                label="Offerte Gestite"
-                icon="heroicons:banknotes"
-                variant="success"
-            />
-            <KpiCard
-                :value="stats.generated_reports"
-                label="Report Generati"
-                icon="heroicons:presentation-chart-bar"
-                variant="default"
-            />
-        </KpiHeader>
-    </div>
-
-    <div v-else-if="loading" class="grid grid-cols-4 gap-4">
-        <!-- Skeleton Loading -->
-        <div v-for="i in 4" :key="i" class="h-24 rounded-lg bg-[hsl(var(--muted))]/20 animate-pulse"/>
-    </div>
-
-    <!-- Content Grid -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <!-- Left Column: Activity Feed -->
-        <div class="lg:col-span-2 space-y-6">
-            <UCard>
-                <template #header>
-                    <div class="flex items-center justify-between">
-                        <h3 class="text-lg font-semibold">Attività Recente</h3>
-                        <UButton variant="ghost" size="sm" color="primary" to="/projects">Vedi tutti i progetti</UButton>
-                    </div>
-                </template>
-
-                <div v-if="loading" class="space-y-4">
-                     <div v-for="i in 3" :key="i" class="h-12 bg-[hsl(var(--muted))]/20 rounded animate-pulse"/>
-                </div>
-                <div v-else-if="projects.length" class="divide-y divide-[hsl(var(--border))]">
-                    <div v-for="project in projects" :key="project.id" class="py-3 flex items-start gap-3">
-                        <div class="mt-1 p-1.5 rounded-full bg-[hsl(var(--primary)/0.1)] text-[hsl(var(--primary))]">
-                             <Icon name="heroicons:folder" class="w-4 h-4" />
-                        </div>
-                        <div class="flex-1">
-                            <NuxtLink :to="`/projects/${project.id}`" class="text-sm font-medium hover:underline">
-                                {{ project.name }}
-                            </NuxtLink>
-                            <p class="text-xs text-[hsl(var(--muted-foreground))]">
-                                {{ project.code }} • {{ project.status }}
-                            </p>
-                        </div>
-                        <div class="text-right">
-                             <span class="text-xs font-medium text-[hsl(var(--foreground))]">
-                                {{ project.estimates_count ?? 0 }} computi
-                             </span>
-                             <p class="text-[10px] text-[hsl(var(--muted-foreground))]">
-                                Aggiornato {{ formatDate(project.updated_at) }}
-                             </p>
-                        </div>
-                    </div>
-                </div>
-                <div v-else class="text-sm text-[hsl(var(--muted-foreground))] py-4 text-center">
-                    Nessuna attività recente.
-                </div>
-            </UCard>
-        </div>
-
-        <!-- Right Column: Quick Actions or Secondary Stats -->
-        <div class="space-y-6">
-             <UCard>
-                <template #header>
-                    <h3 class="text-lg font-semibold">Risorse Utili</h3>
-                </template>
+  <MainPage fluid transparent>
+    <div class="space-y-8 pb-12">
+        
+        <!-- Hero Section -->
+        <div class="relative bg-gradient-to-r from-[hsl(var(--sidebar-background))] to-[hsl(var(--card))] border-b border-[hsl(var(--border))] px-8 py-10 shadow-sm">
+            <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                 <div class="space-y-2">
-                    <UButton to="/projects" block variant="soft" color="neutral" icon="i-heroicons-folder">
-                        Tutti i Progetti
-                    </UButton>
-                    <UButton to="/catalogs" block variant="soft" color="neutral" icon="i-heroicons-book-open">
-                        Listino Globale
-                    </UButton>
-                     <UButton block variant="soft" color="neutral" icon="i-heroicons-chart-bar">
-                        Analytics (Beta)
-                    </UButton>
+                    <h1 class="text-4xl font-extrabold tracking-tight text-[hsl(var(--foreground))]">
+                        {{ greeting }}, <span class="text-primary">Bentornato.</span>
+                    </h1>
+                    <p class="text-lg text-[hsl(var(--muted-foreground))] max-w-2xl">
+                        Il tuo centro di controllo per progetti, stime e analisi.
+                        Hai <strong class="text-foreground">{{ statsData?.active_projects || 0 }}</strong> progetti attivi.
+                    </p>
                 </div>
-             </UCard>
+                <div class="flex items-center gap-3">
+                     <span class="text-sm font-medium px-4 py-2 rounded-full bg-[hsl(var(--background))] border border-[hsl(var(--border))] text-[hsl(var(--muted-foreground))]">
+                        {{ new Date().toLocaleDateString('it-IT', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) }}
+                     </span>
+                </div>
+            </div>
         </div>
-    </div>
+
+        <div class="max-w-7xl mx-auto px-6 space-y-8">
+            
+            <!-- Stats Grid (Premium Cards) -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <!-- Statistic 1 -->
+                <div class="group relative overflow-hidden rounded-2xl bg-card border border-border/50 p-6 shadow-sm hover:shadow-lg transition-all duration-300">
+                    <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                         <Icon name="heroicons:folder-open" class="w-16 h-16 text-primary" />
+                    </div>
+                    <div class="relative z-10">
+                        <div class="flex items-center gap-3 mb-2">
+                            <div class="p-2 rounded-lg bg-primary/10 text-primary">
+                                 <Icon name="heroicons:folder" class="w-5 h-5" />
+                            </div>
+                            <span class="text-sm font-medium text-muted-foreground uppercase tracking-wider">Progetti Attivi</span>
+                        </div>
+                        <div class="text-3xl font-bold text-foreground">{{ statsData?.active_projects || 0 }}</div>
+                    </div>
+                </div>
+
+                <!-- Statistic 2 -->
+                 <div class="group relative overflow-hidden rounded-2xl bg-card border border-border/50 p-6 shadow-sm hover:shadow-lg transition-all duration-300">
+                    <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                         <Icon name="heroicons:document-text" class="w-16 h-16 text-blue-500" />
+                    </div>
+                    <div class="relative z-10">
+                        <div class="flex items-center gap-3 mb-2">
+                             <div class="p-2 rounded-lg bg-blue-500/10 text-blue-600">
+                                 <Icon name="heroicons:document-text" class="w-5 h-5" />
+                            </div>
+                            <span class="text-sm font-medium text-muted-foreground uppercase tracking-wider">Computi Totali</span>
+                        </div>
+                        <div class="text-3xl font-bold text-foreground">{{ statsData?.loaded_estimates || 0 }}</div>
+                         <div class="mt-2 text-xs font-medium text-muted-foreground flex items-center gap-1">
+                             <span>Aggiornato oggi</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Statistic 3 -->
+                <div class="group relative overflow-hidden rounded-2xl bg-card border border-border/50 p-6 shadow-sm hover:shadow-lg transition-all duration-300">
+                    <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                         <Icon name="heroicons:banknotes" class="w-16 h-16 text-amber-500" />
+                    </div>
+                    <div class="relative z-10">
+                        <div class="flex items-center gap-3 mb-2">
+                             <div class="p-2 rounded-lg bg-amber-500/10 text-amber-600">
+                                 <Icon name="heroicons:banknotes" class="w-5 h-5" />
+                            </div>
+                            <span class="text-sm font-medium text-muted-foreground uppercase tracking-wider">Offerte Approvate</span>
+                        </div>
+                        <div class="text-3xl font-bold text-foreground">{{ statsData?.approved_offers || 0 }}</div>
+                    </div>
+                </div>
+
+                <!-- Statistic 4 -->
+                <div class="group relative overflow-hidden rounded-2xl bg-card border border-border/50 p-6 shadow-sm hover:shadow-lg transition-all duration-300">
+                     <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                         <Icon name="heroicons:users" class="w-16 h-16 text-purple-500" />
+                    </div>
+                    <div class="relative z-10">
+                        <div class="flex items-center gap-3 mb-2">
+                            <div class="p-2 rounded-lg bg-purple-500/10 text-purple-600">
+                                 <Icon name="heroicons:users" class="w-5 h-5" />
+                            </div>
+                            <span class="text-sm font-medium text-muted-foreground uppercase tracking-wider">Utenti Attivi</span>
+                        </div>
+                        <div class="text-3xl font-bold text-foreground">{{ statsData?.active_users || 0 }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Content Area: Charts & Activity -->
+            <div class="space-y-6">
+                <!-- Chart removed as per request -->
+
+                <!-- Recent Projects List -->
+                <div class="bg-card border border-border rounded-2xl shadow-sm overflow-hidden">
+                    <div class="p-6 border-b border-border flex items-center justify-between">
+                        <h3 class="text-lg font-bold text-foreground">Progetti Recenti</h3>
+                        <NuxtLink to="/projects" class="text-sm font-medium text-primary hover:underline">Vedi tutti &rarr;</NuxtLink>
+                    </div>
+                    <div class="divide-y divide-border">
+                         <div v-for="project in projects" :key="project.id" class="p-4 flex items-center gap-4 hover:bg-muted/30 transition-colors group">
+                            <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+                                <Icon name="heroicons:folder" class="w-5 h-5" />
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <NuxtLink :to="`/projects/${project.id}`" class="text-base font-semibold text-foreground hover:text-primary truncate block">
+                                    {{ project.name }}
+                                </NuxtLink>
+                                <div class="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                                    <span class="font-mono bg-muted px-1.5 py-0.5 rounded">{{ project.code }}</span>
+                                    <span>&middot;</span>
+                                    <span>Aggiornato {{ formatDate(project.updated_at || '') }}</span>
+                                </div>
+                            </div>
+                             <div class="text-right flex flex-col items-end">
+                                 <span class="text-sm font-medium">{{ project.estimates_count || 0 }} Computi</span>
+                            </div>
+                            <div class="opacity-0 group-hover:opacity-100 transition-opacity">
+                                <Icon name="heroicons:chevron-right" class="w-5 h-5 text-muted-foreground" />
+                            </div>
+                         </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
   </MainPage>
 </template>
+
+<style scoped>
+/* Gradient Text for Welcome */
+/* Not essential if using standard colors, but nice for Premium feel if desired. 
+   Currently using standard text-primary. 
+*/
+</style>

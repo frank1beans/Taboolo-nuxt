@@ -53,18 +53,20 @@ const resolvedVisibleClusters = computed(() => unref(props.visibleClusters) ?? n
     <div>
       <template v-if="resolvedColorBy === 'project'">
         <div class="flex items-center justify-between mb-2">
-          <h3 class="panel-section-header">Progetti</h3>
-          <div class="flex gap-1 text-[9px]">
-            <button class="text-[hsl(var(--primary))] hover:underline" @click="emit('showAll', 'project')">Tutti</button>
-            <span class="text-[hsl(var(--muted-foreground))]">/</span>
-            <button class="text-[hsl(var(--primary))] hover:underline" @click="emit('hideAll', 'project')">Nessuno</button>
+          <div class="flex items-center gap-2">
+            <h3 class="panel-section-header">Progetti</h3>
+            <span class="value-badge">{{ resolvedProjects.length }}</span>
+          </div>
+          <div class="flex gap-1">
+            <UButton size="2xs" color="neutral" variant="ghost" @click="emit('showAll', 'project')">Tutti</UButton>
+            <UButton size="2xs" color="neutral" variant="ghost" @click="emit('hideAll', 'project')">Nessuno</UButton>
           </div>
         </div>
         <div class="space-y-1">
           <button
             v-for="project in resolvedProjects"
             :key="project.id"
-            class="w-full px-2 py-1.5 rounded flex justify-between items-center text-xs transition-colors hover:bg-[hsl(var(--accent))]"
+            class="w-full px-2 py-1.5 rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--card))] flex justify-between items-center text-xs transition-colors hover:bg-[hsl(var(--muted)/0.4)]"
             :class="resolvedVisibleProjects.has(project.id) ? 'text-[hsl(var(--foreground))]' : 'text-[hsl(var(--muted-foreground))] opacity-50'"
             @click="emit('toggleVisibility', 'project', project.id)"
           >
@@ -83,18 +85,20 @@ const resolvedVisibleClusters = computed(() => unref(props.visibleClusters) ?? n
 
       <template v-else-if="resolvedColorBy === 'wbs06'">
         <div class="flex items-center justify-between mb-2">
-          <h3 class="panel-section-header">Categorie WBS6</h3>
-          <div class="flex gap-1 text-[9px]">
-            <button class="text-[hsl(var(--primary))] hover:underline" @click="emit('showAll', 'wbs06')">Tutti</button>
-            <span class="text-[hsl(var(--muted-foreground))]">/</span>
-            <button class="text-[hsl(var(--primary))] hover:underline" @click="emit('hideAll', 'wbs06')">Nessuno</button>
+          <div class="flex items-center gap-2">
+            <h3 class="panel-section-header">Categorie WBS6</h3>
+            <span class="value-badge">{{ resolvedWbs6.length }}</span>
+          </div>
+          <div class="flex gap-1">
+            <UButton size="2xs" color="neutral" variant="ghost" @click="emit('showAll', 'wbs06')">Tutti</UButton>
+            <UButton size="2xs" color="neutral" variant="ghost" @click="emit('hideAll', 'wbs06')">Nessuno</UButton>
           </div>
         </div>
         <div class="space-y-1">
           <button
             v-for="wbs in resolvedWbs6"
             :key="wbs.code"
-            class="w-full px-2 py-1.5 rounded flex justify-between items-center text-xs transition-colors hover:bg-[hsl(var(--accent))]"
+            class="w-full px-2 py-1.5 rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--card))] flex justify-between items-center text-xs transition-colors hover:bg-[hsl(var(--muted)/0.4)]"
             :class="resolvedVisibleWbs6.has(wbs.code) ? 'text-[hsl(var(--foreground))]' : 'text-[hsl(var(--muted-foreground))] opacity-50'"
             @click="emit('toggleVisibility', 'wbs06', wbs.code)"
           >
@@ -113,18 +117,20 @@ const resolvedVisibleClusters = computed(() => unref(props.visibleClusters) ?? n
 
       <template v-else-if="resolvedColorBy === 'cluster'">
         <div class="flex items-center justify-between mb-2">
-          <h3 class="panel-section-header">Cluster</h3>
-          <div class="flex gap-1 text-[9px]">
-            <button class="text-[hsl(var(--primary))] hover:underline" @click="emit('showAll', 'cluster')">Tutti</button>
-            <span class="text-[hsl(var(--muted-foreground))]">/</span>
-            <button class="text-[hsl(var(--primary))] hover:underline" @click="emit('hideAll', 'cluster')">Nessuno</button>
+          <div class="flex items-center gap-2">
+            <h3 class="panel-section-header">Cluster</h3>
+            <span class="value-badge">{{ resolvedClusters.length }}</span>
+          </div>
+          <div class="flex gap-1">
+            <UButton size="2xs" color="neutral" variant="ghost" @click="emit('showAll', 'cluster')">Tutti</UButton>
+            <UButton size="2xs" color="neutral" variant="ghost" @click="emit('hideAll', 'cluster')">Nessuno</UButton>
           </div>
         </div>
         <div class="space-y-1">
           <button
             v-for="cluster in resolvedClusters"
             :key="cluster.id"
-            class="w-full px-2 py-1.5 rounded flex justify-between items-center text-xs transition-colors hover:bg-[hsl(var(--accent))]"
+            class="w-full px-2 py-1.5 rounded-md border border-[hsl(var(--border))] bg-[hsl(var(--card))] flex justify-between items-center text-xs transition-colors hover:bg-[hsl(var(--muted)/0.4)]"
             :class="resolvedVisibleClusters.has(cluster.id) ? 'text-[hsl(var(--foreground))]' : 'text-[hsl(var(--muted-foreground))] opacity-50'"
             @click="emit('toggleVisibility', 'cluster', cluster.id)"
           >
@@ -142,7 +148,7 @@ const resolvedVisibleClusters = computed(() => unref(props.visibleClusters) ?? n
       </template>
 
       <template v-else>
-        <div class="text-xs text-[hsl(var(--muted-foreground))] p-2">
+        <div class="rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--muted)/0.2)] p-2.5 text-xs text-[hsl(var(--muted-foreground))]">
           <p class="mb-2">Colorazione per prezzo (scala continua)</p>
           <div class="h-3 rounded bg-gradient-to-r from-purple-900 via-green-500 to-yellow-400" />
           <div class="flex justify-between text-[10px] mt-1">

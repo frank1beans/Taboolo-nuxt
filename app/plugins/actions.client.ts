@@ -92,7 +92,7 @@ export default defineNuxtPlugin(() => {
     description: 'Vai alla pagina di import del progetto attuale',
     category: 'Navigazione',
     scope: 'project',
-    icon: 'i-heroicons-arrow-up-tray',
+    icon: 'i-heroicons-arrow-down-tray',
     keywords: ['import', 'offerte', 'excel'],
     isEnabled: () => Boolean(currentProjectId.value),
     disabledReason: 'Nessun progetto attivo',

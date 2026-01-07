@@ -56,6 +56,8 @@ class SimilarItemResponse(BaseModel):
     similarity: float
     combined_score: float
     property_matches: List[PropertyMatchResponse] = []
+    element_type: Optional[str] = None
+    element_type_score: Optional[float] = None
 
 
 class PriceEstimateResponse(BaseModel):
@@ -136,6 +138,8 @@ async def estimate_price(request: EstimateRequest):
                 similarity=round(item.similarity, 3),
                 combined_score=round(item.combined_score, 3),
                 property_matches=prop_matches,
+                element_type=item.element_type,
+                element_type_score=round(item.element_type_score, 3) if item.element_type_score is not None else None,
             ))
         
         price_estimate = None

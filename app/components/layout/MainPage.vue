@@ -8,6 +8,8 @@
 
 interface Props {
   loading?: boolean
+  fluid?: boolean
+  transparent?: boolean
 }
 
 defineProps<Props>()
@@ -17,31 +19,37 @@ defineProps<Props>()
   <div class="flex h-full">
     <!-- Main Content Area -->
     <div class="flex-1 min-w-0 min-h-0 flex flex-col h-full">
-      <!-- Header Slot - Notion style: clean, simple padding -->
-      <!-- Header Slot - Teleported to AppShell row -->
-      <ClientOnly>
-        <Teleport to="#page-header-portal">
-           <div v-if="$slots.header" class="surface-card w-full h-full flex flex-col justify-center px-[var(--workspace-gutter-x)] py-2 border-b border-[hsl(var(--border))]">
-             <slot name="header"/>
-           </div>
-        </Teleport>
-      </ClientOnly>
-
-      <!-- Body Content -->
-      <!-- Uses workspace-body-fill pattern: flex-1 min-h-0 for proper vertical fill -->
-      <div class="surface-card flex-1 min-h-0 relative flex flex-col overflow-hidden !rounded-t-none !border-t-0">
-        <div v-if="loading" class="absolute inset-0 z-50 flex items-center justify-center bg-white/50 dark:bg-black/50 backdrop-blur-sm">
-          <UIcon name="i-heroicons-arrow-path" class="w-8 h-8 animate-spin text-primary" />
+      <!-- Content Bubble Wrapper -->
+      <div 
+        class="w-full h-full flex flex-col overflow-hidden transition-colors duration-200"
+        :class="[
+          transparent ? 'bg-transparent' : 'surface-card',
+          fluid ? '' : '' 
+        ]"
+      >
+        
+        <!-- Header (Internal) -->
+        <div v-if="$slots.header" class="flex-shrink-0 flex flex-col justify-center px-[var(--workspace-gutter-x)] py-2">
+          <slot name="header"/>
         </div>
-        <!-- Content wrapper with consistent gutter -->
-        <div class="flex-1 min-h-0 flex flex-col px-[var(--workspace-gutter-x)] pt-2 pb-4">
-          <slot/>
+        <!-- Body Content -->
+        <div class="flex-1 min-h-0 relative flex flex-col">
+          <div v-if="loading" class="absolute inset-0 z-50 flex items-center justify-center bg-white/50 dark:bg-black/50 backdrop-blur-sm">
+            <UIcon name="i-heroicons-arrow-path" class="w-8 h-8 animate-spin text-primary" />
+          </div>
+          <!-- Content wrapper with consistent gutter -->
+          <div 
+            class="flex-1 min-h-0 flex flex-col overflow-y-auto scrollbar-thin"
+            :class="fluid ? '' : 'px-[var(--workspace-gutter-x)] pt-2 pb-4'"
+          >
+            <slot/>
+          </div>
         </div>
-      </div>
 
-      <!-- Footer Slot -->
-      <div v-if="$slots.footer" class="surface-card px-4 py-3 flex-shrink-0 !rounded-t-none !border-t-0">
-        <slot name="footer"/>
+        <!-- Footer Slot -->
+        <div v-if="$slots.footer" class="px-4 py-3 flex-shrink-0 border-t border-[hsl(var(--border))]" :class="transparent ? 'border-transparent' : ''">
+          <slot name="footer"/>
+        </div>
       </div>
     </div>
 

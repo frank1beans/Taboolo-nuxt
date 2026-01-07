@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, computed, watchEffect } from 'vue';
-import { useRouter } from 'vue-router';
+import { ref, onMounted, onBeforeUnmount, computed, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import type { GridApi, GridReadyEvent } from 'ag-grid-community';
 import type { Project } from '#types';
 import { useProjects } from '~/composables/useProjects';
@@ -20,6 +20,7 @@ definePageMeta({
 });
 
 const router = useRouter();
+const route = useRoute();
 const { currentProject } = useCurrentContext();
 const lastActiveProjectId = ref<string | null>(null);
 
@@ -79,6 +80,23 @@ const loadProjects = async () => {
 };
 
 // Load initial data
+const shouldOpenCreateModal = (value: unknown) => {
+  if (Array.isArray(value)) return value.includes('1') || value.includes('true');
+  return value === '1' || value === 'true';
+};
+
+const clearCreateQuery = () => {
+  if (!route.query.create) return;
+  const { create, ...rest } = route.query;
+  router.replace({ query: rest });
+};
+
+const openCreateFromQuery = () => {
+  if (!shouldOpenCreateModal(route.query.create)) return;
+  openCreateModal();
+  clearCreateQuery();
+};
+
 onMounted(async () => {
   try {
     // Assets tree hidden by disableDefaultSidebar: true
@@ -91,11 +109,17 @@ onMounted(async () => {
     
     // Clear project context when entering project list
     await setCurrentProject(null);
+    openCreateFromQuery();
     await loadProjects();
   } catch (error) {
     console.error('Failed to load projects:', error);
   }
 });
+
+watch(
+  () => route.query.create,
+  () => openCreateFromQuery(),
+);
 
 onBeforeUnmount(() => {
   clearRowClickTimeout();
@@ -117,7 +141,7 @@ usePageSidebarModule({
     ],
     primaryActionIds: ['project.create'],
     selectionCount: selectedCount,
-    showDisabled: false,
+    showDisabled: true,
   },
 })
 
@@ -243,7 +267,7 @@ onMounted(() => {
     description: 'Esporta dati in Excel',
     category: 'Tabelle',
     scope: 'global',
-    icon: 'i-heroicons-arrow-down-tray',
+    icon: 'i-heroicons-arrow-up-tray',
     keywords: ['export', 'excel', 'tabella'],
     handler: () => exportToXlsx('progetti-commesse'),
   });
@@ -265,10 +289,10 @@ onMounted(() => {
     description: 'Esporta i progetti selezionati',
     category: 'Progetti',
     scope: 'selection',
-    icon: 'i-heroicons-arrow-down-tray',
+    icon: 'i-heroicons-arrow-up-tray',
     keywords: ['export', 'selezionati'],
     isEnabled: () => selectedProjects.value.length > 0,
-    disabledReason: 'Nessun progetto selezionato',
+    disabledReason: 'Seleziona almeno una voce',
     handler: () => exportSelectedProjects(),
   });
 
@@ -282,7 +306,7 @@ onMounted(() => {
     tone: 'danger',
     keywords: ['elimina', 'selezionati'],
     isEnabled: () => selectedProjects.value.length > 0,
-    disabledReason: 'Nessun progetto selezionato',
+    disabledReason: 'Seleziona almeno una voce',
     handler: () => deleteSelectedProjects(),
   });
 });

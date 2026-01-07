@@ -5,19 +5,19 @@
  */
 import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { useColorMode } from '#imports'
-import type { GridApi, GridReadyEvent, RowNode } from 'ag-grid-community'
+import type { GridApi, GridReadyEvent } from 'ag-grid-community'
 import DataGridPage from '~/components/layout/DataGridPage.vue'
+import PageToolbar from '~/components/layout/PageToolbar.vue'
 import { useEstimateGridConfig, type EstimateItem } from '~/composables/estimates/useEstimateGridConfig'
 import { useWbsTree } from '~/composables/useWbsTree'
 import { useCurrentContext } from '~/composables/useCurrentContext'
-import { useSidebarModules } from '~/composables/useSidebarModules'
-import { useSidebarLayout } from '~/composables/useSidebarLayout'
+import { useDataGridExport } from '~/composables/useDataGridExport'
+import { usePageSidebarModule } from '~/composables/useSidebarModules'
 import WbsModule from '~/components/sidebar/modules/WbsModule.vue'
-import AssetsModule from '~/components/sidebar/modules/AssetsModule.vue'
-import { useProjectTree } from '~/composables/useProjectTree'
+import SidebarActionsModule from '~/components/sidebar/modules/SidebarActionsModule.vue'
 import PriceSummaryDisplay from '~/components/common/PriceSummaryDisplay.vue'
-import { formatCurrency } from '~/lib/formatters'
+import { useActionsStore } from '~/stores/actions'
+import type { Action } from '~/types/actions'
 
 interface Props {
   subtitle: string
@@ -35,8 +35,7 @@ const props = withDefaults(defineProps<Props>(), {
 const route = useRoute()
 const projectId = computed(() => route.params.id as string)
 const estimateId = computed(() => route.params.estimateId as string)
-const colorMode = useColorMode()
-const { setCurrentEstimate, currentProject, currentEstimate } = useCurrentContext()
+const { setCurrentEstimate } = useCurrentContext()
 
 await setCurrentEstimate(estimateId.value).catch((err) => console.error('Failed to set current estimate', err))
 
@@ -59,7 +58,7 @@ const { data: estimate, status: estimateStatus, refresh: refreshEstimate } = awa
   { immediate: hasValidIds.value }
 )
 
-const { data: items, status: itemsStatus, refresh: refreshItems } = await useFetch<EstimateItem[]>(
+const { data: items, status: itemsStatus, refresh: refreshItems } = await useFetch<EstimateItem[] | { items: EstimateItem[] }>(
   () => (projectId.value && estimateId.value 
     ? `/api/projects/${projectId.value}/estimate/${estimateId.value}/items` 
     : ''),
@@ -79,14 +78,25 @@ watch(hasValidIds, (valid) => {
 })
 
 const loading = computed(() => estimateStatus.value === 'pending' || itemsStatus.value === 'pending')
-const rowData = computed<EstimateItem[]>(() => items.value || [])
+const itemsList = computed<EstimateItem[]>(() => {
+  if (Array.isArray(items.value)) {
+    return items.value
+  }
+  if (items.value && Array.isArray(items.value.items)) {
+    return items.value.items
+  }
+  return []
+})
+const rowData = computed<EstimateItem[]>(() => itemsList.value)
 
 const { wbsNodes, selectedWbsNode, filteredRowData, onWbsNodeSelected } = useWbsTree(rowData)
-const { registerModule, unregisterModule, toggleVisibility, isVisible: sidebarVisible, setActiveModule, showSidebar } = useSidebarModules()
-const { showDefaultSidebar } = useSidebarLayout()
 const { gridConfig } = useEstimateGridConfig(filteredRowData)
 const totalAmount = ref(0)
 const gridApiRef = ref<GridApi<EstimateItem> | null>(null)
+const { exportToXlsx } = useDataGridExport(gridApiRef)
+const actionsStore = useActionsStore()
+const actionOwner = 'page:estimate-items'
+const searchText = ref('')
 
 const calculateFromGrid = () => {
   if (!gridApiRef.value) {
@@ -104,7 +114,7 @@ const calculateFromGrid = () => {
 }
 
 const grandTotal = computed(() => {
-  return (items.value || []).reduce((sum: number, item: EstimateItem) => sum + (item.project?.amount || 0), 0) || 0
+  return itemsList.value.reduce((sum: number, item: EstimateItem) => sum + (item.project?.amount || 0), 0) || 0
 })
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -114,57 +124,75 @@ const onGridReady = (params: GridReadyEvent<any>) => {
   calculateFromGrid()
 }
 
-const formattedTotal = computed(() => formatCurrency(totalAmount.value))
-
-const wbsButtonTitle = computed(() => (
-  sidebarVisible.value ? 'Nascondi WBS' : 'Mostra WBS'
-))
-
-const toggleWbsSidebar = () => {
-  if (!sidebarVisible.value) {
-    setActiveModule('wbs')
-    showSidebar()
-  } else {
-    toggleVisibility()
+const handleReset = () => {
+  searchText.value = ''
+  onWbsNodeSelected(null)
+  if (gridApiRef.value) {
+    gridApiRef.value.setFilterModel(null)
+    gridApiRef.value.setGridOption('quickFilterText', '')
   }
 }
 
+const registerAction = (action: Action) => {
+  actionsStore.registerAction(action, { owner: actionOwner, overwrite: true })
+}
+
+usePageSidebarModule({
+  id: 'wbs',
+  label: 'WBS',
+  icon: 'heroicons:squares-2x2',
+  order: 1,
+  component: WbsModule,
+  props: {
+    nodes: wbsNodes,
+    selectedNodeId: computed(() => selectedWbsNode.value?.id ?? null),
+    onNodeSelected: (node: typeof selectedWbsNode.value | null) => onWbsNodeSelected(node),
+  },
+})
+
+usePageSidebarModule({
+  id: 'actions',
+  label: 'Azioni',
+  icon: 'heroicons:command-line',
+  order: 2,
+  group: 'secondary',
+  autoActivate: true,
+  component: SidebarActionsModule,
+  props: {
+    actionIds: [
+      'grid.exportExcel',
+      'grid.resetFilters',
+    ],
+  },
+})
+
 onMounted(() => {
-  registerModule({
-    id: 'wbs',
-    label: 'WBS',
-    icon: 'heroicons:squares-2x2',
-    order: 1,
-    component: WbsModule,
-    props: {
-      nodes: wbsNodes,
-      selectedNodeId: computed(() => selectedWbsNode.value?.id ?? null),
-      onNodeSelected: (node: typeof selectedWbsNode.value | null) => onWbsNodeSelected(node),
-    },
+  registerAction({
+    id: 'grid.exportExcel',
+    label: 'Esporta in Excel',
+    description: 'Esporta dati in Excel',
+    category: 'Tabelle',
+    scope: 'selection',
+    icon: 'i-heroicons-arrow-up-tray',
+    keywords: ['export', 'excel', 'tabella'],
+    handler: () => exportToXlsx(props.exportFilename),
   })
 
-  // Register Assets Module
-  const { treeNodes: contextNodes } = useProjectTree(currentProject, currentEstimate)
-  registerModule({
-      id: 'assets',
-      label: 'Assets',
-      icon: 'heroicons:folder-open',
-      order: 0,
-      component: AssetsModule,
-      props: {
-          nodes: contextNodes,
-          hasProject: computed(() => !!currentProject.value),
-          activeNodeId: computed(() => estimateId.value ? `detail-${estimateId.value}` : null),
-          loading: computed(() => false)
-      }
+  registerAction({
+    id: 'grid.resetFilters',
+    label: 'Reset filtri tabella',
+    description: 'Cancella filtri e ricerca della tabella',
+    category: 'Tabelle',
+    scope: 'selection',
+    icon: 'i-heroicons-arrow-path',
+    keywords: ['reset', 'filtri', 'search'],
+    handler: () => handleReset(),
   })
 
-  setActiveModule('assets')
 })
 
 onUnmounted(() => {
-  unregisterModule('wbs')
-  unregisterModule('assets')
+  actionsStore.unregisterOwner(actionOwner)
 })
 
 const pageTitle = computed(() => {
@@ -184,38 +212,28 @@ const pageTitle = computed(() => {
     :grid-config="gridConfig"
     :row-data="filteredRowData as any"
     :loading="loading"
+    :show-toolbar="false"
+    :filter-text="searchText"
     :toolbar-placeholder="toolbarPlaceholder"
     :export-filename="exportFilename"
     :empty-state-title="emptyTitle"
     :empty-state-message="emptyMessage"
     @grid-ready="onGridReady"
   >
+    <template #pre-grid>
+      <ClientOnly>
+        <Teleport to="#topbar-actions-portal">
+          <PageToolbar
+            v-model="searchText"
+            :search-placeholder="toolbarPlaceholder"
+            class="!py-0"
+          />
+        </Teleport>
+      </ClientOnly>
+    </template>
+
     <!-- ACTIONS -->
     <template #actions>
-      <UButton
-        :icon="sidebarVisible ? 'i-heroicons-view-columns' : 'i-heroicons-view-columns'"
-        :color="sidebarVisible ? 'primary' : 'neutral'"
-        variant="ghost"
-        size="sm"
-        :title="wbsButtonTitle"
-        label="WBS"
-        @click="toggleWbsSidebar"
-      />
-
-      <UBadge v-if="selectedWbsNode" color="primary" variant="soft" class="gap-1.5 pl-2 pr-1 py-1">
-        <Icon name="heroicons:funnel-solid" class="w-3.5 h-3.5" />
-        <span class="max-w-48 truncate">{{ selectedWbsNode.name }}</span>
-        <UButton
-          icon="i-heroicons-x-mark"
-          color="neutral"
-          variant="ghost"
-          size="xs"
-          title="Rimuovi filtro WBS"
-          class="hover:bg-[hsl(var(--primary)/0.2)]"
-          @click="onWbsNodeSelected(null)"
-        />
-      </UBadge>
-
       <UBadge v-if="filteredRowData.length > 0" color="neutral" variant="soft">
         <Icon name="heroicons:list-bullet" class="w-3.5 h-3.5 mr-1" />
         {{ filteredRowData.length }} voci

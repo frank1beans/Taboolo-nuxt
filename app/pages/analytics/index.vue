@@ -405,12 +405,14 @@ const sidebarColorBy = computed(() =>
 const visibleProjects = ref<Set<string>>(new Set())
 const visibleWbs6 = ref<Set<string>>(new Set())
 const visibleClusters = ref<Set<number>>(new Set())
+const getWbs06Key = (point: GlobalPoint | PropertyPoint) => point.wbs06 || 'N/A'
+const getWbsNodeKey = (id: string) => id.split('/').pop() || id
 
 // Visibility-filtered points (global mode)
 const visibilityFilteredPoints = computed(() => {
   return globalAnalytics.filteredPoints.value.filter((p: GlobalPoint) => {
     return visibleProjects.value.has(p.project_id) && 
-           visibleWbs6.value.has(p.wbs06_desc || p.wbs06 || 'N/A') &&
+           visibleWbs6.value.has(getWbs06Key(p)) &&
            visibleClusters.value.has(p.cluster ?? -1)
   })
 })
@@ -456,8 +458,9 @@ const {
 watch(selectedWbsNode, (node) => {
   if (node) {
     visibleWbs6.value.clear()
-    visibleWbs6.value.add(node.name)
+    visibleWbs6.value.add(getWbsNodeKey(node.id))
   } else {
+    visibleWbs6.value.clear()
     legendWbs6Categories.value.forEach(w => visibleWbs6.value.add(w.code))
   }
 })
@@ -652,7 +655,7 @@ const resetMapView = () => {
 const wbs06ColorMap = computed(() => {
   const map = new Map<string, string>()
   const pts = analyticsMode.value === 'global' ? globalAnalytics.points.value : propertyPoints.value
-  const uniqueWbs = [...new Set(pts.map((p: SearchPoint) => p.wbs06_desc || p.wbs06 || 'N/A'))]
+  const uniqueWbs = [...new Set(pts.map((p: SearchPoint) => getWbs06Key(p)))]
   uniqueWbs.sort().forEach((wbs, idx) => {
     map.set(String(wbs), WBS06_PALETTE[idx % WBS06_PALETTE.length])
   })
@@ -688,7 +691,7 @@ const plotData = computed(() => {
   } else if (colorBy === 'cluster') {
     colors = pts.map((p) => getClusterColor(p.cluster ?? -1))
   } else if (colorBy === 'wbs06') {
-    colors = pts.map((p) => getWbs06Color(p.wbs06_desc || p.wbs06 || 'N/A'))
+    colors = pts.map((p) => getWbs06Color(getWbs06Key(p)))
   } else if (colorBy === 'properties' && analyticsMode.value === 'properties') {
     colors = pts.map((p) => (p as PropertyPoint).properties_count ?? Object.keys((p as PropertyPoint).extracted_properties || {}).length)
     colorscale = 'Viridis'
@@ -879,7 +882,7 @@ const initVisibility = () => {
   // Show all WBS6
   const pts = analyticsMode.value === 'global' ? globalAnalytics.points.value : propertyPoints.value
   pts.forEach((p: SearchPoint) => {
-    visibleWbs6.value.add(p.wbs06_desc || p.wbs06 || 'N/A')
+    visibleWbs6.value.add(getWbs06Key(p))
     visibleClusters.value.add(p.cluster ?? -1)
   })
 }

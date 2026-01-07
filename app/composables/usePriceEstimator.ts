@@ -30,6 +30,8 @@ export interface SimilarItem {
     similarity: number
     combined_score: number
     property_matches: PropertyMatch[]
+    element_type?: string
+    element_type_score?: number
 }
 
 export interface PriceEstimate {

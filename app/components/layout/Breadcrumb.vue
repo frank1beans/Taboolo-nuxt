@@ -83,8 +83,6 @@ const crumbs = computed(() => {
   const offerId = normalizeQueryValue(route.query.offerId)
   const offerRound = normalizeQueryValue(route.query.round)
   const offerCompany = normalizeQueryValue(route.query.company)
-  const deltaPerc = normalizeQueryValue(route.query.deltaPerc)
-  const deltaAmount = normalizeQueryValue(route.query.deltaAmount)
   const isOfferContext = Boolean(offerId || (offerRound && offerCompany))
 
   const resolveCompanyLabel = () => {
@@ -108,53 +106,21 @@ const crumbs = computed(() => {
     return offerRound
   }
 
-  const formatSigned = (value: number, formatter: Intl.NumberFormat) => {
-    const sign = value > 0 ? '+' : value < 0 ? '-' : ''
-    return `${sign}${formatter.format(Math.abs(value))}`
-  }
-
-  const resolveDeltaLabel = () => {
-    if (deltaPerc) {
-      const parsed = Number(deltaPerc)
-      if (!Number.isNaN(parsed)) {
-        const percentFormatter = new Intl.NumberFormat('it-IT', {
-          minimumFractionDigits: 1,
-          maximumFractionDigits: 1,
-        })
-        return `${formatSigned(parsed, percentFormatter)}%`
-      }
-      return `${deltaPerc}%`
-    }
-    if (deltaAmount) {
-      const parsed = Number(deltaAmount)
-      if (!Number.isNaN(parsed)) {
-        const amountFormatter = new Intl.NumberFormat('it-IT', {
-          style: 'currency',
-          currency: 'EUR',
-          maximumFractionDigits: 0,
-        })
-        return formatSigned(parsed, amountFormatter)
-      }
-      return deltaAmount
-    }
-    return null
-  }
-
-  const buildOfferLabel = () => {
+  const buildOfferLabel = (options?: { includePrefix?: boolean }) => {
     if (!isOfferContext) return null
+    const includePrefix = options?.includePrefix ?? true
     const parts: string[] = []
     const companyLabel = resolveCompanyLabel()
     const roundLabel = resolveRoundLabel()
     if (companyLabel) parts.push(companyLabel)
     if (roundLabel) parts.push(roundLabel)
-    const deltaLabel = resolveDeltaLabel()
-    if (deltaLabel) parts.push(`Delta ${deltaLabel}`)
-    const suffix = parts.length ? `: ${parts.join(', ')}` : ''
-    return `Offerta${suffix}`
+    if (!parts.length) return includePrefix ? 'Offerta' : null
+    const suffix = parts.join(', ')
+    return includePrefix ? `Offerta: ${suffix}` : suffix
   }
 
   const buildListinoLabel = () => {
-    const offerLabel = buildOfferLabel()
+    const offerLabel = buildOfferLabel({ includePrefix: false })
     if (offerLabel) return `Listino (${offerLabel})`
     return 'Listino (Baseline)'
   }
@@ -234,7 +200,7 @@ const crumbs = computed(() => {
       })
     } else if (segment === 'offer') {
       items.push({
-        label: buildOfferLabel() || getRouteLabel(segment),
+        label: buildOfferLabel({ includePrefix: true }) || getRouteLabel(segment),
         to: currentPath,
       })
     } else if (!['index'].includes(segment)) {
@@ -271,7 +237,7 @@ const shouldShowIcon = (item: BreadcrumbItem) => {
 <template>
   <div v-if="isTitleVariant" class="flex flex-col min-w-0">
     <!-- Breadcrumb Row (Parents) -->
-    <nav v-if="crumbs.length > 1" aria-label="Breadcrumb" class="flex items-center min-w-0 mb-0.5">
+    <nav v-if="crumbs.length > 1" aria-label="Breadcrumb" class="flex items-center min-w-0 mb-1.5">
       <ol class="flex items-center gap-1.5 min-w-0">
         <template v-for="(crumb, i) in crumbs.slice(0, -1)" :key="crumb.to || `${crumb.label}-${i}`">
           <li class="flex items-center gap-1.5 min-w-0">

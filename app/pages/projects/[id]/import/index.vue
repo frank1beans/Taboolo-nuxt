@@ -629,7 +629,7 @@ const navigateToProject = () => {
                        <p class="text-sm font-medium text-[hsl(var(--foreground))]">Genera Embedding AI</p>
                        <p class="text-xs text-[hsl(var(--muted-foreground))]">Abilita la ricerca semantica (richiede più tempo)</p>
                      </div>
-                     <UToggle v-model="enableEmbeddings" color="primary" />
+                     <USwitch v-model="enableEmbeddings" color="primary" />
                    </div>
 
                    <!-- Action Button -->
@@ -831,7 +831,7 @@ const navigateToProject = () => {
                        <p class="text-sm font-medium text-[hsl(var(--foreground))]">Genera Embedding AI</p>
                        <p class="text-xs text-[hsl(var(--muted-foreground))]">Abilita la ricerca semantica (richiede più tempo)</p>
                      </div>
-                     <UToggle v-model="enableEmbeddings" color="primary" />
+                     <USwitch v-model="enableEmbeddings" color="primary" />
                    </div>
 
                    <!-- Action Button -->

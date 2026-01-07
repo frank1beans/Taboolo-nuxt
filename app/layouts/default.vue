@@ -41,6 +41,7 @@ const { treeNodes: contextNodes } = useProjectTree(currentProject, currentEstima
 
 // Determine if we're in a project route - Assets should ALWAYS be registered for project routes
 const isProjectRoute = computed(() => route.path.includes('/projects/'))
+const isProjectsSection = computed(() => route.path === '/projects' || route.path.startsWith('/projects/'))
 
 // Register Assets for project routes immediately and persistently
 const registerAssetsForProjects = () => {
@@ -148,6 +149,8 @@ const activeNodeId = computed(() => {
   return ''
 })
 
+const activeGlobalNodeId = computed(() => isProjectsSection.value ? 'projects' : activeNodeId.value)
+
 const hasProject = computed(() => Boolean(currentProject.value))
 
 const assetsModuleId = 'assets'
@@ -201,39 +204,24 @@ function onCommandPaletteShortcut(event: KeyboardEvent) {
         <template #rail>
           <Sidebar 
             :nodes="globalNodes" 
-            :active-node-id="activeNodeId"
+            :active-node-id="activeGlobalNodeId"
           />
         </template>
 
         <!-- NEW Header -->
         <template #header>
-          <Topbar>
-            <template #start>
-              <!-- Collapse Toggle (Left of breadcrumb) -->
-               <div 
-                v-if="showDefaultSidebar || hasModules"
-                class="mr-3 flex items-center justify-center cursor-pointer text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
-                title="Toggle Sidebar"
-                @click="toggleCollapsed"
-              >
-                <UIcon 
-                  name="i-heroicons-bars-3-bottom-left" 
-                  class="w-5 h-5" 
-                />
-              </div>
-            </template>
-          </Topbar>
+          <Topbar />
         </template>
 
         <!-- Left Sidebar (Context) -->
         <template #sidebar>
-          <div id="app-sidebar-portal" class="h-full relative">
+          <div id="app-sidebar-portal" class="h-full relative py-2 pl-2 pr-2">
             <SidebarShell />
           </div>
         </template>
 
         <!-- Main Content -->
-        <main id="main-content" class="flex-1 h-full overflow-y-auto overflow-x-hidden relative scroll-smooth" tabindex="-1">
+        <main id="main-content" class="flex-1 h-full overflow-hidden relative py-2 pr-2 pl-1" tabindex="-1">
           <slot />
         </main>
 

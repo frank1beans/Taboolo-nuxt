@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useRoute } from 'vue-router';
 import type { GridApi, GridReadyEvent } from 'ag-grid-community';
-import { computed, onMounted, onBeforeUnmount, reactive, ref, defineAsyncComponent } from 'vue';
+import { computed, onMounted, onBeforeUnmount, reactive, ref, defineAsyncComponent, toValue, watch } from 'vue';
 import type { DataGridConfig } from '~/types/data-grid';
 import type { ApiEstimate, ApiOfferSummary } from '~/types/api';
 import { useCurrentContext } from '~/composables/useCurrentContext';
@@ -23,27 +23,37 @@ const ImportWizard = defineAsyncComponent(() => import('~/components/projects/Im
 
 const route = useRoute();
 
-const projectId = route.params.id as string;
-const estimateId = route.params.estimateId as string;
+const projectId = computed(() => route.params.id as string);
+const estimateId = computed(() => route.params.estimateId as string);
 
 // 1. Fetch Estimate Details (Baseline Context)
 const { data: currentEstimate, status: estimateStatus, refresh: refreshEstimate } = await useAsyncData<ApiEstimate>(
-    `estimate-details-${estimateId}`,
-    () => $fetch<ApiEstimate>(`/api/projects/${projectId}/estimate/${estimateId}`)
+    `estimate-details-${toValue(estimateId)}`,
+    () => {
+        const pId = projectId.value;
+        const eId = estimateId.value;
+        if (!pId || !eId || pId === 'undefined' || eId === 'undefined') {
+            return Promise.resolve(null as any); // Return null or handle as needed, but don't fetch
+        }
+        return $fetch<ApiEstimate>(`/api/projects/${pId}/estimate/${eId}`);
+    },
+    { watch: [estimateId] }
 );
 
 // 2. Fetch Offers linked to this Estimate
 const { data: offersData, status: offersStatus, refresh: refreshOffers } = await useAsyncData(
-    `estimate-offers-${estimateId}`,
-    () => $fetch<{ offers: ApiOfferSummary[] }>(`/api/projects/${projectId}/offers`, { query: { estimate_id: estimateId } })
+    `estimate-offers-${toValue(estimateId)}`,
+    () => $fetch<{ offers: ApiOfferSummary[] }>(`/api/projects/${projectId.value}/offers`, { query: { estimate_id: estimateId.value } }),
+    { watch: [estimateId] }
 );
 
 // 3. Keep Alert Summary legacy for now (Plan to refactor)
 const { data: alertSummary, status: alertStatus, refresh: refreshAlertSummary } = await useFetch(
-  `/api/projects/${projectId}/offers/alerts/summary`,
+  () => `/api/projects/${projectId.value}/offers/alerts/summary`,
   {
-    key: `project-${projectId}-estimate-${estimateId}-alert-summary`,
+    key: `project-${toValue(projectId)}-estimate-${toValue(estimateId)}-alert-summary`,
     query: { group_by: 'offer', estimate_id: estimateId, status: 'open' },
+    watch: [estimateId]
   }
 );
 
@@ -73,9 +83,13 @@ usePageSidebarModule({
 
 
 // Ensure context matches URL
+watch(estimateId, (newId) => {
+  if (newId) setCurrentEstimate(newId);
+}, { immediate: true });
+
 onMounted(() => {
-  console.log('Mounting Estimate Dashboard', estimateId);
-  setCurrentEstimate(estimateId);
+  console.log('Mounting Estimate Dashboard', estimateId.value);
+  // setCurrentEstimate calls moved to watcher
 });
 
 onBeforeUnmount(() => {
@@ -137,8 +151,8 @@ const unifiedRows = computed(() => {
     id: 'project-baseline',
     rowType: 'project',
     round_number: null,
-    company_name: '-',
-    name: 'Preventivo di Progetto',
+    company_name: 'Budget Progetto',
+    name: currentEstimate.value?.name || 'Preventivo di Progetto',
     status: 'baseline',
     total_amount: baselineTotal.value,
     deltaAmount: 0,
@@ -146,6 +160,7 @@ const unifiedRows = computed(() => {
     alertCount: 0,
     isBest: false,
     isBaseline: true,
+    file_name: currentEstimate.value?.file_name,
   });
 
   // Add all offers with computed deltas
@@ -163,6 +178,7 @@ const unifiedRows = computed(() => {
       alertCount: alertSummaryMap.value[offer.id] || 0,
       isBest: offer.id === bestOfferId.value,
       isBaseline: false,
+      file_name: (offer as any).file_name,
     });
   });
 
@@ -174,12 +190,33 @@ const unifiedGridConfig: DataGridConfig = {
   columns: [
     {
       field: 'name',
-      headerName: 'Preventivo',
+      headerName: 'Riferimento',
       flex: 2,
-      minWidth: 220,
+      minWidth: 280,
       cellRenderer: (params: any): string => {
-        return `<span class="font-medium">${params.value || ''}</span>`;
+        const row = params.data;
+        if (!row) return '';
+        
+        const isBaseline = row.isBaseline;
+        const typeLabel = isBaseline ? 'Baseline' : 'Offerta';
+        const typeColor = isBaseline 
+          ? 'bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]' 
+          : 'bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]';
+        
+        const fileName = row.file_name || '';
+        const name = params.value || '';
+        
+        return `
+          <div class="flex flex-col py-1 gap-0.5">
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-bold px-1.5 py-0.5 rounded ${typeColor}">${typeLabel}</span>
+              <span class="font-medium text-[hsl(var(--foreground))]">${name}</span>
+            </div>
+            ${fileName ? `<span class="text-xs text-[hsl(var(--muted-foreground))] flex items-center gap-1"><i class="i-heroicons-paper-clip w-3 h-3"></i> ${fileName}</span>` : ''}
+          </div>
+        `;
       },
+      autoHeight: true,
     },
     {
       field: 'round_number',
@@ -261,7 +298,8 @@ const unifiedGridConfig: DataGridConfig = {
       pinned: 'right',
       sortable: false,
       filter: false,
-      suppressMenu: true,
+      suppressHeaderMenuButton: true,
+      suppressHeaderContextMenu: true,
     },
   ],
   defaultColDef: {
@@ -275,7 +313,7 @@ const unifiedGridConfig: DataGridConfig = {
   enableQuickFilter: true,
   enableExport: true,
   getRowClass: (params: any) => {
-    if (params.data?.isBaseline) return 'bg-[hsl(var(--info-light))]';
+    if (params.data?.isBaseline) return 'bg-[hsl(var(--primary)/0.1)] font-medium border-l-4 border-l-[hsl(var(--primary))]';
     if (params.data?.isBest) return 'bg-[hsl(var(--success-light))]';
     return '';
   },
@@ -351,7 +389,7 @@ const navigateToPricelist = (row: OfferRow | null | undefined) => {
   if (!row) return;
   const params = new URLSearchParams();
 
-  params.set('estimateId', estimateId);
+  params.set('estimateId', estimateId.value);
 
   if (!isBaselineRow(row)) {
     const offerId = getOfferId(row);
@@ -372,7 +410,7 @@ const navigateToPricelist = (row: OfferRow | null | undefined) => {
     }
   }
 
-  navigateTo(`/projects/${projectId}/pricelist?${params.toString()}`);
+  navigateTo(`/projects/${projectId.value}/pricelist?${params.toString()}`);
 };
 
 const openOfferDetail = (row: OfferRow | null | undefined) => {
@@ -380,7 +418,7 @@ const openOfferDetail = (row: OfferRow | null | undefined) => {
    const params = new URLSearchParams();
    if (row.round_number !== undefined) params.set('round', String(row.round_number));
    if (row.company_name) params.set('company', row.company_name);
-   navigateTo(`/projects/${projectId}/estimate/${estimateId}/offer?${params.toString()}`);
+   navigateTo(`/projects/${projectId.value}/estimate/${estimateId.value}/offer?${params.toString()}`);
 };
 
 const openEditOffer = (row: OfferRow | null | undefined) => {
@@ -456,7 +494,7 @@ const confirmDeleteOffer = async () => {
   }
   
   try {
-    await $fetch(`/api/projects/${projectId}/offers/${row.id}`, { method: 'DELETE' });
+    await $fetch(`/api/projects/${projectId.value}/offers/${row.id}`, { method: 'DELETE' });
     closeDeleteModal();
     await refreshOffers();
     await refreshAlertSummary();
@@ -475,11 +513,11 @@ const deleteEstimate = async () => {
   if (!confirmed) return;
 
   try {
-    await $fetch(`/api/projects/${projectId}/estimates/${estimateId}`, {
+    await $fetch(`/api/projects/${projectId.value}/estimates/${estimateId.value}`, {
       method: "DELETE",
     });
     // Redirect to project dashboard after deletion
-    navigateTo(`/projects/${projectId}`);
+    navigateTo(`/projects/${projectId.value}`);
   } catch (error) {
     console.error("Errore durante l'eliminazione del preventivo", error);
     window.alert("Si è verificato un errore durante l'eliminazione del preventivo.");
@@ -490,7 +528,7 @@ const gridContext = computed(() => ({
   rowActions: {
     viewPricelist: (row: OfferRow) => navigateToPricelist(row),
     viewOffer: (row: OfferRow) => openOfferDetail(row),
-    resolve: () => navigateTo(`/projects/${projectId}/conflicts?estimateId=${estimateId}`), // Should filter by offer?
+    resolve: () => navigateTo(`/projects/${projectId.value}/conflicts?estimateId=${estimateId.value}`), // Should filter by offer?
     edit: (row: OfferRow) => isBaselineRow(row) ? null : openEditOffer(row),
     remove: (row: OfferRow) => isBaselineRow(row) ? deleteEstimate() : openDeleteModal(row),
   },
@@ -539,7 +577,7 @@ onMounted(() => {
     description: 'Esporta dati in Excel',
     category: 'Tabelle',
     scope: 'selection',
-    icon: 'i-heroicons-arrow-down-tray',
+    icon: 'i-heroicons-arrow-up-tray',
     keywords: ['export', 'excel', 'tabella'],
     handler: () => exportToXlsx('ritorni-gara'),
   });
@@ -561,7 +599,7 @@ onMounted(() => {
     description: 'Apri la procedura di import offerte',
     category: 'Preventivi',
     scope: 'estimate',
-    icon: 'i-heroicons-arrow-up-tray',
+    icon: 'i-heroicons-arrow-down-tray',
     keywords: ['import', 'offerte'],
     handler: () => {
       isImportModalOpen.value = true
@@ -606,7 +644,7 @@ const handleImportSuccess = async () => {
 <template>
   <div class="h-full flex flex-col">
     <DataGridPage
-      title="Ritorni di Gara"
+      title="Confronto Offerte"
       :grid-config="unifiedGridConfig"
       :row-data="unifiedRows"
       :loading="loading || offersLoading || alertsLoading"

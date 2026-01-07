@@ -44,7 +44,7 @@ defineSlots<{
       </div>
 
       <!-- Breadcrumb + Meta -->
-      <div class="flex flex-col gap-1 flex-1 min-w-0">
+      <div class="flex flex-col gap-2 flex-1 min-w-0">
         <Breadcrumb
           v-if="showBreadcrumb"
           :current-label="title"

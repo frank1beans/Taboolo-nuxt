@@ -180,7 +180,7 @@
                 <!-- Main Estimate Card -->
                  <div class="grid md:grid-cols-3 gap-6">
                     <!-- Price -->
-                    <div v-if="result.estimated_price" class="md:col-span-2 bg-gradient-to-br from-[hsl(var(--primary)/0.05)] to-[hsl(var(--primary)/0.1)] rounded-xl border border-[hsl(var(--primary)/0.2)] p-6 shadow-sm relative overflow-hidden group">
+                    <div v-if="displayEstimate" class="md:col-span-2 bg-gradient-to-br from-[hsl(var(--primary)/0.05)] to-[hsl(var(--primary)/0.1)] rounded-xl border border-[hsl(var(--primary)/0.2)] p-6 shadow-sm relative overflow-hidden group">
                       <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
                          <UIcon name="i-heroicons-currency-euro" class="w-24 h-24 text-[hsl(var(--primary))]" />
                       </div>
@@ -189,23 +189,27 @@
                          <h3 class="text-sm font-medium text-[hsl(var(--muted-foreground))] uppercase tracking-wider mb-2">Prezzo Stimato</h3>
                          <div class="flex items-baseline gap-2 mb-4">
                            <span class="text-4xl sm:text-5xl font-bold text-[hsl(var(--foreground))] tracking-tight">
-                             {{ formatCurrency(result.estimated_price.value) }}
+                             {{ formatCurrency(displayEstimate.value) }}
                            </span>
                            <span class="text-xl text-[hsl(var(--muted-foreground))]">
-                             / {{ result.estimated_price.unit }}
+                             / {{ displayEstimate.unit }}
                            </span>
                          </div>
                          
-                         <div class="flex items-center gap-4 text-sm">
+                         <div class="flex items-center gap-4 text-sm flex-wrap">
                             <div class="px-3 py-1 bg-white/50 dark:bg-black/20 rounded-lg border border-[hsl(var(--primary)/0.1)] backdrop-blur-sm">
                                <span class="text-[hsl(var(--muted-foreground))] mr-2">Range:</span>
                                <span class="font-mono font-medium text-[hsl(var(--foreground))]">
-                                 {{ formatCurrency(result.estimated_price.range_low) }} - {{ formatCurrency(result.estimated_price.range_high) }}
+                                 {{ formatCurrency(displayEstimate.range_low) }} - {{ formatCurrency(displayEstimate.range_high) }}
                                </span>
                             </div>
                             <div class="flex items-center gap-1.5 text-[hsl(var(--primary))] font-medium">
                                <UIcon name="i-heroicons-check-badge" class="w-4 h-4" />
-                               {{ formatConfidence(result.estimated_price.confidence) }} Confidenza
+                               {{ formatConfidence(displayEstimate.confidence) }} Confidenza
+                            </div>
+                            <div v-if="totalItemsCount" class="flex items-center gap-1.5 text-[hsl(var(--muted-foreground))] font-medium">
+                              <UIcon name="i-heroicons-check-circle" class="w-4 h-4" />
+                              {{ selectedItemsCount }} / {{ totalItemsCount }} selezionate
                             </div>
                          </div>
                       </div>
@@ -237,72 +241,51 @@
                       <UIcon name="i-heroicons-list-bullet" class="w-5 h-5 text-[hsl(var(--primary))]" />
                       Voci di Riferimento Analizzate
                     </h3>
-                    <span class="text-xs font-mono px-2 py-1 bg-[hsl(var(--muted))] rounded text-[hsl(var(--muted-foreground))]">
-                      {{ result.similar_items.length }} voci
-                    </span>
+                    <div class="flex items-center gap-2">
+                      <span class="text-xs font-mono px-2 py-1 bg-[hsl(var(--muted))] rounded text-[hsl(var(--muted-foreground))]">
+                        {{ selectedItemsCount }} selezionate
+                      </span>
+                      <span class="text-xs font-mono px-2 py-1 bg-[hsl(var(--muted)/0.6)] rounded text-[hsl(var(--muted-foreground))]">
+                        {{ totalItemsCount }} totali
+                      </span>
+                    </div>
                   </div>
                   
                   <div class="bg-[hsl(var(--card))] rounded-xl border border-[hsl(var(--border))] shadow-sm overflow-hidden">
-                    <div class="divide-y divide-[hsl(var(--border))]">
-                      <div
-                        v-for="item in result.similar_items"
-                        :key="item.id"
-                        class="p-4 sm:p-5 hover:bg-[hsl(var(--muted)/0.3)] transition-colors group cursor-default"
-                      >
-                        <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-                          <div class="flex-1 min-w-0">
-                            <div class="flex flex-wrap items-center gap-2 mb-2">
-                              <span class="font-mono text-xs px-1.5 py-0.5 bg-[hsl(var(--primary)/0.1)] text-[hsl(var(--primary))] rounded border border-[hsl(var(--primary)/0.2)]">
-                                {{ item.code }}
-                              </span>
-                              <span class="text-xs text-[hsl(var(--muted-foreground))] flex items-center gap-1">
-                                <UIcon name="i-heroicons-folder" class="w-3 h-3" />
-                                {{ item.project_name }}
-                              </span>
-                            </div>
-                            <p class="text-sm text-[hsl(var(--foreground))] leading-relaxed">
-                              {{ item.description }}
-                            </p>
-                            
-                            <!-- Detailed Matches -->
-                            <div v-if="item.property_matches.length > 0" class="flex flex-wrap gap-2 mt-3">
-                              <span
-                                v-for="match in item.property_matches.slice(0, 6)"
-                                :key="match.name"
-                                :class="[
-                                  'text-[10px] px-2 py-1 rounded-full border transition-colors',
-                                  match.is_match 
-                                    ? 'bg-[hsl(var(--success-light))] border-[hsl(var(--success)/0.3)] text-[hsl(var(--success))]' 
-                                    : 'bg-[hsl(var(--muted)/0.3)] border-transparent text-[hsl(var(--muted-foreground))]'
-                                ]"
-                              >
-                                {{ match.name }}: <span class="font-medium">{{ match.item_value || 'N/D' }}</span>
-                              </span>
-                            </div>
-                          </div>
-                          
-                          <div class="text-left sm:text-right flex-shrink-0 pt-2 sm:pt-0 pl-0 sm:pl-4 border-t sm:border-t-0 border-[hsl(var(--border))] sm:border-l border-dashed mt-2 sm:mt-0">
-                            <div class="flex items-baseline sms:justify-end gap-1.5">
-                               <span class="text-lg font-bold text-[hsl(var(--foreground))]">
-                                  {{ formatCurrency(item.price) }}
-                               </span>
-                               <span class="text-xs text-[hsl(var(--muted-foreground))]">/ {{ item.unit }}</span>
-                            </div>
-                            <div class="mt-1 flex items-center sm:justify-end gap-1 text-xs text-[hsl(var(--muted-foreground))]">
-                              <span>Score:</span>
-                              <span class="font-mono font-medium" :class="item.combined_score > 0.8 ? 'text-[hsl(var(--success))]' : 'text-[hsl(var(--warning))]'">
-                                {{ Math.round(item.combined_score * 100) }}%
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+                    <DataGrid
+                      :config="similarItemsGridConfig"
+                      :row-data="similarItems as any[]"
+                      :loading="isLoading"
+                      height="480px"
+                      :show-toolbar="false"
+                      :enable-row-selection="true"
+                      selection-mode="multiple"
+                      get-row-id="id"
+                      row-clickable
+                      row-aria-label="Seleziona voce"
+                      :flat="true"
+                      empty-state-title="Nessuna voce disponibile"
+                      empty-state-message="Nessuna voce simile trovata per il calcolo."
+                      @grid-ready="onGridReady"
+                      @row-dblclick="(row: any) => openSimilarItem(row as SimilarItem)"
+                      @selection-changed="onSelectionChanged"
+                    />
                   </div>
                 </div>
 
+                <!-- No Selection -->
+                <div v-else-if="selectionEmpty" class="bg-[hsl(var(--card))] rounded-xl border border-[hsl(var(--border))] p-12 text-center shadow-sm">
+                  <div class="w-16 h-16 bg-[hsl(var(--muted))] rounded-full flex items-center justify-center mx-auto mb-4">
+                     <UIcon name="i-heroicons-check-circle" class="w-8 h-8 text-[hsl(var(--muted-foreground))]" />
+                  </div>
+                  <p class="text-lg font-medium text-[hsl(var(--foreground))]">Seleziona almeno una voce</p>
+                  <p class="text-sm text-[hsl(var(--muted-foreground))] mt-1 max-w-sm mx-auto">
+                    La stima del prezzo si aggiorna in base alle voci selezionate.
+                  </p>
+                </div>
+
                 <!-- No Results -->
-                <div v-else-if="!result.estimated_price" class="bg-[hsl(var(--card))] rounded-xl border border-[hsl(var(--border))] p-12 text-center shadow-sm">
+                <div v-else-if="!similarItems.length" class="bg-[hsl(var(--card))] rounded-xl border border-[hsl(var(--border))] p-12 text-center shadow-sm">
                   <div class="w-16 h-16 bg-[hsl(var(--muted))] rounded-full flex items-center justify-center mx-auto mb-4">
                      <UIcon name="i-heroicons-magnifying-glass" class="w-8 h-8 text-[hsl(var(--muted-foreground))]" />
                   </div>
@@ -324,8 +307,14 @@
 <script setup lang="ts">
 import MainPage from '~/components/layout/MainPage.vue'
 import PageHeader from '~/components/layout/PageHeader.vue'
+import DataGrid from '~/components/data-grid/DataGrid.vue'
+import PriceEstimatorDetailModule from '~/components/sidebar/modules/PriceEstimatorDetailModule.vue'
+import { usePageSidebarModule, useSidebarModules } from '~/composables/useSidebarModules'
+import { usePriceEstimatorGridConfig } from '~/composables/usePriceEstimatorGridConfig'
 import { useActionsStore } from '~/stores/actions'
 import type { Action } from '~/types/actions'
+import type { SimilarItem } from '~/composables/usePriceEstimator'
+import type { GridApi, GridReadyEvent } from 'ag-grid-community'
 
 const {
   query,
@@ -349,6 +338,47 @@ const registerAction = (action: Action) => {
 }
 
 const showAdvanced = ref(false)
+const selectedSimilarItem = ref<SimilarItem | null>(null)
+const { setActiveModule, showSidebar, activeModuleId } = useSidebarModules()
+const gridApiRef = ref<GridApi | null>(null)
+const selectedItems = ref<SimilarItem[]>([])
+const pendingSelectAll = ref(false)
+
+const similarItems = computed(() => result.value?.similar_items ?? [])
+const selectedItemsCount = computed(() => selectedItems.value.length)
+const totalItemsCount = computed(() => similarItems.value.length)
+const selectionEmpty = computed(() =>
+  totalItemsCount.value > 0 && selectedItemsCount.value === 0 && !pendingSelectAll.value
+)
+
+const { gridConfig: similarItemsGridConfigBase } = usePriceEstimatorGridConfig(similarItems)
+const similarItemsGridConfig = computed(() => ({
+  ...similarItemsGridConfigBase,
+  rowClassRules: {
+    ...(similarItemsGridConfigBase.rowClassRules || {}),
+    'ag-row-detail-active': (params: any) => selectedSimilarItem.value?.id === params.data?.id,
+  },
+}))
+
+const selectAllRows = () => {
+  if (!gridApiRef.value) return
+  gridApiRef.value.selectAll()
+  selectedItems.value = gridApiRef.value.getSelectedRows() as SimilarItem[]
+}
+
+usePageSidebarModule({
+  id: 'price-estimator-detail',
+  label: 'Dettaglio',
+  icon: 'heroicons:document-text',
+  order: 0,
+  component: PriceEstimatorDetailModule,
+  props: {
+    item: selectedSimilarItem,
+    onClose: () => {
+      selectedSimilarItem.value = null
+    },
+  },
+})
 
 onMounted(() => {
   registerAction({
@@ -395,15 +425,94 @@ onUnmounted(() => {
   actionsStore.unregisterOwner(actionOwner)
 })
 
-// Valid units options derived from result
+const buildPercentile = (values: number[], percentile: number) => {
+  if (!values.length) return 0
+  const sorted = [...values].sort((a, b) => a - b)
+  const idx = (sorted.length - 1) * percentile
+  const lower = Math.floor(idx)
+  const upper = Math.ceil(idx)
+  if (lower === upper) return sorted[lower] ?? 0
+  const weight = idx - lower
+  return (sorted[lower] ?? 0) * (1 - weight) + (sorted[upper] ?? 0) * weight
+}
+
+const buildEstimateFromItems = (items: SimilarItem[], targetUnit: string | null) => {
+  if (!items.length) return null
+  let validItems = items.filter((item) => (item.combined_score ?? 0) >= 0 && item.price > 0)
+  if (!validItems.length) {
+    validItems = items.filter((item) => item.price > 0)
+  }
+  if (!validItems.length) return null
+
+  const unitCounts = new Map<string, number>()
+  validItems.forEach((item) => {
+    if (!item.unit) return
+    unitCounts.set(item.unit, (unitCounts.get(item.unit) ?? 0) + 1)
+  })
+  if (!unitCounts.size) return null
+
+  const availableUnits = Object.fromEntries(unitCounts.entries())
+  const target = targetUnit && availableUnits[targetUnit] ? targetUnit : null
+  const unit = target ?? Array.from(unitCounts.entries()).sort((a, b) => b[1] - a[1])[0]?.[0]
+  if (!unit) return null
+
+  const unitItems = validItems.filter((item) => item.unit === unit)
+  if (!unitItems.length) return null
+
+  const prices = unitItems.map((item) => item.price)
+  const weights = unitItems.map((item) => Math.max(item.combined_score ?? 0, 0.1))
+  const totalWeight = weights.reduce((sum, value) => sum + value, 0)
+  const estimated = totalWeight > 0
+    ? prices.reduce((sum, price, index) => sum + price * weights[index], 0) / totalWeight
+    : buildPercentile(prices, 0.5)
+
+  const rangeLow = prices.length > 1 ? buildPercentile(prices, 0.25) : prices[0]
+  const rangeHigh = prices.length > 1 ? buildPercentile(prices, 0.75) : prices[0]
+
+  let confidence = 0.5
+  if (prices.length >= 3) {
+    const avg = prices.reduce((sum, value) => sum + value, 0) / prices.length
+    const variance = prices.reduce((sum, value) => sum + Math.pow(value - avg, 2), 0) / prices.length
+    const cv = avg > 0 ? Math.sqrt(variance) / avg : 1
+    confidence = Math.max(0.3, Math.min(0.95, 1 - cv))
+  }
+
+  return {
+    value: Number(estimated.toFixed(2)),
+    range_low: Number(rangeLow.toFixed(2)),
+    range_high: Number(rangeHigh.toFixed(2)),
+    confidence: Number(confidence.toFixed(2)),
+    unit,
+    available_units: availableUnits,
+    method: 'selection',
+  }
+}
+
+const estimateItems = computed(() => {
+  if (selectedItems.value.length) return selectedItems.value
+  if (pendingSelectAll.value) return similarItems.value
+  return []
+})
+
+const selectionEstimate = computed(() => buildEstimateFromItems(estimateItems.value, selectedUnit.value))
+const displayEstimate = computed(() => selectionEstimate.value)
+
+const unitOptionsSource = computed(() =>
+  selectedItems.value.length ? selectedItems.value : similarItems.value
+)
+
 const unitOptions = computed(() => {
-  if (!result.value?.estimated_price?.available_units) return []
-  
-  return Object.entries(result.value.estimated_price.available_units)
-    .sort(([, a], [, b]) => b - a) // Sort by count desc
+  const counts = new Map<string, number>()
+  unitOptionsSource.value.forEach((item) => {
+    if (!item.unit) return
+    counts.set(item.unit, (counts.get(item.unit) ?? 0) + 1)
+  })
+
+  return Array.from(counts.entries())
+    .sort(([, a], [, b]) => b - a)
     .map(([unit, count]) => ({
       label: `${unit} (${count} voci)`,
-      value: unit
+      value: unit,
     }))
 })
 
@@ -412,6 +521,40 @@ watch(() => result.value, (newResult) => {
   if (newResult?.estimated_price?.unit && !selectedUnit.value) {
     selectedUnit.value = newResult.estimated_price.unit
   }
+  selectedSimilarItem.value = null
+  selectedItems.value = []
+  pendingSelectAll.value = Boolean(newResult?.similar_items?.length)
+  if (gridApiRef.value && newResult?.similar_items?.length) {
+    nextTick(() => {
+      selectAllRows()
+      pendingSelectAll.value = false
+    })
+  } else if (gridApiRef.value && !newResult?.similar_items?.length) {
+    gridApiRef.value.deselectAll()
+    pendingSelectAll.value = false
+  }
 })
+
+const openSimilarItem = (item: SimilarItem) => {
+  selectedSimilarItem.value = item
+  if (activeModuleId.value !== 'price-estimator-detail') {
+    setActiveModule('price-estimator-detail')
+  }
+  showSidebar()
+}
+
+const onGridReady = (params: GridReadyEvent) => {
+  gridApiRef.value = params.api
+  if (pendingSelectAll.value) {
+    nextTick(() => {
+      selectAllRows()
+      pendingSelectAll.value = false
+    })
+  }
+}
+
+const onSelectionChanged = (rows: SimilarItem[]) => {
+  selectedItems.value = rows
+}
 
 </script>

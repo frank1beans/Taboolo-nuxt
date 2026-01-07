@@ -1,13 +1,8 @@
 import { defineEventHandler } from 'h3';
 import { Project } from '../../models/project.schema'
 import { Estimate } from '../../models/estimate.schema'
-
-type LeanProject = {
-  _id?: { toString(): string }
-  code?: string
-  name?: string
-  status?: string
-}
+import { Offer } from '../../models/offer.schema'
+import { UserContext } from '../../models/user-context.schema'
 
 type LeanEstimate = {
   _id?: { toString(): string }
@@ -19,31 +14,47 @@ type LeanEstimate = {
 
 export default defineEventHandler(async () => {
   // Basic counts
-  const [projects, estimates, offers] = await Promise.all([
-    Project.find().lean(),
-    Estimate.find().lean(),
-    Offer.find().lean(),
+  const [projectsCount, estimatesCount, approvedOffersCount, uniqueUsersCount, recentEstimates] = await Promise.all([
+    // Active projects (not closed)
+    Project.countDocuments({ status: { $ne: 'closed' } }),
+
+    // Total estimates
+    Estimate.countDocuments(),
+
+    // Approved offers
+    Offer.countDocuments({ status: 'accepted' }),
+
+    // Active users (unique user_ids in context)
+    UserContext.distinct('user_id').then(ids => ids.length),
+
+    // Recent activity: last 10 estimates (project or offer)
+    Estimate.find().sort({ created_at: -1 }).limit(10).lean()
   ]);
 
-  const active_projects = projects.filter((p) => p.status !== 'closed').length
-  const loaded_estimates = estimates.length
-  const offers_count = offers.length // Renamed to avoid conflict with the 'offers' array
-  const generated_reports = 0
+  const active_projects = projectsCount
+  const loaded_estimates = estimatesCount
+  const approved_offers = approvedOffersCount
+  const active_users = uniqueUsersCount
 
-  // Recent activity: last 10 estimates (project or offer)
-  const recentRaw: LeanEstimate[] = await Estimate.find().sort({ created_at: -1 }).limit(10).lean()
+  // Build project lookup for codes/names for recent activity
+  const projectIds = new Set<string>()
+  recentEstimates.forEach((item: LeanEstimate) => {
+    const startId = item.project_id
+    if (startId) projectIds.add(startId.toString())
+  })
 
-  // Build project lookup for codes/names
+  const relevantProjects = await Project.find({ _id: { $in: Array.from(projectIds) } }).lean()
   const projectMap = new Map<string, { id: string; code?: string; name?: string }>()
-  projects.forEach((p) => {
+
+  relevantProjects.forEach((p) => {
     const id = p._id?.toString()
     if (id) {
       projectMap.set(id, { id, code: p.code, name: p.name })
     }
   })
 
-  const recent_activity = recentRaw.map((item) => {
-    const projectId = item.project_id?.toString?.() || ''
+  const recent_activity = recentEstimates.map((item: LeanEstimate) => {
+    const projectId = item.project_id?.toString() || ''
     const project = projectMap.get(projectId)
     return {
       estimate_id: item._id?.toString() || '',
@@ -59,8 +70,8 @@ export default defineEventHandler(async () => {
   return {
     active_projects,
     loaded_estimates,
-    offers,
-    generated_reports,
+    approved_offers,
+    active_users,
     recent_activity,
   }
 })

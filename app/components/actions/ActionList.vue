@@ -104,12 +104,12 @@ const handleClick = async (item: ActionPaletteItem) => {
 </script>
 
 <template>
-  <div v-if="resolvedItems.length" :class="layout === 'sidebar' ? 'space-y-2' : 'flex flex-wrap items-center gap-2'">
+  <div v-if="resolvedItems.length" :class="layout === 'sidebar' ? 'space-y-1' : 'flex flex-wrap items-center gap-2'">
     <template v-for="item in resolvedItems" :key="item.id">
       <template v-if="layout === 'sidebar'">
         <button
           type="button"
-          class="w-full text-left px-3 py-2 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))] hover:bg-[hsl(var(--muted)/0.5)] transition"
+          class="w-full text-left px-3 py-1.5 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))] hover:bg-[hsl(var(--muted)/0.5)] transition"
           :class="item.enabled ? 'text-[hsl(var(--foreground))]' : 'opacity-60 cursor-not-allowed'"
           :disabled="!item.enabled"
           :title="item.enabled ? undefined : item.disabledReason"

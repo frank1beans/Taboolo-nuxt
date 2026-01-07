@@ -8,7 +8,7 @@
 
 import MainPage from './MainPage.vue'
 import PageHeader from './PageHeader.vue'
-import type { DataGridConfig, DataGridRowActions } from '~/types/data-grid'
+import type { DataGridConfig, DataGridRowActions, ActiveFilter } from '~/types/data-grid'
 import type { GridReadyEvent } from 'ag-grid-community'
 
 defineOptions({
@@ -49,6 +49,12 @@ interface Props {
   rowActions?: DataGridRowActions
   getRowId?: string | ((row: Record<string, unknown>) => string)
   onSelectionChange?: (selectedIds: string[], selectedRows: Record<string, unknown>[]) => void
+
+  // External filters (e.g. WBS)
+  externalFilters?: ActiveFilter[]
+  onExternalFilterRemove?: (field: string) => void
+  flat?: boolean
+  selectionKey?: string
 }
 
 const _props = withDefaults(defineProps<Props>(), {
@@ -69,7 +75,9 @@ const _props = withDefaults(defineProps<Props>(), {
   rowAriaLabel: undefined,
   stickyHeader: true,
   enableRowSelection: true,
-  selectionMode: 'single'
+  selectionMode: 'multiple',
+  flat: true,
+  selectionKey: undefined
 })
 
 const emit = defineEmits<{
@@ -132,6 +140,10 @@ const onGridReady = (params: GridReadyEvent<Record<string, unknown>>) => {
           :row-actions="rowActions"
           :get-row-id="getRowId"
           :on-selection-change="onSelectionChange"
+          :external-filters="externalFilters"
+          :on-external-filter-remove="onExternalFilterRemove"
+          :flat="flat"
+          :selection-key="selectionKey"
           @grid-ready="onGridReady"
         />
       </div>

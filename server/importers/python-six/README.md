@@ -1,20 +1,13 @@
-# Python SIX Importer (proxy da Nuxt/Nitro)
+# Python SIX importer client (Nuxt)
 
-Questa cartella centralizza le chiamate dal backend Nuxt (Nitro) al servizio Python che gestisce il parsing dei file SIX/XML.
+Questa cartella contiene il client Nuxt/Nitro per il parsing SIX/XML via servizio Python.
 
-## Dove sta il servizio Python (in questa repo)
-
-Il servizio è incluso nella repo in:
+## Dove sta il servizio Python
 
 - `services/importer/`
+- Entry point: `services/importer/main.py`
 
-Entry point:
-
-- `services/importer/main.py` (FastAPI)
-
-## Avvio servizio Python (dev)
-
-Esempio:
+## Avvio in locale
 
 ```bash
 cd services/importer
@@ -24,28 +17,27 @@ pip install -r requirements.txt
 uvicorn main:app --reload --port 8000
 ```
 
-## Endpoint richiesti (SIX raw)
+## Endpoint usati
 
-Con prefix API di default `/api/v1`, il servizio deve esporre:
+Base URL: `PYTHON_API_URL` (default `http://localhost:8000/api/v1`).
 
-- `POST /api/v1/commesse/{projectId}/import-six/preview`
-- `POST /api/v1/commesse/{projectId}/import-six`
+- `POST /commesse/{projectId}/import-six/preview`
+- `POST /commesse/{projectId}/import-six`
 
-Nota: nel client esistono anche chiamate "non raw" per compatibilità/legacy, ma il flusso stabile per SIX in questa repo è raw (ora endpoint standard).
+## Modalita raw
 
-## Configurazione Nuxt/Nitro
+La modalita raw e' quella di default. La selezione avviene nel backend Nuxt via query `mode=raw`.
+La persistenza e' gestita da `server/services/ImportPersistenceService.ts`.
 
-In `.env` (o variabili runtime) imposta:
+## File coinvolti
 
-- `PYTHON_API_URL=http://localhost:8000/api/v1`
-
-Questo alimenta `runtimeConfig.pythonApiBaseUrl` (vedi `nuxt.config.ts`) e viene usato da:
-
+- `server/importers/python-six/client.ts` (proxy e mapping)
 - `server/utils/python-proxy.ts` (proxy multipart)
+- `server/utils/python-mappers.ts` (mapping payload)
+- `server/api/projects/[id]/import-six*.ts` (endpoint API)
 
-## Convenzioni
+## Configurazione
 
-- Tutto il traffico verso Python passa da `server/importers/python-six/client.ts` (mantenere mapping e gestione errori in un punto unico).
-- Mapper payload: `server/utils/python-mappers.ts`.
-- Persistenza su Mongo: `server/services/ImportPersistenceService.ts`.
-
+- `PYTHON_API_URL`
+- `PYTHON_PROXY_MAX_UPLOAD_MB`
+- `PYTHON_PROXY_TIMEOUT_MS`

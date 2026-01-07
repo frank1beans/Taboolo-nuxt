@@ -1,20 +1,19 @@
 # Taboolo (Nuxt)
 
-Repository per Taboolo: web app Nuxt (frontend) + Nitro (backend) + MongoDB (persistenza) + servizio Python per parsing/import.
+Repository per Taboolo: Nuxt 4 (frontend), Nitro API, MongoDB e servizio Python opzionale per parsing/import.
 
 ## Documentazione
 
 - Guida generale: `docs/README.md`
 - Indice completo: `docs/SUMMARY.md`
-- Inizio corso ("Studente"): `docs/studente/README.md`
 
 ## Avvio rapido (sviluppo)
 
 Prerequisiti:
 
-- Node.js (LTS) + pnpm
+- Node.js LTS + pnpm
 - MongoDB raggiungibile
-- Python (per `services/importer/`)
+- Python 3.11+ (solo per la pipeline di import)
 
 Install:
 
@@ -38,14 +37,20 @@ Lint:
 pnpm lint
 ```
 
-## Servizi esterni (locale)
+## Configurazione runtime
 
-Variabili ambiente principali:
+Variabili principali:
 
-- `MONGODB_URI`
-- `PYTHON_API_URL` (default atteso: `http://localhost:8000/api/v1`)
+- `MONGODB_URI` (obbligatoria per le API)
+- `PYTHON_API_URL` (default: `http://localhost:8000/api/v1`)
+- `PYTHON_PROXY_MAX_UPLOAD_MB` (default: `100`)
+- `PYTHON_PROXY_TIMEOUT_MS` (default: `600000`)
 
-Servizio Python importer (esempio):
+Dettagli: `docs/reference/configurazione.md`
+
+## Servizio Python importer (locale)
+
+Esempio:
 
 ```bash
 cd services/importer
@@ -54,9 +59,3 @@ python -m venv .venv
 pip install -r requirements.txt
 uvicorn main:app --reload --port 8000
 ```
-
-Dettagli e troubleshooting:
-
-- `docs/studente/parte-b-backend/06-runtime-config-e-env.md`
-- `docs/studente/parte-c-dominio-feature/10-importer-python.md`
-- `docs/studente/parte-d-approfondimenti/21-python-importer-servizio.md`

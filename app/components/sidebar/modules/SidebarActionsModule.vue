@@ -51,7 +51,7 @@ const showEmpty = computed(() => !showActionList.value && !showGroups.value)
 </script>
 
 <template>
-  <div class="sidebar-actions-module p-4 flex flex-col gap-6">
+  <div class="sidebar-actions-module p-2 flex flex-col gap-3">
     <ActionList
       v-if="showActionList"
       layout="sidebar"

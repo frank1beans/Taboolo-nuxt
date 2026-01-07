@@ -1,141 +1,82 @@
-# Database Schema Plan (MongoDB / Mongoose)
+# Database schema (current)
 
-Based on `types/api.ts`, here is the proposed Mongoose schema structure.
+Questo documento riepiloga lo schema attuale usato in `server/models`.
+Non e' un piano di migrazione, ma un riferimento rapido per sviluppatori.
 
 ## Collections
 
-### 1. `Commesse` (Collection: `commesse`)
-```typescript
-interface Commessa {
-  _id: ObjectId;
-  nome: string;
-  codice: string; // Unique index
-  descrizione?: string;
-  note?: string;
-  business_unit?: string;
-  revisione?: string;
-  stato: 'setup' | 'in_corso' | 'chiusa';
-  created_at: Date;
-  updated_at: Date;
-  // Relationship: Computi are children, referenced by ID or embedded?
-  // Referenced is better for scalability.
-  computi: ObjectId[]; // Reference to Computi
-}
-```
+- `projects`
+- `estimates`
+- `estimateitems`
+- `pricelists`
+- `pricelistitems`
+- `wbsnodes`
+- `offers`
+- `offeritems`
+- `offeralerts`
+- `user_contexts`
 
-### 2. `Computi` (Collection: `computi`)
-```typescript
-interface Computo {
-  _id: ObjectId;
-  commessa_id: ObjectId; // Ref to Commesse
-  nome: string;
-  tipo: 'progetto' | 'ritorno';
-  disciplina?: string;
-  revisione?: string;
-  is_baseline: boolean;
-  impresa?: string;
-  round_number?: number;
-  importo_totale?: number;
-  delta_vs_progetto?: number;
-  percentuale_delta?: number;
-  note?: string;
-  file_nome?: string;
-  created_at: Date;
-  updated_at: Date;
-  matching_report?: Record<string, any>;
-}
-```
+## Modelli principali
 
-### 3. `WBSNodes` (Collection: `wbs_nodes`)
-Ideally, WBS can be stored as a single document per Commessa if not too large, or as a tree structure using Materialized Path or Parent References.
-Given `ApiWbsNode` recursive structure:
+### Project
 
-Option A: Embedded in Commessa (Simple, fast read, hard to query deep nodes independently)
-Option B: Separate Collection (Better for large trees)
+Campi base progetto: `name`, `code`, `description`, `notes`, `business_unit`, `revision`, `status`.
 
-Let's go with **Option B** (Separate Collection) but maybe denormalized.
+### Estimate (baseline)
 
-```typescript
-interface WbsNode {
-  _id: ObjectId;
-  commessa_id: ObjectId;
-  parent_id?: ObjectId;
-  type: 'spaziale' | 'wbs6' | 'wbs7';
-  code: string;
-  description?: string;
-  level: number;
-  importo: number; // Computed/Cached
-  path: { level: number; code: string }[]; // Materialized path for breadcrumbs
-  // specific fields
-  wbs6_id?: ObjectId; // For wbs7
-  wbs_spaziale_id?: ObjectId; // For wbs6
-}
-```
+- `project_id`
+- `name`, `type` (`project`)
+- `is_baseline`
+- `total_amount`, `price_list_id`, `source_preventivo_id`, `import_run_id`
 
-### 4. `ComputoVoci` (Collection: `computo_voci`)
-The items. Can be millions. Must be a separate collection.
+Nota: le offerte non sono piu gestite come `Estimate` di tipo `offer`. Sono una collezione separata (`Offer`).
 
-```typescript
-interface ComputoVoce {
-  _id: ObjectId;
-  computo_id: ObjectId; // Index
-  commessa_id: ObjectId; // Index (for fast aggregation)
-  codice: string;
-  descrizione: string;
-  descrizione_estesa?: string;
-  unita_misura?: string;
-  quantita: number;
-  prezzo_unitario: number;
-  importo: number;
-  
-  // WBS Links
-  wbs6_id?: ObjectId;
-  wbs7_id?: ObjectId;
-  wbs_path_ids?: ObjectId[];
-  
-  // Metadata for aggregation
-  round_number?: number;
-  impresa?: string;
-}
-```
+### EstimateItem
 
-### 5. `PriceCatalogItems` (Collection: `price_catalog`)
-```typescript
-interface PriceCatalogItem {
-  _id: ObjectId;
-  commessa_id: ObjectId;
-  product_id: string;
-  item_code: string;
-  item_description?: string;
-  unit_id?: string;
-  wbs6_code?: string;
-  price_lists?: Map<string, number>;
-  extra_metadata?: any;
-  // Embeddings for semantic search?
-  embedding?: number[];
-}
-```
+- `project_id`, `wbs_ids`, `price_list_item_id`
+- `code`, `unit_measure`, `progressive`, `order`
+- `project` con quantita e prezzi baseline
 
-### 6. `Settings` (Collection: `settings`)
-Singleton or per-user/organization.
-```typescript
-interface Settings {
-  delta_minimo_critico: number;
-  delta_massimo_critico: number;
-  // ...
-}
-```
+### PriceList / PriceListItem
 
-### 7. `ImportConfigs` (Collection: `import_configs`)
-```typescript
-interface ImportConfig {
-  commessa_id?: ObjectId;
-  nome: string;
-  configuration: any;
-}
-```
+- `PriceList` collega `project_id` e `estimate_id`.
+- `PriceListItem` include `code`, `description`, `long_description`, `extended_description`, `unit`, `price`.
+- Campi semantic map: `embedding`, `map2d`, `map3d`, `cluster`, `map_version`.
 
-## Migration Strategy
-1.  Setup Mongoose connection in Nuxt server (`server/plugins/mongoose.ts` or `server/utils/db.ts`).
-2.  Define Mongoose Models in `server/models/`.
-3.  Port logic from Python (or inferred) to Mongoose queries.
+### WbsNode
+
+- `project_id`, `estimate_id`, `parent_id`, `ancestors`
+- `type`, `level`, `code`, `description`
+
+### Offer
+
+- `project_id`, `estimate_id` (baseline)
+- `company_name`, `round_number`, `mode` (`detailed`/`aggregated`)
+- `status`, `total_amount`
+
+### OfferItem
+
+- `offer_id`, `project_id`
+- `origin`, `source`, `resolution_status`
+- `estimate_item_id` (detailed) o `price_list_item_id` (aggregated)
+- `quantity`, `unit_price`
+
+### OfferAlert
+
+- `offer_id`, `offer_item_id`, `estimate_id`
+- `type`, `severity`, `status`
+- `actual`, `expected`, `delta`, `message`
+
+### UserContext
+
+- `user_id`, `organization_id`
+- `current_project_id`, `current_estimate_id`
+
+## Relazioni chiave
+
+- Un Project ha piu baseline (Estimate).
+- Un Estimate ha WBS, Listino e EstimateItem.
+- Un Offer e' sempre collegata a un Estimate baseline.
+- OfferItem e OfferAlert gestiscono match e conflitti delle offerte.
+
+Per dettagli completi: `docs/reference/modello-dati.md`.

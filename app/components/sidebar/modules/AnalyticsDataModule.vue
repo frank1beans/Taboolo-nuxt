@@ -64,9 +64,24 @@ const modeOptions = [
       </div>
     </template>
 
-    <div class="space-y-4">
-      <div class="space-y-2">
-        <h3 class="panel-section-header">Filtri Dati</h3>
+    <div class="space-y-3">
+      <div class="rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--muted)/0.2)] p-2.5 space-y-2">
+        <div class="flex items-center justify-between">
+          <h3 class="panel-section-header">Filtri dati</h3>
+          <span class="value-badge">{{ resolvedFilters.projectIds.length || 'Tutti' }}</span>
+        </div>
+
+        <div class="flex flex-wrap gap-1 text-[10px] text-[hsl(var(--muted-foreground))]">
+          <span class="px-2 py-0.5 rounded-full bg-[hsl(var(--muted)/0.4)]">
+            Progetti: {{ resolvedFilters.projectIds.length ? resolvedFilters.projectIds.length : 'Tutti' }}
+          </span>
+          <span class="px-2 py-0.5 rounded-full bg-[hsl(var(--muted)/0.4)]">
+            Anno: {{ resolvedFilters.year ?? 'Tutti' }}
+          </span>
+          <span class="px-2 py-0.5 rounded-full bg-[hsl(var(--muted)/0.4)]">
+            BU: {{ resolvedFilters.businessUnit ?? 'Tutte' }}
+          </span>
+        </div>
 
         <div class="space-y-1">
           <label class="text-[10px] text-[hsl(var(--muted-foreground))]">Progetti</label>
@@ -106,19 +121,19 @@ const modeOptions = [
             />
           </div>
         </div>
-
-        <UButton
-          block
-          size="xs"
-          color="neutral"
-          variant="soft"
-          icon="i-heroicons-arrow-path"
-          :loading="resolvedLoading"
-          @click="emit('refreshMap')"
-        >
-          Aggiorna Filtri
-        </UButton>
       </div>
+
+      <UButton
+        block
+        size="xs"
+        color="neutral"
+        variant="soft"
+        icon="i-heroicons-arrow-path"
+        :loading="resolvedLoading"
+        @click="emit('refreshMap')"
+      >
+        Aggiorna Filtri
+      </UButton>
     </div>
   </SidebarModule>
 </template>

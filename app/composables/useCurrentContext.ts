@@ -3,6 +3,16 @@ import type { Estimate, Project } from '#types'
 
 import { persistClient as persistClientStorage, restoreFromClient as restoreFromClientStorage } from '~/composables/context/useContextPersistence'
 
+const isValidId = (id: unknown): id is string => {
+  if (typeof id !== 'string') return false
+  if (!id) return false
+  if (id === 'undefined') return false
+  if (id === 'null') return false
+  if (id === '[object Object]') return false
+  return true
+}
+
+
 const currentProjectId = ref<string | null>(null)
 const currentEstimateId = ref<string | null>(null)
 const project = ref<Project | null>(null)
@@ -17,10 +27,11 @@ const persistClient = () => {
 const restoreFromClient = () => {
   const restored = restoreFromClientStorage()
   if (restored) {
-    currentProjectId.value = restored.currentProjectId
-    currentEstimateId.value = restored.currentEstimateId
+    currentProjectId.value = isValidId(restored.currentProjectId) ? restored.currentProjectId : null
+    currentEstimateId.value = isValidId(restored.currentEstimateId) ? restored.currentEstimateId : null
   }
 }
+
 
 const loadProjectContext = async (projectId: string | null) => {
   loading.value = true
@@ -87,13 +98,22 @@ const setProjectState = (projectData: Project | null, estimateId: string | null 
 }
 
 const setCurrentProject = async (projectId: string | null) => {
+  if (projectId && !isValidId(projectId)) {
+    console.warn('[useCurrentContext] Attempted to set invalid projectId:', projectId)
+    projectId = null
+  }
   currentProjectId.value = projectId
   currentEstimateId.value = null
   await syncContext()
   await loadProjectContext(projectId)
 }
 
+
 const setCurrentEstimate = async (estimateId: string | null) => {
+  if (estimateId && !isValidId(estimateId)) {
+    console.warn('[useCurrentContext] Attempted to set invalid estimateId:', estimateId)
+    estimateId = null
+  }
   if (!project.value) return
   const exists = (project.value.estimates ?? []).find((est) => est.id === estimateId) ?? null
   currentEstimateId.value = exists ? estimateId : null
@@ -116,8 +136,9 @@ const hydrateFromApi = async () => {
         ? null
         : response.currentEstimateId ?? null
 
-    currentProjectId.value = normalizedProjectId
-    currentEstimateId.value = normalizedEstimateId
+    currentProjectId.value = isValidId(normalizedProjectId) ? normalizedProjectId : null
+    currentEstimateId.value = isValidId(normalizedEstimateId) ? normalizedEstimateId : null
+
 
     await loadProjectContext(currentProjectId.value)
   } catch (error) {

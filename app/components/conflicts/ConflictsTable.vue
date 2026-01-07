@@ -126,14 +126,13 @@ const ActionsRenderer = {
 const gridConfig = computed<DataGridConfig>(() => ({
   columns: [
     {
-      checkboxSelection: true,
-      headerCheckboxSelection: true,
       width: 48,
       maxWidth: 48,
       pinned: 'left',
       lockPosition: 'left',
       resizable: false,
-      suppressMenu: true,
+      suppressHeaderMenuButton: true,
+      suppressHeaderContextMenu: true,
       headerName: '',
       field: '_selection'
     },
@@ -235,7 +234,8 @@ const gridConfig = computed<DataGridConfig>(() => ({
       width: 48,
       pinned: 'right',
       cellRenderer: 'ActionsRenderer',
-      suppressMenu: true,
+      suppressHeaderMenuButton: true,
+      suppressHeaderContextMenu: true,
       sortable: false,
       cellClass: 'px-0 overflow-visible flex items-center justify-center',
     }

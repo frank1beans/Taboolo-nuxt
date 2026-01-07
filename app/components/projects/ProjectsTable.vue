@@ -5,7 +5,6 @@ import type { DataGridConfig } from '~/types/data-grid';
 import DataGridPage from '~/components/layout/DataGridPage.vue';
 import StatusBadge from '~/components/ui/StatusBadge.vue';
 import PageToolbar from '~/components/layout/PageToolbar.vue';
-import SelectionBar from '~/components/ui/SelectionBar.vue';
 import TableActionMenu, { type TableActionItem } from '~/components/data-grid/TableActionMenu.vue';
 
 type ProjectCellParams = { value?: unknown; data?: Project };
@@ -153,7 +152,8 @@ const gridConfig = computed<DataGridConfig>(() => ({
       sortable: false,
       filter: false,
       resizable: false,
-      suppressMenu: true,
+      suppressHeaderMenuButton: true,
+      suppressHeaderContextMenu: true,
       cellRenderer: 'ProjectActionsRenderer',
       cellClass: 'px-0 overflow-visible flex items-center justify-center',
     }
@@ -229,13 +229,6 @@ const handleGridReady = (params: unknown) => {
         </Teleport>
       </ClientOnly>
 
-      <SelectionBar
-        v-if="selectionKey"
-        :selection-key="selectionKey"
-        :action-ids="selectionActionIds"
-        label-singular="Progetto"
-        label-plural="Progetti"
-      />
     </template>
   </DataGridPage>
 </template>

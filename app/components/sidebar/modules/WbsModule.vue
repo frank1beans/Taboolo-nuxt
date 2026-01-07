@@ -32,6 +32,22 @@ const searchQuery = ref('')
 const resolvedNodes = computed(() => unref(props.nodes) ?? [])
 const resolvedSelectedNodeId = computed(() => unref(props.selectedNodeId) ?? null)
 const totalNodes = computed(() => countNodes(resolvedNodes.value))
+const subtitleText = computed(() => {
+  if (selectedNode.value) return 'Filtro attivo'
+  return `${totalNodes.value} nodi`
+})
+
+const selectedSummary = computed(() => {
+  if (!selectedNode.value) return null
+  const items = countItemsInNode(selectedNode.value)
+  const amount = selectedNode.value.amount || 0
+  return {
+    label: selectedNode.value.name || selectedNode.value.code || selectedNode.value.id,
+    code: selectedNode.value.id,
+    items,
+    amount: amount > 0 ? formatAmount(amount) : null,
+  }
+})
 
 const countNodes = (nodes: WbsNode[]): number => {
   let count = nodes.length
@@ -59,7 +75,7 @@ const getNodeTooltip = (node: WbsNode): string => {
   const itemCount = countItemsInNode(node)
   const totalAmount = node.amount || 0
   if (totalAmount > 0) {
-    return `${itemCount} voci · ${formatAmount(totalAmount)}`
+    return `${itemCount} voci - ${formatAmount(totalAmount)}`
   }
   return `${itemCount} voci`
 }
@@ -86,6 +102,15 @@ const filterNodes = (nodes: WbsNode[], query: string): WbsNode[] => {
 
 const filteredNodes = computed(() => filterNodes(resolvedNodes.value, searchQuery.value))
 
+const expandPath = (nodeId: string) => {
+  const parts = nodeId.split('/')
+  let path = ''
+  parts.forEach((part, idx) => {
+    path = idx === 0 ? part : `${path}/${part}`
+    expandedNodes.value.add(path)
+  })
+}
+
 // Auto-expand when searching
 watch(searchQuery, (query) => {
   if (query.trim()) {
@@ -110,6 +135,7 @@ watch(
       return
     }
     selectedNode.value = findNodeById(resolvedNodes.value, nextSelectedId)
+    expandPath(nextSelectedId)
   },
   { immediate: true }
 )
@@ -153,8 +179,7 @@ const findNodeById = (nodes: WbsNode[], id: string): WbsNode | null => {
 
 const selectNode = (node: WbsNode) => {
   if (selectedNode.value?.id === node.id) {
-    selectedNode.value = null
-    emit('node-selected', null)
+    clearSelection()
   } else {
     selectedNode.value = node
     emit('node-selected', node)
@@ -179,14 +204,18 @@ const collapseAll = () => {
 const clearSearch = () => {
   searchQuery.value = ''
 }
+
+const clearSelection = () => {
+  selectedNode.value = null
+  emit('node-selected', null)
+}
 </script>
 
 <template>
   <SidebarModule 
     title="WBS" 
-    :subtitle="`${totalNodes} nodi`"
+    :subtitle="subtitleText"
     icon="heroicons:squares-2x2"
-    hide-header
   >
     <template #header-actions>
       <div class="flex items-center gap-0.5">
@@ -198,6 +227,35 @@ const clearSearch = () => {
         </UTooltip>
       </div>
     </template>
+
+    <div v-if="selectedSummary" class="mb-3 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--muted)/0.2)] p-2.5">
+      <div class="flex items-start justify-between gap-2">
+        <div class="min-w-0">
+          <div class="panel-section-header mb-1">Selezione attiva</div>
+          <div class="text-xs font-semibold text-[hsl(var(--foreground))] truncate" :title="selectedSummary.label">
+            {{ selectedSummary.label }}
+          </div>
+          <div class="text-[10px] text-[hsl(var(--muted-foreground))] truncate" :title="selectedSummary.code">
+            {{ selectedSummary.code }}
+          </div>
+        </div>
+        <UButton
+          size="2xs"
+          color="neutral"
+          variant="ghost"
+          icon="i-heroicons-x-mark"
+          @click="clearSelection"
+        >
+          Reset
+        </UButton>
+      </div>
+      <div v-if="selectedSummary.items > 0 || selectedSummary.amount" class="mt-2 flex items-center gap-2 text-[10px] text-[hsl(var(--muted-foreground))]">
+        <span v-if="selectedSummary.items > 0">{{ selectedSummary.items }} voci</span>
+        <span v-if="selectedSummary.amount">
+          {{ selectedSummary.items > 0 ? '| ' : '' }}{{ selectedSummary.amount }}
+        </span>
+      </div>
+    </div>
 
     <!-- Search -->
     <div class="mb-3">

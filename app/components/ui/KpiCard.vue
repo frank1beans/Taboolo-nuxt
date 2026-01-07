@@ -12,7 +12,7 @@
     <!-- Content -->
     <div class="flex-1 min-w-0">
       <div class="text-xl font-bold leading-tight text-foreground tracking-tight">
-        {{ formattedValue }}
+        {{ kpiDisplayValue }}
       </div>
       <div class="text-xs font-medium uppercase tracking-wide text-muted-foreground mt-0.5">
         {{ label }}
@@ -49,7 +49,7 @@ defineEmits<{
   click: []
 }>()
 
-const formattedValue = computed(() => {
+const kpiDisplayValue = computed(() => {
   if (props.format === 'none' || typeof props.value === 'string') {
     return props.value
   }
@@ -64,8 +64,6 @@ const formattedValue = computed(() => {
 })
 
 const variantClass = computed(() => {
-  // We can use specific classes if variants need distinct backgrounds/borders
-  // For now, keeping it simple as per original design but fully Tailwind
   return ''
 })
 
@@ -79,3 +77,7 @@ const trendIcon = computed(() => {
   return props.trend > 0 ? 'heroicons:arrow-trending-up' : props.trend < 0 ? 'heroicons:arrow-trending-down' : 'heroicons:minus'
 })
 </script>
+
+<style scoped>
+/* Scoped styles to satisfy Tailwind v4 delimeter if needed */
+</style>

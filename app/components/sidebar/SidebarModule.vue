@@ -30,7 +30,7 @@ defineEmits<{
 <template>
   <div class="sidebar-module h-full flex flex-col">
     <!-- Header -->
-    <div v-if="!hideHeader" class="sidebar-module-header h-11 flex items-center gap-2 px-3 border-b border-[hsl(var(--border))/0.5] flex-shrink-0 bg-[hsl(var(--card))]">
+    <div v-if="!hideHeader" class="sidebar-module-header h-11 flex items-center gap-2 px-3 flex-shrink-0 bg-[hsl(var(--card))]">
       <Icon v-if="icon" :name="icon" class="w-4 h-4 text-[hsl(var(--primary))]" />
       <div class="flex-1 min-w-0">
         <h3 class="text-xs font-semibold text-[hsl(var(--foreground))] truncate">

@@ -3,13 +3,15 @@ SIX File Import Endpoint
 Parses .six/.xml files and transforms to database schema.
 """
 
-import os
+import logging
 from fastapi import APIRouter, File, UploadFile, HTTPException, Form
 
 from application.process_file import process_file_content
 from loader import LoaderService
 from api.endpoints.shared import ImportResult, compute_embeddings_for_items, get_used_pli_ids
 from core import settings
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -67,9 +69,9 @@ async def import_six(
         # DEBUG: Log sample of price_list.items to verify long_description
         if price_list.items:
             for i, pli in enumerate(price_list.items[:3]):
-                print(f"[DEBUG Python] PLI #{i}: code={pli.code[:30] if pli.code else ''}, "
-                      f"desc={pli.description[:30] if pli.description else ''}, "
-                      f"long_desc={pli.long_description[:50] if pli.long_description else 'EMPTY'}")
+                logger.debug(f"PLI #{i}: code={pli.code[:30] if pli.code else ''}, "
+                             f"desc={pli.description[:30] if pli.description else ''}, "
+                             f"long_desc={pli.long_description[:50] if pli.long_description else 'EMPTY'}")
         
         return ImportResult(
             project=project,
@@ -102,9 +104,9 @@ async def preview_six(
     
     try:
         # Parse using Domain Logic
-        print(f"DEBUG Endpoint: Processing preview for {file.filename}")
+        logger.info(f"Processing preview for {file.filename}")
         normalized = process_file_content(content, "six", filename=file.filename)
-        print(f"DEBUG Endpoint: Normalized result has {len(normalized.preventivi)} preventivi")
+        logger.info(f"Normalized result has {len(normalized.preventivi)} preventivi")
         
         # Use Preview Service
         from ingestion.preview import PreviewService

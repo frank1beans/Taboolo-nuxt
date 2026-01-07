@@ -51,7 +51,7 @@ class SixParser(ParserProtocol):
     def parse(self, file_content: bytes, filename: str | None = None) -> NormalizedEstimate:
         root = ET.fromstring(file_content)
         self.ns = self._detect_namespace(root)
-        print(f"DEBUG SixParser: Root tag={root.tag}, Detected NS='{self.ns}'")
+        logger.debug(f"Root tag={root.tag}, Detected NS='{self.ns}'")
         
         # 1. Parse Definitions
         self._parse_price_lists(root)
@@ -66,7 +66,7 @@ class SixParser(ParserProtocol):
         
         # 2. Find All Preventivi
         preventivi_nodes = root.findall(f".//{self.ns}preventivo")
-        print(f"DEBUG SixParser: Found {len(preventivi_nodes)} preventivi nodes using NS='{self.ns}'")
+        logger.debug(f"Found {len(preventivi_nodes)} preventivi nodes using NS='{self.ns}'")
         
         if not preventivi_nodes:
             logger.warning("No preventivo found in SIX file, returning empty estimate")
@@ -143,21 +143,21 @@ class SixParser(ParserProtocol):
                             if refs:
                                 ref_map[prog] = refs
             
-            print(f"[Parser Debug] First pass done. Raw map size: {len(raw_map)}. Ref map size: {len(ref_map)}", flush=True)
+            logger.debug(f"First pass done. Raw map size: {len(raw_map)}. Ref map size: {len(ref_map)}")
             if ref_map:
-                print(f"[Parser Debug] Ref map keys: {list(ref_map.keys())[:10]}", flush=True)
+                logger.debug(f"Ref map keys: {list(ref_map.keys())[:10]}")
 
             # Resolve Quantities
-            print("[Parser] Resolving quantities...", flush=True)
+            logger.info("Resolving quantities...")
             for m in temp_items:
                 if m.progressive:
-                     try:
-                         prog_int = int(float(m.progressive))
-                         # Resolve!
-                         final_qty = self._resolve_quantity(prog_int, raw_map, ref_map, set())
-                         m.total_quantity = final_qty
-                     except Exception as e:
-                         print(f"[Parser] Error resolving qty for {m.progressive}: {e}")
+                    try:
+                        prog_int = int(float(m.progressive))
+                        # Resolve!
+                        final_qty = self._resolve_quantity(prog_int, raw_map, ref_map, set())
+                        m.total_quantity = final_qty
+                    except Exception as e:
+                        logger.error(f"Error resolving qty for {m.progressive}: {e}")
                 measurements.append(m)
             
             # Create Model
@@ -187,7 +187,7 @@ class SixParser(ParserProtocol):
             used_wbs_ids.update(prod.wbs_ids)
             
         filtered_wbs_nodes = [n for n in self._wbs_nodes.values() if n.id in used_wbs_ids]
-        print(f"[Parser] WBS Filtering: {len(self._wbs_nodes)} -> {len(filtered_wbs_nodes)} (Used nodes)", flush=True)
+        logger.info(f"WBS Filtering: {len(self._wbs_nodes)} -> {len(filtered_wbs_nodes)} (Used nodes)")
 
         estimate.price_lists = list(self._price_lists.values())
         estimate.wbs_nodes = filtered_wbs_nodes
@@ -308,7 +308,7 @@ class SixParser(ParserProtocol):
                 
                 # DEBUG: Log first 5 products that HAVE estesa attribute 
                 if debug_count < 5 and desc_ext:
-                    print(f"[DEBUG Parser] Product {code}: breve='{desc[:50]}...', estesa='{desc_ext[:80]}...'", flush=True)
+                    logger.debug(f"Product {code}: breve='{desc[:50]}...', estesa='{desc_ext[:80]}...'")
                     debug_count += 1
                 
             desc = desc.strip() or code
@@ -316,7 +316,7 @@ class SixParser(ParserProtocol):
             # Track voce nodes for later extended_description building
             if is_voce and desc_ext:
                 voce_descriptions[code] = desc_ext.strip()
-                print(f"[DEBUG Parser] Voce node: {code} -> '{desc_ext[:60]}...'", flush=True)
+                logger.debug(f"Voce node: {code} -> '{desc_ext[:60]}...'")
             
             # Unit
             unit = prodotto.attrib.get("unitaDiMisuraId") or "nr"
@@ -371,11 +371,11 @@ class SixParser(ParserProtocol):
                 extended_count += 1
                 
                 if extended_count <= 3:
-                    print(f"[DEBUG Parser] Extended desc for {prod.code}: '{prod.extended_description[:100]}...'", flush=True)
+                    logger.debug(f"Extended desc for {prod.code}: '{prod.extended_description[:100]}...'")
         
         # Final debug summary
         items_with_long_desc = sum(1 for p in self._price_list_items.values() if p.long_description)
-        print(f"[DEBUG Parser] Parsed {len(self._price_list_items)} products, {items_with_long_desc} have long_description, {extended_count} have extended_description", flush=True)
+        logger.info(f"Parsed {len(self._price_list_items)} products, {items_with_long_desc} have long_description, {extended_count} have extended_description")
 
     def _parse_rilevazione(self, node: ET.Element, index: int) -> Tuple[Measurement, Optional[int], List[Tuple[int, int]]] | None:
         prod_id = node.attrib.get("prodottoId")
@@ -398,22 +398,21 @@ class SixParser(ParserProtocol):
         row_idx = 0
         total_qty = Decimal(0)
         
-        # "Vedi Voce" handling
         # <prvVediVoce id="uuid" /> or similar reference
         # Usually inside prvRilevazione. 
         # Check if this node HAS a vedi voce tag
         vedi_voce_node = node.find(f"{self.ns}prvVediVoce")
         related_id = None
         if vedi_voce_node is not None:
-             print("[Parser] Found prvVediVoce tag!", vedi_voce_node.attrib)
+             logger.debug(f"Found prvVediVoce tag! {vedi_voce_node.attrib}")
              related_id = vedi_voce_node.attrib.get("rifId") or vedi_voce_node.attrib.get("id")
              if related_id:
-                 print(f"[Parser] Extracted related_id: {related_id}")
+                 logger.debug(f"Extracted related_id: {related_id}")
         else:
              # Debug check for ANY child with 'Vedi' in tag
              for child in list(node):
                  if 'Vedi' in child.tag:
-                     print(f"[Parser] Suspicious tag found: {child.tag} Attribs: {child.attrib}")
+                     logger.debug(f"Suspicious tag found: {child.tag} Attribs: {child.attrib}")
 
         # Check raw quantity on the node itself just in case
         # But we prefer sum of parts
@@ -495,7 +494,7 @@ class SixParser(ParserProtocol):
                     prod_id = node.attrib.get("prodottoId")
                     if prod_id == "11524":
                         cell_details = [(c[2], c[1]) for c in cells]  # (raw_text, rounded_val)
-                        print(f"[DEBUG L032.020.07] Cells: {cell_details} -> prod={float(prod):.6f} -> row_multiplier={row_multiplier}", flush=True)
+                        logger.debug(f"[L032.020.07] Cells: {cell_details} -> prod={float(prod):.6f} -> row_multiplier={row_multiplier}")
                     
                     # Map first 3 found cells to L/W/H for UI
                     if len(cells) >= 1: length = cells[0][1]
@@ -544,7 +543,7 @@ class SixParser(ParserProtocol):
             # FIX: If references found, ignore row quantity to avoid double counting
             if misura_refs:
                 if row_qty and abs(row_qty) > 0.0001:
-                     print(f"[Parser Audit] DISCARDING local qty {row_qty} in node {node.attrib.get('progressivo')} due to refs {misura_refs}", flush=True)
+                     logger.info(f"Audit: DISCARDING local qty {row_qty} in node {node.attrib.get('progressivo')} due to refs {misura_refs}")
                 row_qty = 0.0
 
             if row_qty is None: row_qty = 0.0
@@ -575,8 +574,6 @@ class SixParser(ParserProtocol):
             
         progressivo_id = node.attrib.get("progressivo") or str(uuid.uuid4())
         
-        progressivo_id = node.attrib.get("progressivo") or str(uuid.uuid4())
-        
         # Try to parse numeric progressive for ordering
         prog_num = None
         if node.attrib.get("progressivo"):
@@ -589,13 +586,12 @@ class SixParser(ParserProtocol):
              has_measurements = len(node.findall(f"{self.ns}prvMisura")) > 0
              msg = ""
              if has_measurements:
-                 msg = f"[Parser] checking Node {progressivo_id}: Total Qty = 0 but has measurements! details={len(details)}\n"
+                 msg = f"[Parser] checking Node {progressivo_id}: Total Qty = 0 but has measurements! details={len(details)}"
              elif related_id:
-                 msg = f"[Parser] Node {progressivo_id} (VediVoce {related_id}): Total Qty = 0. Has measurements: {has_measurements}\n"
+                 msg = f"[Parser] Node {progressivo_id} (VediVoce {related_id}): Total Qty = 0. Has measurements: {has_measurements}"
              
              if msg:
-                 with open("parser_debug.log", "a") as f:
-                     f.write(msg)
+                 logger.warning(msg)
 
         # Extract price list ID (listaQuotazioneId) from the rilevazione node
         price_list_id = node.attrib.get("listaQuotazioneId")
@@ -611,19 +607,6 @@ class SixParser(ParserProtocol):
             details=details,
             price_list_id=price_list_id  # CRITICAL FIX: Pass the price list ID
         ), prog_num, node_refs)
-        
-        if float(total_qty) == 0:
-             # Debug: Why is qty 0?
-             has_measurements = len(node.findall(f"{self.ns}prvMisura")) > 0
-             msg = ""
-             if has_measurements:
-                 msg = f"[Parser] checking Node {progressivo_id}: Total Qty = 0 but has measurements! details={len(details)}\n"
-             elif related_id:
-                 msg = f"[Parser] Node {progressivo_id} (VediVoce {related_id}): Total Qty = 0. Has measurements: {has_measurements}\n"
-             
-             if msg:
-                 with open("parser_debug.log", "a") as f:
-                     f.write(msg)
 
     def _to_int(self, value: str | None) -> int | None:
         if value is None: return None
@@ -657,7 +640,7 @@ class SixParser(ParserProtocol):
         # Add refs
         refs = ref_map.get(prog, [])
         if refs:
-             print(f"[Parser Resolve] {prog} has refs: {refs} (Base: {total})", flush=True)
+             logger.debug(f"[Resolve] {prog} has refs: {refs} (Base: {total})")
 
         for ref_prog, sign in refs:
             # Recursive resolve
@@ -666,14 +649,14 @@ class SixParser(ParserProtocol):
             
         stack.remove(prog)
         if refs:
-             print(f"[Parser Resolve] {prog} -> Final: {total}", flush=True)
+             logger.debug(f"[Resolve] {prog} -> Final: {total}")
              
         # Legacy Rounding: Round final resolved quantity to 2 decimals
         # Avoid float precision issues by converting to string first
         try:
             rounded_total = float(Decimal(f"{total:.10f}").quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
         except Exception as e:
-            print(f"[Parser Error] Rounding failed for {prog}: {e}", flush=True)
+            logger.error(f"Rounding failed for {prog}: {e}")
             rounded_total = total
             
         return rounded_total

@@ -2,8 +2,11 @@
   <ClientOnly>
     <div
       ref="gridWrapper"
-      class="surface-card w-full relative flex flex-col overflow-hidden"
-      :class="{ 'data-grid--sticky-header': stickyHeader }"
+      class="w-full relative flex flex-col overflow-hidden"
+      :class="[
+        !flat ? 'surface-card' : '',
+        { 'data-grid--sticky-header': stickyHeader }
+      ]"
       :style="{ height }"
     >
       <!-- Loading State -->
@@ -28,9 +31,9 @@
 
         <!-- ACC-Style Filter Bar - Above Grid -->
         <DataGridFilterChips
-          :filters="activeFilters"
-          @remove="removeFilter"
-          @clear-all="clearAllFilters"
+          :filters="allActiveFilters"
+          @remove="handleFilterRemove"
+          @clear-all="handleClearAllFilters"
         />
 
         <!-- AG Grid -->
@@ -47,8 +50,8 @@
           :components="components"
           :context="context"
           :row-selection="rowSelectionProp"
+          :selection-column-def="selectionColumnDef"
           :get-row-id="getRowIdFn"
-          :suppress-row-click-selection="true"
           :header-height="config.headerHeight || 48"
           :group-header-height="config.groupHeaderHeight || 40"
           :row-height="config.rowHeight || 44"
@@ -68,6 +71,7 @@
           @row-double-clicked="handleRowDoubleClick"
           @selection-changed="handleSelectionChange"
           @column-resized="onColumnResized"
+          :pinned-bottom-row-data="pinnedBottomRowData"
         />
 
         <!-- Column Filter Popover -->
@@ -128,12 +132,14 @@ import {
   type RowDoubleClickedEvent,
   type SelectionChangedEvent,
   type ColDef,
+  type RowSelectionOptions,
+  type SelectionColumnDef,
 } from 'ag-grid-community';
 import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-quartz.css';
 import '~/assets/css/styles/ag-grid-custom.css';
 
-import type { DataGridConfig, DataGridRowAction, DataGridRowActions, FilterPanelConfig } from '~/types/data-grid';
+import type { DataGridConfig, DataGridRowAction, DataGridRowActions, FilterPanelConfig, ActiveFilter } from '~/types/data-grid';
 import DataGridHeader from './DataGridHeader.vue';
 import DataGridRowActionsCell from './DataGridRowActions.vue';
 import ColumnFilterPopover from './ColumnFilterPopover.vue';
@@ -164,7 +170,7 @@ const props = withDefaults(
     config: DataGridConfig;
     rowData?: RowData[];
     height?: string;
-    rowSelection?: 'single' | 'multiple' | 'singleRow' | 'multiRow' | { mode: 'singleRow' | 'multiRow' };
+    rowSelection?: RowSelectionOptions | 'single' | 'multiple' | 'singleRow' | 'multiRow';
     toolbarPlaceholder?: string;
     emptyStateTitle?: string;
     emptyStateMessage?: string;
@@ -203,6 +209,12 @@ const props = withDefaults(
     rowActions?: DataGridRowActions;
     getRowId?: string | ((row: RowData) => string);
     onSelectionChange?: (selectedIds: string[], selectedRows: RowData[]) => void;
+    /** External filters (e.g. WBS) to display in the filter bar */
+    externalFilters?: ActiveFilter[];
+    /** Callback when an external filter is removed */
+    onExternalFilterRemove?: (field: string) => void;
+    flat?: boolean;
+    pinnedBottomRowData?: RowData[];
   }>(),
   {
     rowData: () => [],
@@ -231,7 +243,8 @@ const props = withDefaults(
     cacheBlockSize: undefined,
     maxBlocksInCache: undefined,
     enableRowSelection: true,
-    selectionMode: 'single',
+    selectionMode: 'multiple',
+    flat: false,
   }
 );
 
@@ -256,6 +269,7 @@ const themeClass = computed(() => (isDark.value ? 'ag-theme-quartz-dark' : 'ag-t
 // Key to force re-render when theme changes
 const gridKey = computed(() => `grid-${isDark.value ? 'dark' : 'light'}`);
 const missingRowIdWarned = ref(false);
+const clickTimeout = ref<ReturnType<typeof setTimeout> | null>(null);
 
 // Use composables
 const { gridApi, onGridReady: onGridReadyBase } = useDataGrid(props.config);
@@ -271,17 +285,36 @@ const resolvedSelectionMode = computed<'single' | 'multiple'>(() => {
   return props.selectionMode;
 });
 
-const rowSelectionProp = computed(() => {
-  const mode = resolvedSelectionMode.value === 'multiple' ? 'multiRow' as const : 'singleRow' as const;
-  
-  if (props.rowSelection && typeof props.rowSelection === 'object') {
-    return { ...props.rowSelection, mode };
-  }
-  
-  return { mode, checkboxes: false, headers: false, enableClickSelection: false };
-})
-
 const isServerSide = computed(() => typeof props.fetchRows === 'function');
+
+const rowSelectionProp = computed<RowSelectionOptions>(() => {
+  const mode = resolvedSelectionMode.value === 'multiple' ? 'multiRow' as const : 'singleRow' as const;
+  const enableCheckboxes = props.enableRowSelection !== false;
+  const baseOptions: RowSelectionOptions = mode === 'multiRow'
+    ? {
+        mode,
+        enableClickSelection: false,
+        checkboxes: enableCheckboxes,
+        headerCheckbox: enableCheckboxes,
+        selectAll: isServerSide.value ? 'currentPage' : 'filtered',
+      }
+    : {
+        mode,
+        enableClickSelection: false,
+        checkboxes: enableCheckboxes,
+      };
+
+  if (props.rowSelection && typeof props.rowSelection === 'object') {
+    const merged = { ...baseOptions, ...props.rowSelection, mode };
+    if (!enableCheckboxes) {
+      merged.checkboxes = false;
+      if ('headerCheckbox' in merged) merged.headerCheckbox = false;
+    }
+    return merged;
+  }
+
+  return baseOptions;
+});
 const gridCacheBlockSize = computed(() => isServerSide.value ? (props.cacheBlockSize || props.config.pagination?.pageSize || 200) : undefined);
 const gridMaxBlocksInCache = computed(() => isServerSide.value ? (props.maxBlocksInCache ?? 4) : undefined);
 const rowModelType = computed(() => (isServerSide.value ? 'infinite' : undefined));
@@ -316,6 +349,33 @@ const {
     }
   },
 });
+
+// Merge external filters (e.g. WBS) with internal column filters
+const allActiveFilters = computed(() => [
+  ...(props.externalFilters || []),
+  ...activeFilters.value,
+]);
+
+// Handle filter removal - route to appropriate handler based on filter type
+const handleFilterRemove = (field: string) => {
+  const externalFilter = props.externalFilters?.find(f => f.field === field);
+  if (externalFilter) {
+    // External filter (e.g. WBS) - call external handler
+    props.onExternalFilterRemove?.(field);
+  } else {
+    // Internal column filter
+    removeFilter(field);
+  }
+};
+
+// Handle clear all - clear both internal and external filters
+const handleClearAllFilters = () => {
+  clearAllFilters();
+  // Clear external filters by calling handler for each
+  props.externalFilters?.forEach(f => {
+    props.onExternalFilterRemove?.(f.field);
+  });
+};
 
 // Watch external filterText prop
 watch(() => props.filterText, (newValue) => {
@@ -535,29 +595,6 @@ const columnDefs = computed(() => {
 
   const pinnedCols: ColDef[] = [];
 
-  if (props.enableRowSelection) {
-    pinnedCols.push({
-      colId: 'selection',
-      headerName: '',
-      width: 48,
-      minWidth: 44,
-      maxWidth: 56,
-      pinned: 'left',
-      lockPosition: 'left',
-      suppressMovable: true,
-      suppressSizeToFit: true,
-      sortable: false,
-      filter: false,
-      resizable: false,
-      checkboxSelection: true,
-      headerCheckboxSelection: resolvedSelectionMode.value === 'multiple',
-      headerCheckboxSelectionFilteredOnly: true,
-      headerCheckboxSelectionCurrentPageOnly: true,
-      headerClass: 'data-grid-utility-header',
-      cellClass: 'data-grid-selection-cell flex items-center justify-center',
-    });
-  }
-
   const rawRenderer = existingActionsCol?.cellRenderer;
   let overflowRenderer: unknown;
   if (typeof rawRenderer === 'string') {
@@ -579,7 +616,8 @@ const columnDefs = computed(() => {
     sortable: false,
     filter: false,
     resizable: false,
-    suppressMenu: true,
+    suppressHeaderMenuButton: true,
+    suppressHeaderContextMenu: true,
     headerClass: 'data-grid-utility-header',
     cellClass: 'data-grid-actions-cell overflow-visible flex items-center justify-center',
     cellRenderer: 'dataGridRowActions',
@@ -589,6 +627,26 @@ const columnDefs = computed(() => {
   });
 
   return [...pinnedCols, ...mappedDefs];
+});
+
+const selectionColumnDef = computed<SelectionColumnDef | undefined>(() => {
+  if (props.enableRowSelection === false) return undefined;
+  return {
+    headerName: '',
+    width: 48,
+    minWidth: 44,
+    maxWidth: 56,
+    pinned: 'left',
+    lockPosition: 'left',
+    suppressMovable: true,
+    suppressSizeToFit: true,
+    sortable: false,
+    resizable: false,
+    suppressHeaderMenuButton: true,
+    suppressHeaderContextMenu: true,
+    headerClass: 'data-grid-utility-header data-grid-select-all-header',
+    cellClass: 'data-grid-selection-cell flex items-center justify-center',
+  };
 });
 
 const defaultColDef = computed(() => ({
@@ -701,10 +759,40 @@ const handleRowClick = (event: RowClickedEvent<RowData>) => {
       return;
     }
   }
-  emit('row-click', event.data as RowData);
+
+  // Clear any existing timeout to handle rapid clicks safely (though standard dblclick handles the cancellation)
+  if (clickTimeout.value) {
+    clearTimeout(clickTimeout.value);
+    clickTimeout.value = null;
+  }
+
+  // Delay selection logic to allow double-click detection
+  clickTimeout.value = setTimeout(() => {
+    // Handle selection toggle manually (accumulative)
+    if (props.enableRowSelection !== false && resolvedSelectionMode.value === 'multiple' && event.node) {
+      event.node.setSelected(!event.node.isSelected(), false);
+    } else if (props.enableRowSelection !== false && resolvedSelectionMode.value === 'single' && event.node) {
+      const wasSelected = event.node.isSelected();
+      if (wasSelected) {
+         event.node.setSelected(false);
+      } else {
+         event.node.setSelected(true, true); 
+      }
+    }
+    
+    // Emit click event (delayed)
+    emit('row-click', event.data as RowData);
+    
+    clickTimeout.value = null;
+  }, 250); // 250ms delay for double-click detection
 };
 
 const handleRowDoubleClick = (event: RowDoubleClickedEvent<RowData>) => {
+  // Cancel pending single click selection
+  if (clickTimeout.value) {
+    clearTimeout(clickTimeout.value);
+    clickTimeout.value = null;
+  }
   emit('row-dblclick', event.data as RowData);
 };
 
@@ -796,6 +884,15 @@ defineExpose({
 
 :deep(.data-grid-utility-header .ag-header-cell-label) {
   justify-content: center;
+}
+
+:deep(.data-grid-select-all-header .ag-header-cell-label) {
+  align-items: center;
+  padding-top: 0;
+}
+
+:deep(.data-grid-select-all-header .ag-header-select-all) {
+  align-self: center;
 }
 
 :deep(.data-grid--sticky-header .ag-header) {

@@ -341,6 +341,22 @@
   background-color: transparent !important;
 }
 
+/* Detail Active Row - Azure Highlight */
+.ag-theme-quartz .ag-row-detail-active {
+  background-color: hsl(var(--info) / 0.15) !important;
+  border-left: 2px solid hsl(var(--info));
+}
+
+.ag-theme-quartz-dark .ag-row-detail-active {
+  background-color: hsl(var(--info) / 0.20) !important;
+  border-left: 2px solid hsl(var(--info));
+}
+
+.ag-theme-quartz .ag-row-detail-active .ag-cell,
+.ag-theme-quartz-dark .ag-row-detail-active .ag-cell {
+  background-color: transparent !important;
+}
+
 /* Fix text rendering artifacts */
 /* Fix text rendering artifacts */
 /* Removed duplicate block */

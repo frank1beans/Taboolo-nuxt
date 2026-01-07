@@ -1,48 +1,40 @@
 # Indice Documentazione Taboolo
 
-Benvenuto nella documentazione di Taboolo! Questo indice ti guida attraverso tutti i contenuti disponibili.
+---
+
+## Manuale Utente
+
+Guida pratica per utenti finali.
+
+1. [README - Panoramica](user-guide/README.md)
+2. [Introduzione a Taboolo](user-guide/01-introduzione.md)
+3. [Primi Passi](user-guide/02-primi-passi.md)
+4. [Gestione Progetti](user-guide/03-gestione-progetti.md)
+5. [Import Computo](user-guide/04-import-computo.md)
+6. [Import Offerte](user-guide/05-import-offerte.md)
+7. [Confronto Offerte](user-guide/06-confronto-offerte.md)
+8. [Listino e Catalogo](user-guide/07-listino-catalogo.md)
+9. [Analytics e Mappe](user-guide/08-analytics-mappe.md)
+10. [Conflitti e Alert](user-guide/09-conflitti-alert.md)
+11. [Stima Prezzi](user-guide/10-stima-prezzi.md)
+12. [FAQ](user-guide/FAQ.md)
 
 ---
 
-## 📚 Tutorial — Impara facendo
+## Documentazione Tecnica
 
-Percorso sequenziale per chi parte da zero. Segui in ordine.
+Riferimento per sviluppatori e amministratori.
 
-1. [Quickstart — Ambiente funzionante in 15 minuti](tutorial/01-quickstart.md)
-2. [Fondamenti Web — JavaScript e TypeScript](tutorial/02-fondamenti-web.md)
-3. [Fondamenti Nuxt — Vue, componenti e routing](tutorial/03-fondamenti-nuxt.md)
-4. [Architettura Taboolo — Modello dati e cartelle](tutorial/04-architettura.md)
-5. [Import Computo — Il tuo primo import SIX](tutorial/05-import-computo.md)
-6. [Import Offerte — Caricare Excel e collegarli alla baseline](tutorial/06-import-offerte.md)
-7. [Dashboard e Griglia — Visualizzare e filtrare i dati](tutorial/07-dashboard.md)
-8. [Analytics — UMAP, clustering e analisi prezzi](tutorial/08-analytics.md)
-
----
-
-## 📖 Reference — Trova velocemente
-
-Documentazione di consultazione rapida. Usala come dizionario.
-
-- [API Endpoints — REST API con esempi](reference/api-endpoints.md)
-- [Modello Dati — Schemi Mongoose e relazioni](reference/modello-dati.md)
-- [Configurazione — Variabili d'ambiente](reference/configurazione.md)
-- [Query MongoDB — Aggregazioni utili](reference/mongo-queries.md)
-- [Componenti Frontend — Pagine e composables](reference/frontend-componenti.md)
-- [Glossario — Terminologia di dominio](reference/glossario.md)
-- [Troubleshooting — Problemi comuni e soluzioni](reference/troubleshooting.md)
+1. [README - Panoramica](technical/README.md)
+2. [Architettura](technical/architecture.md)
+3. [Installazione](technical/installation.md)
+4. [Configurazione](technical/configuration.md)
+5. [API Reference](technical/api-reference.md)
+6. [Modello Dati](technical/data-model.md)
+7. [Servizio Python](technical/python-service.md)
+8. [Struttura Frontend](technical/frontend-structure.md)
+9. [Troubleshooting](technical/troubleshooting.md)
 
 ---
 
-## 🔬 Deep Dive — Approfondisci
-
-Per chi vuole capire i meccanismi interni avanzati.
-
-- [Python Importer — Architettura del servizio esterno](deep-dive/python-importer.md)
-- [LLM Extraction — Estrazione strutturata con AI](deep-dive/llm-extraction.md)
-- [Gravitational Clustering — Algoritmo di clustering semantico](deep-dive/gravitational-clustering.md)
-- [Price Analysis — Stima prezzo equo e outlier detection](deep-dive/price-analysis.md)
-- [Semantic Map — Visualizzazione UMAP e analytics](deep-dive/semantic-map.md)
-
----
-
-*Ultimo aggiornamento: Dicembre 2024*
+*Ultimo aggiornamento: Gennaio 2026*

@@ -9,6 +9,7 @@ type RowActionParams = {
       open?: (row: Record<string, unknown> | undefined) => void;
       viewPricelist?: (row: Record<string, unknown> | undefined) => void;
       viewOffer?: (row: Record<string, unknown> | undefined) => void;
+      viewDetail?: (row: Record<string, unknown> | undefined) => void;
       resolve?: (row: Record<string, unknown> | undefined) => void;
       edit?: (row: Record<string, unknown> | undefined) => void;
       remove?: (row: Record<string, unknown> | undefined) => void;
@@ -38,6 +39,13 @@ const menuItems = computed<TableActionItem[][]>(() => {
     if (!props.params?.context?.isActionVisible) return true;
     return props.params.context.isActionVisible(key, row.value);
   };
+
+  // Group 0: Detail (Very common)
+  const group0: TableActionItem[] = [];
+  if (acts.viewDetail && isVisible('viewDetail')) {
+    group0.push({ label: 'Dettagli', icon: 'i-heroicons-information-circle', click: () => runAction('viewDetail') });
+  }
+  if (group0.length) groups.push(group0);
 
   // Group 1: Primary actions (Open, View Pricelist, View Offer)
   const group1: TableActionItem[] = [];

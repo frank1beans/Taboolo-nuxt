@@ -61,8 +61,11 @@ const displayedCategories = computed(() => {
 <template>
   <SidebarModule title="Analisi" subtitle="Prezzi" icon="heroicons:chart-bar">
     <div class="space-y-4">
-      <div class="space-y-3">
-        <h3 class="panel-section-header">Parametri</h3>
+      <div class="rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--muted)/0.2)] p-2.5 space-y-3">
+        <div class="flex items-center justify-between">
+          <h3 class="panel-section-header">Parametri</h3>
+          <span class="value-badge">Analisi</span>
+        </div>
 
         <div>
           <div class="flex justify-between items-center mb-1">
@@ -116,20 +119,19 @@ const displayedCategories = computed(() => {
           block
           icon="i-heroicons-play"
           color="primary"
-          class="mt-4"
           :loading="analysisLoading"
           @click="emit('runAnalysis')"
         >
           Esegui Analisi Prezzi
         </UButton>
 
-        <div v-if="analysisError" class="text-xs text-[hsl(var(--destructive))] mt-2 bg-[hsl(var(--destructive-light))] p-2 rounded">
+        <div v-if="analysisError" class="text-xs text-[hsl(var(--destructive))] bg-[hsl(var(--destructive-light))] p-2 rounded">
           {{ analysisError }}
         </div>
       </div>
 
-      <div v-if="analysisResult" class="mt-6 border-t border-[hsl(var(--border))] pt-4">
-        <div class="flex items-center justify-between mb-3">
+      <div v-if="analysisResult" class="rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--muted)/0.2)] p-2.5 space-y-3">
+        <div class="flex items-center justify-between">
           <h3 class="panel-section-header">Risultati</h3>
           <CountBadge 
             :value="analysisResult.outliers_found" 
@@ -138,7 +140,7 @@ const displayedCategories = computed(() => {
           />
         </div>
 
-        <div class="text-[10px] text-[hsl(var(--muted-foreground))] mb-3 grid grid-cols-2 gap-2">
+        <div class="text-[10px] text-[hsl(var(--muted-foreground))] grid grid-cols-2 gap-2">
           <div class="bg-[hsl(var(--muted)/0.3)] p-1.5 rounded">
             <span class="block font-mono text-[hsl(var(--foreground))]">{{ analysisResult.total_items }}</span>
             <span>Elementi totali</span>
@@ -152,14 +154,14 @@ const displayedCategories = computed(() => {
         <div class="space-y-2">
           <div class="flex items-center justify-between panel-section-header">
             <span>Gruppi con anomalie</span>
-              <UButton
-                :color="true ? 'success' : 'error'"
-                variant="link"
-                size="xs"
-                @click="showAllCategories = !showAllCategories"
-              >
-                {{ showAllCategories ? 'Vedi meno' : 'Vedi tutti' }}
-              </UButton>
+            <UButton
+              color="neutral"
+              variant="ghost"
+              size="2xs"
+              @click="showAllCategories = !showAllCategories"
+            >
+              {{ showAllCategories ? 'Vedi meno' : 'Vedi tutti' }}
+            </UButton>
           </div>
 
           <div v-for="cat in displayedCategories" :key="cat.wbs6_code" class="bg-[hsl(var(--muted)/0.2)] rounded p-2 text-xs">
@@ -167,11 +169,12 @@ const displayedCategories = computed(() => {
               <span class="font-medium truncate flex-1 mr-2" :title="cat.wbs6_description">{{ cat.wbs6_description || cat.wbs6_code }}</span>
               <span class="text-[hsl(var(--destructive))] font-mono font-bold">{{ cat.outlier_count }}</span>
             </div>
-            <div class="text-[10px] text-[hsl(var(--muted-foreground))] flex justify-between">
+            <div class="text-[10px] text-[hsl(var(--muted-foreground))] flex justify-between items-center">
               <span>{{ cat.item_count }} elementi</span>
               <UButton
-                color="neutral" 
-                variant="solid" 
+                size="2xs"
+                color="primary" 
+                variant="soft" 
                 icon="i-heroicons-arrow-path"
                 @click="emit('toggleVisibility', 'wbs06', cat.wbs6_code)"
               >

@@ -87,7 +87,12 @@ const runPrimaryAction = () => {
         :icon="primaryIcon"
         :aria-label="primaryTooltip"
         :disabled="primaryDisabled"
-        class="data-grid-row-actions__primary text-[hsl(var(--foreground))]"
+        class="data-grid-row-actions__primary transition-colors duration-200"
+        :class="[
+          (primaryAction?.id === 'open' || primaryIcon.includes('arrow')) 
+            ? 'text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-700 dark:hover:text-emerald-300' 
+            : 'text-[hsl(var(--foreground))]'
+        ]"
         @click.stop="runPrimaryAction"
       />
     </UTooltip>

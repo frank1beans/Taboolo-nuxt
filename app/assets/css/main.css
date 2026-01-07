@@ -179,20 +179,20 @@
     --table-border: 0 0% 92%;
     --table-stripe: 0 0% 99%;
 
-    /* SIDEBAR - Premium dark (not pure black) #141720 */
-    --sidebar-background: 225 22% 11%;
-    /* #141720 */
-    --sidebar-foreground: 220 15% 75%;
-    /* Gray text, not bright white */
-    --sidebar-primary: 152 60% 50%;
-    /* Bright green accent */
+    /* SIDEBAR - Light theme synchronization */
+    --sidebar-background: 228 25% 97%;
+    /* #F6F7FB - matches main background */
+    --sidebar-foreground: 225 20% 12%;
+    /* Dark text for contrast */
+    --sidebar-primary: 152 60% 35%;
+    /* Darker primary for light theme */
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 225 20% 16%;
-    /* Subtle hover */
-    --sidebar-accent-foreground: 220 15% 90%;
-    --sidebar-border: 225 15% 18%;
-    /* Nearly invisible */
-    --sidebar-ring: 152 60% 55%;
+    --sidebar-accent: 152 50% 92%;
+    /* Light green accent for hover */
+    --sidebar-accent-foreground: 152 60% 25%;
+    --sidebar-border: 0 0% 90%;
+    /* Subtle border matching main layout */
+    --sidebar-ring: 152 60% 45%;
     --sidebar-surface: 0 0% 99%;
 
     /* Shadows - Premium soft shadows for depth */
@@ -564,10 +564,7 @@
   .surface-card {
     background: hsl(var(--card));
     border: 1px solid hsl(var(--border));
-    border-left: none;
-    /* Seamlessly attach to sidebar */
-    margin-left: 0;
-    border-radius: 0 var(--radius-xl) var(--radius-xl) 0;
+    border-radius: var(--radius-xl);
     box-shadow: var(--shadow-sm);
   }
 

@@ -35,6 +35,7 @@ export interface SidebarModule {
 interface SidebarModuleInternal extends SidebarModule {
     _routePath?: string
     _isLayout?: boolean
+    _ownerId?: number
 }
 
 // Global state (shared across all instances)
@@ -48,8 +49,15 @@ let routeWatcherInitialized = false
 export function useSidebarModules() {
     const { isCollapsed, toggleCollapsed, expand, collapse } = useSidebarLayout()
     const route = useRoute()
+    const ownerId = getCurrentInstance()?.uid
 
     // Initialize route watcher once (clears page modules on navigation)
+    // Route watcher removed to support component reuse (same page, different params).
+    // The previous watcher was clearing modules on every route change, which caused
+    // modules to disappear when the component was reused (setup/mounted not called).
+    // We now rely on `usePageSidebarModule`'s `onUnmounted` hook or explicit cleanup.
+
+    /*
     if (!routeWatcherInitialized && import.meta.client) {
         routeWatcherInitialized = true
 
@@ -73,6 +81,7 @@ export function useSidebarModules() {
             { immediate: true }
         )
     }
+    */
 
     const sortModules = (list: SidebarModuleInternal[]) => {
         list.sort((a, b) => {
@@ -90,6 +99,7 @@ export function useSidebarModules() {
         const internalModule: SidebarModuleInternal = {
             ...module,
             _isLayout: true,
+            _ownerId: ownerId,
         }
 
         const existingIndex = modules.value.findIndex(m => m.id === module.id)
@@ -120,6 +130,7 @@ export function useSidebarModules() {
             ...module,
             _routePath: route.path,
             _isLayout: false,
+            _ownerId: ownerId,
         }
 
         const existingIndex = modules.value.findIndex(m => m.id === module.id)
@@ -153,18 +164,29 @@ export function useSidebarModules() {
      * Unregister a module by ID
      */
     const unregisterModule = (moduleId: string) => {
-        modules.value = modules.value.filter(m => m.id !== moduleId)
+        const scopedOwnerId = ownerId
+        const nextModules = modules.value.filter(m => {
+            if (m.id !== moduleId) return true
+            if (scopedOwnerId == null) return false
+            if (m._ownerId == null) return false
+            return m._ownerId !== scopedOwnerId
+        })
+        modules.value = nextModules
 
         // If we removed the active module, switch to first available
-        if (activeModuleId.value === moduleId) {
-            activeModuleId.value = modules.value[0]?.id ?? null
+        if (activeModuleId.value === moduleId && !nextModules.some(m => m.id === moduleId)) {
+            activeModuleId.value = nextModules[0]?.id ?? null
         }
     }
 
     /**
      * Set the active module by ID
      */
-    const setActiveModule = (moduleId: string) => {
+    const setActiveModule = (moduleId: string | null) => {
+        if (!moduleId || activeModuleId.value === moduleId) {
+            activeModuleId.value = null
+            return
+        }
         if (modules.value.some(m => m.id === moduleId)) {
             activeModuleId.value = moduleId
         }
@@ -273,7 +295,7 @@ export function useSidebarModules() {
  * ```
  */
 export function usePageSidebarModule(module: SidebarModule) {
-    const { registerPageModule, unregisterModule, setActiveModule, showSidebar } = useSidebarModules()
+    const { registerPageModule, unregisterModule, setActiveModule, showSidebar, activeModuleId } = useSidebarModules()
 
     // Only auto-activate if this is a primary module (order = 0)
     // This prevents WBS from stealing focus from Assets
@@ -282,14 +304,18 @@ export function usePageSidebarModule(module: SidebarModule) {
     // Register immediately
     registerPageModule(module)
     if (shouldAutoActivate) {
-        setActiveModule(module.id)
+        if (activeModuleId.value !== module.id) {
+            setActiveModule(module.id)
+        }
     }
 
     // Also register on mounted (in case of HMR)
     onMounted(() => {
         registerPageModule(module)
         if (shouldAutoActivate) {
-            setActiveModule(module.id)
+            if (activeModuleId.value !== module.id) {
+                setActiveModule(module.id)
+            }
         }
     })
 

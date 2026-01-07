@@ -19,6 +19,15 @@ import CountBadge from '~/components/ui/CountBadge.vue';
 const route = useRoute();
 const projectId = route.params.id as string;
 
+// Validate ID immediately
+if (projectId === '[object Object]' || projectId === 'undefined' || projectId === 'null') {
+  console.error('[Projects] Invalid project ID in route, redirecting to list:', projectId)
+  if (import.meta.client) {
+     navigateTo('/projects')
+  }
+}
+
+
 // Fetch Project Context
 const { data: projectDetails, status: projectStatus } = await useAsyncData(
   `project-${projectId}-details`,
@@ -258,7 +267,8 @@ const gridConfig: DataGridConfig = {
       sortable: false,
       filter: false,
       resizable: false,
-      suppressMenu: true,
+      suppressHeaderMenuButton: true,
+      suppressHeaderContextMenu: true,
       cellRenderer: 'actionsRenderer',
       cellClass: 'overflow-visible flex items-center justify-center',
     },
@@ -368,7 +378,7 @@ onMounted(() => {
     description: 'Esporta dati in Excel',
     category: 'Tabelle',
     scope: 'selection',
-    icon: 'i-heroicons-arrow-down-tray',
+    icon: 'i-heroicons-arrow-up-tray',
     keywords: ['export', 'excel', 'tabella'],
     handler: () => exportToXlsx('preventivi'),
   });
@@ -379,7 +389,7 @@ onMounted(() => {
     description: 'Importa offerte da Excel',
     category: 'Progetti',
     scope: 'project',
-    icon: 'i-heroicons-arrow-up-tray',
+    icon: 'i-heroicons-arrow-down-tray',
     keywords: ['import', 'offerte', 'excel'],
     handler: () => { navigateTo(`/projects/${projectId}/import`) },
   });
@@ -425,7 +435,9 @@ onMounted(() => {
     empty-state-message="Non ci sono preventivi associati a questo progetto."
     :custom-components="{ actionsRenderer: DataGridActions }"
     :context-extras="gridContext"
-    @row-dblclick="(params: any) => navigateToEstimate(params?.data)"
+    :enable-row-selection="true"
+    selection-mode="multiple"
+    @row-dblclick="(row: any) => navigateToEstimate(row)"
     @grid-ready="(params: any) => onGridReady(params)"
   >
     <template #header-meta>

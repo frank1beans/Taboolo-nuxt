@@ -22,7 +22,7 @@ export interface DataGridColumn {
   pinned?: 'left' | 'right' | boolean | null;
   lockPosition?: boolean | 'left' | 'right';
   suppressHeaderMenuButton?: boolean;
-  suppressMenu?: boolean;
+  suppressHeaderContextMenu?: boolean;
   resizable?: boolean;
   suppressSizeToFit?: boolean;
   suppressMovable?: boolean;

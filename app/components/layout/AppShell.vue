@@ -188,8 +188,7 @@ const gridColumns = computed(() => {
   grid-row: 3; /* Below Page Header */
   overflow: hidden;
   height: 100%;
-  background: hsl(var(--sidebar-surface, var(--card)));
-  border-right: 1px solid hsl(var(--border));
+  background: transparent;
 }
 
 .app-shell-sidebar-inner {

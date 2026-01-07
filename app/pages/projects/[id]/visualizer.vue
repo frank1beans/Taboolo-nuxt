@@ -50,7 +50,7 @@
               <!-- Show Poles Toggle -->
               <div class="flex items-center justify-between">
                 <label class="text-xs text-[hsl(var(--muted-foreground))]">Mostra Poli</label>
-                <UToggle v-model="showPoles" />
+                <USwitch v-model="showPoles" />
               </div>
               
               <!-- Manual Reload Button -->
@@ -163,7 +163,7 @@
         <h3 class="panel-section-header mb-2">Azioni</h3>
         
         <UButton
-          icon="i-heroicons-arrow-down-tray"
+          icon="i-heroicons-arrow-up-tray"
           size="xs"
           variant="soft"
           color="primary"
@@ -495,7 +495,7 @@ onMounted(() => {
         description: 'Esporta i dati della mappa in CSV',
         category: 'Visualizer',
         scope: 'project',
-        icon: 'i-heroicons-arrow-down-tray',
+        icon: 'i-heroicons-arrow-up-tray',
         keywords: ['export', 'csv'],
         handler: () => handleExportCsv(),
     });
