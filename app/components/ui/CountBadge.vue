@@ -10,11 +10,11 @@ import { computed } from 'vue';
 type CountBadgeColor = 'neutral' | 'primary' | 'success' | 'warning' | 'destructive' | 'info';
 
 const props = withDefaults(defineProps<{
-  /** The count to display */
-  count: number;
-  /** Optional label after the count */
+  /** The value to display */
+  value: string | number;
+  /** Optional label after the value */
   label?: string;
-  /** Optional icon before the count */
+  /** Optional icon before the value */
   icon?: string;
   /** Badge color variant */
   color?: CountBadgeColor;
@@ -40,12 +40,12 @@ const badgeColor = computed(() => {
 
 const ringClass = computed(() => {
   const map: Record<CountBadgeColor, string> = {
-    neutral: 'ring-[hsl(var(--border)/0.5)]',
-    primary: 'ring-[hsl(var(--primary)/0.2)]',
-    success: 'ring-[hsl(var(--success)/0.2)]',
-    warning: 'ring-[hsl(var(--warning)/0.2)]',
-    destructive: 'ring-[hsl(var(--destructive)/0.2)]',
-    info: 'ring-[hsl(var(--info)/0.2)]',
+    neutral: 'ring-[hsl(var(--border)/0.5)] shadow-sm',
+    primary: 'ring-[hsl(var(--primary)/0.2)] shadow-sm shadow-[hsl(var(--primary)/0.1)]',
+    success: 'ring-[hsl(var(--success)/0.2)] shadow-sm shadow-[hsl(var(--success)/0.1)]',
+    warning: 'ring-[hsl(var(--warning)/0.2)] shadow-sm shadow-[hsl(var(--warning)/0.1)]',
+    destructive: 'ring-[hsl(var(--destructive)/0.2)] shadow-sm shadow-[hsl(var(--error)/0.1)]',
+    info: 'ring-[hsl(var(--info)/0.2)] shadow-sm shadow-[hsl(var(--info)/0.1)]',
   };
   return map[props.color];
 });
@@ -53,8 +53,8 @@ const ringClass = computed(() => {
 const sizeClasses = computed(() => {
   const map: Record<string, string> = {
     xs: 'px-1.5 py-0.5 text-[10px]',
-    sm: 'px-2 py-0.5 text-xs',
-    md: 'px-2.5 py-1 text-sm',
+    sm: 'px-3 py-1 text-xs',
+    md: 'px-4 py-1.5 text-sm',
   };
   return map[props.size];
 });
@@ -64,15 +64,15 @@ const sizeClasses = computed(() => {
   <UBadge 
     variant="subtle" 
     :color="(badgeColor as any)"
-    :class="['rounded-full ring-1', ringClass, sizeClasses]"
+    :class="['rounded-full ring-1 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]', ringClass, sizeClasses]"
   >
     <Icon 
       v-if="icon" 
       :name="icon" 
-      class="w-3.5 h-3.5 mr-1.5 opacity-70" 
+      class="w-3.5 h-3.5 mr-2 opacity-80" 
     />
-    <span class="font-semibold">{{ count }}</span>
-    <span v-if="label" class="ml-1 text-micro uppercase tracking-wider opacity-60 font-bold">
+    <span class="font-bold tracking-tight">{{ value }}</span>
+    <span v-if="label" class="ml-1.5 text-[9px] uppercase tracking-widest opacity-70 font-black">
       {{ label }}
     </span>
   </UBadge>

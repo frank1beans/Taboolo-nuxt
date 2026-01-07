@@ -65,7 +65,7 @@ export default defineEventHandler(async (event) => {
         },
       },
       { $project: { wbs_nodes: 0, wbs6_node: 0, wbs7_node: 0 } }, // Cleanup
-      { $sort: { created_at: -1 } },
+      { $sort: { wbs6_code: 1, wbs7_code: 1, code: 1 } },
     ]);
 
     return { items: serializeDocs(items) };

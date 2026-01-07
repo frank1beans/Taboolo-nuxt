@@ -132,7 +132,7 @@ const displayedCategories = computed(() => {
         <div class="flex items-center justify-between mb-3">
           <h3 class="panel-section-header">Risultati</h3>
           <CountBadge 
-            :count="analysisResult.outliers_found" 
+            :value="analysisResult.outliers_found" 
             :label="`(${outlierPercent}%)`"
             :color="analysisResult.outliers_found > 0 ? 'destructive' : 'success'"
           />
@@ -170,8 +170,9 @@ const displayedCategories = computed(() => {
             <div class="text-[10px] text-[hsl(var(--muted-foreground))] flex justify-between">
               <span>{{ cat.item_count }} elementi</span>
               <UButton
-                variant="link"
-                color="neutral"
+                color="neutral" 
+                variant="solid" 
+                icon="i-heroicons-arrow-path"
                 @click="emit('toggleVisibility', 'wbs06', cat.wbs6_code)"
               >
                 Mostra

@@ -1,13 +1,11 @@
 import { defineEventHandler, createError, getRouterParam } from 'h3';
 import { Types } from 'mongoose';
-import { Estimate, Project, Offer } from '#models';
+import { Project, EstimateItem } from '#models';
 import { listEstimates } from '#services/EstimateService';
 import { listOffers } from '#services/OfferService';
 import { serializeDoc, serializeDocs } from '#utils/serialize';
 
-export default defineEventHandler(async (event) => {
-  const id = getRouterParam(event, 'id');
-
+export const buildProjectContext = async (id: string) => {
   if (!id) {
     throw createError({ statusCode: 400, statusMessage: 'Project ID is required' });
   }
@@ -53,7 +51,7 @@ export default defineEventHandler(async (event) => {
       if (offer.company_name) {
         roundMap.get(roundNum)!.set(offer.company_name, {
           mode: offer.mode || 'detailed', // Default to detailed for legacy
-          id: offer._id.toString()
+          id: offer._id.toString(),
         });
       }
     }
@@ -68,14 +66,14 @@ export default defineEventHandler(async (event) => {
           'project.estimate_id': { $in: estimateObjectIds },
         },
       },
-      { $addFields: { pli_oid: { $toObjectId: "$price_list_item_id" } } },
+      { $addFields: { pli_oid: { $toObjectId: '$price_list_item_id' } } },
       {
         $lookup: {
           from: 'pricelistitems',
           localField: 'pli_oid',
           foreignField: '_id',
-          as: 'price_item'
-        }
+          as: 'price_item',
+        },
       },
       { $unwind: { path: '$price_item', preserveNullAndEmptyArrays: true } },
       {
@@ -84,10 +82,10 @@ export default defineEventHandler(async (event) => {
             $cond: {
               if: { $gt: ['$project.amount', null] },
               then: '$project.amount',
-              else: { $multiply: ['$project.quantity', { $ifNull: ['$price_item.price', 0] }] }
-            }
-          }
-        }
+              else: { $multiply: ['$project.quantity', { $ifNull: ['$price_item.price', 0] }] },
+            },
+          },
+        },
       },
       {
         $group: {
@@ -107,40 +105,43 @@ export default defineEventHandler(async (event) => {
   });
 
   const serializedProject = serializeDoc(project);
+  const serializedEstimates = serializeDocs(estimates);
 
   return {
     ...serializedProject,
-    estimates: estimates.map((est) => {
-      const estimateId = est._id.toString();
-      const roundMap = hierarchyMap.get(estimateId);
+    estimates: serializedEstimates.map((est, idx) => {
+      const rawEstimate = estimates[idx];
+      const estimateId = rawEstimate?._id?.toString?.() ?? est.id;
+      const roundMap = estimateId ? hierarchyMap.get(estimateId) : undefined;
 
       const rounds = roundMap
-        ? Array.from(roundMap.keys()).sort((a, b) => a - b).map(rNum => {
+        ? Array.from(roundMap.keys()).sort((a, b) => a - b).map((rNum) => {
           const companyMap = roundMap.get(rNum)!;
-          const companiesInRound = Array.from(companyMap.keys()).sort().map(cName => {
+          const companiesInRound = Array.from(companyMap.keys()).sort().map((cName) => {
             const info = companyMap.get(cName)!;
             return {
-              id: cName, // Company Name as ID for now
+              id: cName,
               name: cName,
               offerMode: info.mode,
-              offerId: info.id
+              offerId: info.id,
             };
           });
 
           return {
             id: String(rNum),
             name: `Round ${rNum} `,
-            companies: companiesInRound
+            companies: companiesInRound,
           };
         })
         : [];
 
-      // Legacy flat companies list just in case needed, or empty
-      const companies = rounds.flatMap(r => r.companies || []);
+      const companies = rounds.flatMap((r) => r.companies || []);
+      const computedTotal = estimateId ? totalsMap.get(estimateId) : undefined;
 
       return {
-        id: estimateId,
-        name: est.name,
+        ...est,
+        project_id: (est as { project_id?: string | Types.ObjectId }).project_id?.toString?.()
+          ?? (est as { project_id?: string }).project_id,
         priceCatalog: est.price_list_id
           ? {
             id: est.price_list_id,
@@ -148,11 +149,16 @@ export default defineEventHandler(async (event) => {
           }
           : undefined,
         rounds,
-        companies, // Kept for backward compat if any
+        companies,
         roundsCount: rounds.length,
         companiesCount: companies.length,
-        total_amount: totalsMap.get(estimateId) || 0,
+        total_amount: typeof computedTotal === 'number' ? computedTotal : (est.total_amount ?? 0),
       };
     }),
   };
+};
+
+export default defineEventHandler(async (event) => {
+  const id = getRouterParam(event, 'id');
+  return buildProjectContext(id ?? '');
 });

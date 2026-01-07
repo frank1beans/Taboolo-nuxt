@@ -1,19 +1,27 @@
 <template>
   <div class="animate-pulse h-full min-h-[400px] flex flex-col">
     <!-- Header skeleton -->
-    <div class="border-b border-[hsl(var(--border))] px-5 py-3 flex gap-3 bg-[hsl(var(--secondary))]">
-      <div class="flex-1 h-9 rounded-md bg-[hsl(var(--muted))]"/>
-      <div class="h-9 w-24 rounded-md bg-[hsl(var(--muted))]"/>
-      <div class="h-9 w-24 rounded-md bg-[hsl(var(--muted))]"/>
+    <div class="border-b border-[hsl(var(--border))] px-5 py-3 flex gap-3 items-center bg-[hsl(var(--secondary))]">
+      <div class="h-9 w-12 rounded-md bg-[hsl(var(--muted))]"/>
+      <div class="flex-1 flex items-center gap-3">
+        <div class="flex-1 h-9 rounded-md bg-[hsl(var(--muted))]"/>
+        <div class="h-9 w-24 rounded-md bg-[hsl(var(--muted))]"/>
+        <div class="h-9 w-24 rounded-md bg-[hsl(var(--muted))]"/>
+      </div>
+      <div class="h-9 w-14 rounded-md bg-[hsl(var(--muted))]"/>
     </div>
 
     <!-- Grid skeleton -->
     <div class="flex-1 p-4 space-y-3">
-      <div v-for="i in rows" :key="i" class="flex gap-4">
-        <div class="flex-1 h-8 rounded-md bg-[hsl(var(--muted))]"/>
-        <div class="flex-[2] h-8 rounded-md bg-[hsl(var(--muted))]"/>
-        <div class="flex-1 h-8 rounded-md bg-[hsl(var(--muted))]"/>
-        <div class="flex-1 h-8 rounded-md bg-[hsl(var(--muted))]"/>
+      <div v-for="i in rows" :key="i" class="flex gap-4 items-center">
+        <div class="w-12 h-8 rounded-md bg-[hsl(var(--muted))]"/>
+        <div class="flex-1 flex items-center gap-4">
+          <div class="flex-1 h-8 rounded-md bg-[hsl(var(--muted))]"/>
+          <div class="flex-[2] h-8 rounded-md bg-[hsl(var(--muted))]"/>
+          <div class="flex-1 h-8 rounded-md bg-[hsl(var(--muted))]"/>
+          <div class="flex-1 h-8 rounded-md bg-[hsl(var(--muted))]"/>
+        </div>
+        <div class="w-14 h-8 rounded-md bg-[hsl(var(--muted))]"/>
       </div>
     </div>
 

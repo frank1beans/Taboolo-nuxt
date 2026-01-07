@@ -3,9 +3,9 @@ import { h, computed, resolveComponent } from 'vue';
 import type { ApiOfferAlert, ApiOfferSummary } from '~/types/api';
 import type { GridReadyEvent, ICellRendererParams } from 'ag-grid-community';
 import type { DataGridConfig } from '~/types/data-grid';
-import DataGrid from '~/components/data-grid/DataGrid.vue'; // Direct usage or via DataGridPage? index.vue uses MainPage, so I'll just use DataGrid here or wrap in a div.
-// Wait, projects used DataGridPage. Let's start with a pure component I can embed.
+import DataGrid from '~/components/data-grid/DataGrid.vue'; 
 import { formatCurrency, formatNumber } from '~/lib/formatters';
+import TableActionMenu, { type TableActionItem } from '~/components/data-grid/TableActionMenu.vue';
 
 const props = defineProps<{
   alerts: ApiOfferAlert[];
@@ -19,9 +19,6 @@ const emit = defineEmits<{
   (e: 'selection-changed', alerts: ApiOfferAlert[]): void;
   (e: 'grid-ready', params: GridReadyEvent<ApiOfferAlert>): void;
 }>();
-
-// ... existing code ...
-
 
 // --- Helpers ---
 const formatAlertValue = (value: number | string | null | undefined, type?: string) => {
@@ -76,71 +73,52 @@ const AlertTypeRenderer = {
 const ActionsRenderer = {
   props: ['params'],
   setup(props: { params: ICellRendererParams<ApiOfferAlert> }) {
-    const UButton = resolveComponent('UButton');
-    const UTooltip = resolveComponent('UTooltip');
-
     return () => {
       const row = props.params.data;
       if (!row) return null;
 
-      const actions = [];
+      const items: TableActionItem[][] = [];
       const status = row.status || 'open';
 
+      // Group 1: Navigate
+      items.push([{
+        label: 'Vai al dettaglio',
+        icon: 'i-heroicons-arrow-top-right-on-square',
+        click: () => emit('navigate', row)
+      }]);
+
+      const group2: TableActionItem[] = [];
       // Resolve
       if (status !== 'resolved') {
-        actions.push(h(UTooltip, { text: 'Segna come risolto' }, {
-            default: () => h(UButton, {
-              color: 'primary',
-              variant: 'ghost',
-              icon: 'i-heroicons-check-circle',
-              size: 'xs',
-              class: "text-[hsl(var(--success))] hover:bg-[hsl(var(--success-light))]",
-              onClick: (e: Event) => { e.stopPropagation(); emit('resolve', row); }
-            })
-        }));
+        group2.push({
+          label: 'Segna come risolto',
+          icon: 'i-heroicons-check-circle',
+          click: () => emit('resolve', row),
+          color: 'primary'
+        });
       }
 
       // Ignore
       if (status !== 'ignored') {
-        actions.push(h(UTooltip, { text: 'Ignora' }, {
-            default: () => h(UButton, {
-              color: 'neutral',
-              variant: 'ghost',
-              icon: 'i-heroicons-eye-slash',
-              size: 'xs',
-              class: "text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted))]",
-              onClick: (e: Event) => { e.stopPropagation(); emit('ignore', row); }
-            })
-        }));
+        group2.push({
+          label: 'Ignora',
+          icon: 'i-heroicons-eye-slash',
+          click: () => emit('ignore', row)
+        });
       }
 
       // Reopen (only if not open)
       if (status !== 'open') {
-         actions.push(h(UTooltip, { text: 'Riapri' }, {
-            default: () => h(UButton, {
-              color: 'neutral',
-              variant: 'ghost',
-              icon: 'i-heroicons-arrow-path',
-              size: 'xs',
-              class: "text-[hsl(var(--info))] hover:bg-[hsl(var(--info-light))]",
-               onClick: (e: Event) => { e.stopPropagation(); emit('reopen', row); }
-            })
-        }));
+         group2.push({
+            label: 'Riapri',
+            icon: 'i-heroicons-arrow-path',
+            click: () => emit('reopen', row)
+         });
       }
+      
+      if (group2.length) items.push(group2);
 
-      // Navigate Link
-      actions.push(h(UTooltip, { text: 'Vai al dettaglio' }, {
-          default: () => h(UButton, {
-            color: 'primary',
-            variant: 'ghost',
-            icon: 'i-heroicons-arrow-top-right-on-square',
-            size: 'xs',
-            class: "text-primary-500 hover:bg-primary-50",
-             onClick: (e: Event) => { e.stopPropagation(); emit('navigate', row); }
-          })
-      }));
-
-      return h('div', { class: 'flex items-center justify-end h-full gap-1' }, actions);
+      return h(TableActionMenu, { items });
     };
   }
 };
@@ -159,6 +137,7 @@ const gridConfig = computed<DataGridConfig>(() => ({
       headerName: '',
       field: '_selection'
     },
+
     {
       field: 'type',
       headerName: 'Alert',
@@ -174,7 +153,7 @@ const gridConfig = computed<DataGridConfig>(() => ({
        cellRenderer: (params: ICellRendererParams<ApiOfferAlert>) => {
          const d = params.data;
          if (!d) return '';
-         const estName = props.estimateMap[d.estimate_id] || 'N/D';
+         const estName = (d.estimate_id ? props.estimateMap[d.estimate_id] : null) || 'N/D';
          const offer = props.offerMap[d.offer_id];
          const offerName = offer ? (offer.company_name || offer.name || 'Offer') : 'N/D';
          const code = d.code || d.baseline_code || '';
@@ -211,10 +190,7 @@ const gridConfig = computed<DataGridConfig>(() => ({
          const expectedLabel = d.type === 'price_mismatch' ? 'Listino' : 'Target';
          
          const isNegative = d.delta !== null && typeof d.delta === 'number' && d.delta < 0;
-         const deltaColor = isNegative ? 'text-[hsl(var(--success))]' : 'text-[hsl(var(--destructive))]'; // Lower price is usually better/green? Depends on context. For price mismatch usually we want match.
-         // If price mismatch: Actual (Offer) vs Target (Estimate). 
-         // If Offer < Estimate -> Green (Savings). If Offer > Estimate -> Red (Over budget).
-         // Delta = Actual - Expected. So negative delta = Savings.
+         const deltaColor = isNegative ? 'text-[hsl(var(--success))]' : 'text-[hsl(var(--destructive))]'; 
          
          return `
           <div class="flex items-center h-full gap-3 text-xs">
@@ -256,11 +232,12 @@ const gridConfig = computed<DataGridConfig>(() => ({
     {
       colId: 'actions',
       headerName: '',
-      width: 120,
+      width: 48,
       pinned: 'right',
       cellRenderer: 'ActionsRenderer',
       suppressMenu: true,
-      sortable: false
+      sortable: false,
+      cellClass: 'px-0 overflow-visible flex items-center justify-center',
     }
   ],
   defaultColDef: {
@@ -281,8 +258,8 @@ const customComponents = {
   ActionsRenderer
 };
 
-const onSelectionChanged = (selectedRows: ApiOfferAlert[]) => {
-  emit('selection-changed', selectedRows);
+const onSelectionChanged = (selectedRows: any[]) => {
+  emit('selection-changed', selectedRows as ApiOfferAlert[]);
 };
 
 const emitGridReady = (params: GridReadyEvent<ApiOfferAlert>) => emit('grid-ready', params);
@@ -292,7 +269,7 @@ const emitGridReady = (params: GridReadyEvent<ApiOfferAlert>) => emit('grid-read
   <div class="flex-1 min-h-0 w-full rounded-[var(--card-radius)] overflow-hidden border border-[hsl(var(--border))] bg-[hsl(var(--card))] shadow-sm flex flex-col">
     <DataGrid
       :config="gridConfig"
-      :row-data="alerts"
+      :row-data="alerts as any[]"
       :loading="loading"
       :custom-components="customComponents"
       row-selection="multiple"

@@ -11,6 +11,14 @@ import { EstimateSchema } from './estimate.schema';
 export const OfferSchema = EstimateSchema.extend({
     // Add offer-specific validations if any
     type: z.literal('offer'),
+    estimate_id: commonSchemas.id,
+    company_name: z.string().min(1, 'Company name is required'),
+    company_id: commonSchemas.id.optional(),
+    mode: z.enum(['detailed', 'aggregated']).optional(),
+    status: z.enum(['draft', 'submitted', 'accepted', 'rejected']).optional(),
+    date: z.string().datetime().optional(),
+    discount_percentage: z.number().optional(),
+    description: z.string().optional(),
 });
 
 export const CreateOfferSchema = OfferSchema;

@@ -57,7 +57,7 @@
                <UButton 
                   size="xs" 
                   block 
-                  color="gray" 
+                  color="neutral" 
                   variant="solid" 
                   icon="i-heroicons-arrow-path"
                   @click="fetchPoles"
@@ -88,7 +88,7 @@
           Analisi
           <CountBadge 
             v-if="priceAnalysis.analysisResult.value?.outliers_found" 
-            :count="priceAnalysis.analysisResult.value.outliers_found" 
+            :value="priceAnalysis.analysisResult.value.outliers_found" 
             color="destructive"
             size="xs"
           />
@@ -466,11 +466,11 @@ const fetchPoles = async () => {
         toast.add({
             title: 'Poli Caricati',
             description: `Trovati ${poles.value.length} poli gravitazionali.`,
-            color: poles.value.length > 0 ? 'green' : 'orange'
+            color: poles.value.length > 0 ? 'success' : 'warning'
         });
     } catch (e) {
         console.error("Failed to fetch poles", e);
-        toast.add({ title: 'Errore', description: 'Impossibile caricare i poli.', color: 'red' });
+        toast.add({ title: 'Errore', description: 'Impossibile caricare i poli.', color: 'error' });
     }
 };
 
@@ -606,7 +606,7 @@ const plotData = computed(() => {
           neighborIds: analytics.neighborIds.value,
           pointSize: pointSize.value,
           clusterPalette: analytics.clusterPalette.value,
-          outlierIds: priceAnalysis.outlierIds.value,
+          outlierIds: priceAnalysis.outlierIds.value as Set<string>,
         });
 
         if (mode.value === '3d') {
@@ -722,7 +722,8 @@ const plotConfig = computed(() => ({
 
   function getClusterColor(clusterId: number): string {
     const palette = analytics.clusterPalette.value;
-    return palette[Math.abs(clusterId) % palette.length];
+    if (!palette || palette.length === 0) return '#cccccc';
+    return palette[Math.abs(clusterId) % palette.length] as string;
   }
   
   async function copyToClipboard(text: string) {

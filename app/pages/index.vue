@@ -1,7 +1,5 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { queryApi } from '~/utils/queries'
-import { QueryKeys } from '~/types/queries'
 import KpiHeader from '~/components/ui/KpiHeader.vue'
 import KpiCard from '~/components/ui/KpiCard.vue'
 import MainPage from '~/components/layout/MainPage.vue'
@@ -14,12 +12,29 @@ definePageMeta({
 
 const { setCurrentProject } = useCurrentContext()
 
+type ProjectListRow = {
+  id: string
+  name: string
+  code: string
+  status?: string
+  updated_at?: string
+  estimates_count?: number
+  offers_count?: number
+}
+
 // Fetch projects for list
 const { data: projectsData, status: projectsStatus } = await useAsyncData('dashboard-projects', () => 
-  queryApi.fetch(QueryKeys.PROJECT_LIST, { sort: 'updated_at:desc' })
+  $fetch<{ data: ProjectListRow[]; total: number }>('/api/projects', {
+    query: {
+      page: 1,
+      pageSize: 50,
+      sort: 'updated_at',
+      order: 'desc',
+    },
+  })
 )
 
-const projects = computed(() => projectsData.value?.items || [])
+const projects = computed(() => projectsData.value?.data || [])
 const totalProjects = computed(() => projectsData.value?.total || 0)
 // Simple mock stats derived from listing (or we could make a dedicated stats query if heavy)
 // For now, we count what we see or use totals
@@ -118,7 +133,7 @@ const formatDate = (dateStr: string) => {
                         </div>
                         <div class="text-right">
                              <span class="text-xs font-medium text-[hsl(var(--foreground))]">
-                                {{ project.estimates_count }} computi
+                                {{ project.estimates_count ?? 0 }} computi
                              </span>
                              <p class="text-[10px] text-[hsl(var(--muted-foreground))]">
                                 Aggiornato {{ formatDate(project.updated_at) }}

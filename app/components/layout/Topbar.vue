@@ -8,13 +8,13 @@ const toggleTheme = () => {
 </script>
 
 <template>
-  <header class="w-full h-full flex items-center justify-between px-4 bg-[hsl(var(--card))] border-b border-[hsl(var(--border))] z-40">
+  <header class="w-full h-full flex items-center justify-between px-[var(--workspace-gutter-x)] bg-[hsl(var(--card))] border-b border-[hsl(var(--border))] z-40">
     <!-- Left / Center: Breadcrumb Area (Now Actions/Search Area) -->
     <div class="flex items-center min-w-0 flex-1 mr-4 gap-4">
       <slot name="start">
           <!-- Breadcrumb usually goes here -->
       </slot>
-      <div id="topbar-actions-portal" class="flex-1 flex items-center min-w-0"/>
+      <div id="topbar-actions-portal" class="flex-1 flex items-center min-w-0 h-full"/>
     </div>
 
     <!-- Right: Actions -->
@@ -43,3 +43,12 @@ const toggleTheme = () => {
     </div>
   </header>
 </template>
+
+<style scoped>
+#topbar-actions-portal :deep(.page-toolbar) {
+  align-items: center;
+  height: 100%;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+</style>

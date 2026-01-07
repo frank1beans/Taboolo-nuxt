@@ -37,13 +37,18 @@ export default defineEventHandler(async (event) => {
         })
 
         return response
-    } catch (error: unknown) {
+    } catch (error: any) {
         console.error('Global map proxy error:', error)
+        if (error.data) {
+            console.error('Upstream error data:', error.data)
+        }
 
         const errMessage = error instanceof Error ? error.message : 'Failed to fetch global map data'
+        const detail = error.data?.detail || (typeof error.data === 'string' ? error.data : '')
+
         throw createError({
             statusCode: 500,
-            message: errMessage
+            message: detail ? `${errMessage}: ${detail}` : errMessage
         })
     }
 })

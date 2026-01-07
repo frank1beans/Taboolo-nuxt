@@ -206,9 +206,6 @@
 </template>
 
 <script setup lang="ts">
-definePageMeta({
-  disableDefaultSidebar: true,
-})
 import { reactive, computed, ref, watch, onMounted, onUnmounted } from 'vue'
   import { useGlobalAnalytics, type GlobalPoint } from '~/composables/useGlobalAnalytics'
   import { useGlobalPropertyAnalytics, type PropertyPoint } from '~/composables/useGlobalPropertyAnalytics'
@@ -230,6 +227,9 @@ import AnalyticsUmapModule from '~/components/sidebar/modules/AnalyticsUmapModul
 import AnalysisResultsModule from '~/components/sidebar/modules/AnalysisResultsModule.vue'
 import { useActionsStore } from '~/stores/actions'
 import type { Action } from '~/types/actions'
+definePageMeta({
+  disableDefaultSidebar: true,
+})
 
 // Analytics composables
 const globalAnalytics = useGlobalAnalytics()

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch, defineAsyncComponent, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import type { GridApi, GridReadyEvent } from 'ag-grid-community'
 import { useCurrentContext } from '~/composables/useCurrentContext'
 import { useColorMode } from '#imports'
 import DataGridPage from '~/components/layout/DataGridPage.vue'
@@ -9,7 +10,7 @@ import { useWbsTree } from '~/composables/useWbsTree'
 import { useSidebarModules, usePageSidebarModule } from '~/composables/useSidebarModules'
 import { useProjectTree } from '~/composables/useProjectTree'
 import WbsModule from '~/components/sidebar/modules/WbsModule.vue'
-import AssetsModule from '~/components/sidebar/modules/AssetsModule.vue'
+import SidebarActionsModule from '~/components/sidebar/modules/SidebarActionsModule.vue'
 import { formatCurrency, formatNumber } from '~/lib/formatters'
 import type { Project } from '#types'
 import { useActionsStore } from '~/stores/actions'
@@ -19,7 +20,7 @@ import type { Action } from '~/types/actions'
 const ImportWizard = defineAsyncComponent(() => import('~/components/projects/ImportWizard.vue'))
 
 definePageMeta({
-  disableDefaultSidebar: true,
+  // Layout handles Assets module centrally
 })
 
 
@@ -148,23 +149,16 @@ const { wbsNodes, selectedWbsNode, filteredRowData: filteredRows, onWbsNodeSelec
 })
 
 const totalItems = computed(() => filteredRows.value.length)
+const gridApi = ref<GridApi | null>(null)
+const { exportToXlsx } = useDataGridExport(gridApi)
+
+const onGridReady = (params: GridReadyEvent<Record<string, unknown>>) => {
+  gridApi.value = params.api
+}
 
 const { toggleVisibility, isVisible: sidebarVisible, setActiveModule, showSidebar } = useSidebarModules()
 
-// Register Assets Module using route-scoped helper
-usePageSidebarModule({
-  id: 'assets',
-  label: 'Assets',
-  icon: 'heroicons:folder-open',
-  order: 0,
-  component: AssetsModule,
-  props: {
-    nodes: treeNodes,
-    hasProject: computed(() => !!context.value),
-    loading: computed(() => contextStatus.value === 'pending'),
-  },
-})
-
+// WBS Module - Assets is handled by layout
 // Register WBS Module using route-scoped helper
 usePageSidebarModule({
   id: 'wbs',
@@ -176,6 +170,26 @@ usePageSidebarModule({
     nodes: wbsNodes,
     selectedNodeId: computed(() => selectedWbsNode.value?.id ?? null),
     onNodeSelected: (node: typeof selectedWbsNode.value | null) => onWbsNodeSelected(node),
+  },
+})
+
+usePageSidebarModule({
+  id: 'actions',
+  label: 'Azioni',
+  icon: 'heroicons:command-line',
+  order: 2,
+  group: 'secondary',
+  autoActivate: true,
+  component: SidebarActionsModule,
+  props: {
+    actionIds: [
+      'estimate.importOffers',
+      'grid.exportExcel',
+      'comparison.toggleWbsSidebar',
+      'comparison.resetFilters',
+      'comparison.refresh',
+    ],
+    primaryActionIds: ['estimate.importOffers'],
   },
 })
 
@@ -204,6 +218,17 @@ onMounted(() => {
     handler: () => {
       isImportModalOpen.value = true
     },
+  })
+
+  registerAction({
+    id: 'grid.exportExcel',
+    label: 'Esporta in Excel',
+    description: 'Esporta dati in Excel',
+    category: 'Tabelle',
+    scope: 'selection',
+    icon: 'i-heroicons-arrow-down-tray',
+    keywords: ['export', 'excel', 'tabella'],
+    handler: () => exportToXlsx('confronto-offerte'),
   })
 
   registerAction({
@@ -515,6 +540,7 @@ const handleImportSuccess = async () => {
       
       :show-toolbar="false"
       :filter-text="searchText"
+      @grid-ready="onGridReady"
     >
       <!-- Meta: Item Count -->
       <template #header-meta>
@@ -524,12 +550,6 @@ const handleImportSuccess = async () => {
               {{ totalItems }} voci
            </span>
          </div>
-      </template>
-      <template #actions>
-        <ActionList
-          layout="toolbar"
-          :action-ids="['estimate.importOffers', 'comparison.toggleWbsSidebar']"
-        />
       </template>
 
       <!-- Toolbar Slot -->

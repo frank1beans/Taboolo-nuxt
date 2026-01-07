@@ -119,10 +119,6 @@ const hydrateFromApi = async () => {
     currentProjectId.value = normalizedProjectId
     currentEstimateId.value = normalizedEstimateId
 
-    if (!currentProjectId.value) {
-      restoreFromClient()
-    }
-
     await loadProjectContext(currentProjectId.value)
   } catch (error) {
     console.error('Failed to hydrate context from API', error)

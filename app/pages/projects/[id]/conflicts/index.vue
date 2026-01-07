@@ -45,12 +45,14 @@ const currentEstimate = computed(() => {
 const { treeNodes } = useProjectTree(context, currentEstimate);
 
 // Sidebar management
-const { registerModule, unregisterModule } = useSidebarModules();
+const { registerModule, unregisterModule, setActiveModule } = useSidebarModules();
 const { showDefaultSidebar } = useSidebarLayout();
 
 const moduleIds = ['conflicts-assets', 'conflicts-filters', 'conflicts-detail', 'conflicts-actions'];
 
 onMounted(() => {
+  // Activate Assets module by default so user can see their position
+  setActiveModule('conflicts-assets')
   
   // 1. Assets (Navigation)
   registerModule({
@@ -61,6 +63,12 @@ onMounted(() => {
     component: AssetsModule,
     props: {
       nodes: treeNodes,
+      activeNodeId: computed(() => {
+        if (selectedEstimateId.value && selectedEstimateId.value !== 'all') {
+          return `estimate-${selectedEstimateId.value}`
+        }
+        return context.value ? `project-${projectId}` : null
+      }),
       hasProject: computed(() => !!context.value),
       loading: computed(() => contextStatus.value === 'pending'),
     }
@@ -623,30 +631,11 @@ const refreshAll = async () => {
             </span>
           </div>
         </template>
-
-        <template #rightSlot>
-          <ActionList
-            layout="toolbar"
-            :action-ids="['conflicts.applyAllPrices', 'conflicts.refresh']"
-            :primary-action-ids="['conflicts.applyAllPrices']"
-          />
-        </template>
       </PageHeader>
     </template>
 
     <!-- Main Content: Full Height Table -->
     <div class="flex-1 min-h-0 relative overflow-hidden flex flex-col h-full">
-      <SelectionBar
-        selection-key="conflicts"
-        :action-ids="[
-          'conflicts.batchResolve',
-          'conflicts.batchIgnore',
-          'conflicts.batchApplyPrices',
-        ]"
-        label-singular="Conflitto"
-        label-plural="Conflitti"
-      />
-
       <ConflictsTable
         :alerts="alerts"
         :loading="alertsStatus === 'pending'"
@@ -659,9 +648,6 @@ const refreshAll = async () => {
         @navigate="handleNavigate"
         @selection-changed="handleSelectionChanged"
       />
-
-      <!-- Batch Actions Toolbar -->
-      <!-- Batch Actions Toolbar removed (moved to sidebar) -->
 
     </div>
   </MainPage>

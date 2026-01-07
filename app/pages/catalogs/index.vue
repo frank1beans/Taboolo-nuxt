@@ -16,11 +16,9 @@ import { usePriceListGridConfig } from '~/composables/estimates/usePriceListGrid
 import { useSidebarModules, usePageSidebarModule } from '~/composables/useSidebarModules'
 import WbsModule from '~/components/sidebar/modules/WbsModule.vue'
 import { useWbsTree } from '~/composables/useWbsTree'
-// import { catalogApi } from '~/lib/api/catalog' // Replaced by queryApi
-import { queryApi } from '~/utils/queries'
-import { QueryKeys } from '~/types/queries'
 import { useActionsStore } from '~/stores/actions'
 import type { Action } from '~/types/actions'
+import SidebarActionsModule from '~/components/sidebar/modules/SidebarActionsModule.vue'
 
 // Standardized header: removed breadcrumb
 definePageMeta({
@@ -53,10 +51,10 @@ const actionsStore = useActionsStore()
 // Replaces lines 46-50.
 const actionOwner = 'page:catalogs-index'
 
-const { data: wbsRes } = await useAsyncData('catalog-wbs', () => queryApi.fetch(QueryKeys.CATALOG_WBS_SUMMARY, {}))
-const { data: catalogSummary } = await useAsyncData('catalog-summary', () => queryApi.fetch(QueryKeys.CATALOG_SUMMARY, {}))
+const { data: wbsRes } = await useAsyncData('catalog-wbs', () => $fetch<CatalogWbsEntry[]>('/api/catalog/wbs'))
+const { data: catalogSummary } = await useAsyncData('catalog-summary', () => $fetch<ApiPriceCatalogSummary>('/api/catalog/summary'))
 
-const wbsEntries = computed(() => wbsRes.value?.items ?? [])
+const wbsEntries = computed(() => wbsRes.value ?? [])
 
 const searchText = ref('')
 const debouncedSearch = ref('')
@@ -91,12 +89,12 @@ const runSemanticSearch = async (query: string) => {
   semanticResults.value = []
 
   try {
-    const response = await queryApi.fetch(QueryKeys.CATALOG_SEMANTIC_SEARCH, {
-      query,
-      limit: SEMANTIC_TOP_K,
-      // threshold?
+    const results = await $fetch<ApiPriceListItemSearchResult[]>('/api/catalog/semantic-search', {
+      query: {
+        query,
+        top_k: SEMANTIC_TOP_K,
+      },
     })
-    const results = response.items
     if (token !== searchToken) return
     semanticResults.value = results as unknown as ApiPriceListItemSearchResult[]
     lastSemanticQuery.value = query
@@ -275,6 +273,24 @@ usePageSidebarModule({
   }
 })
 
+usePageSidebarModule({
+  id: 'actions',
+  label: 'Azioni',
+  icon: 'heroicons:command-line',
+  order: 2,
+  group: 'secondary',
+  component: SidebarActionsModule,
+  props: {
+    actionIds: [
+      'catalog.toggleWbsSidebar',
+      'catalog.resetFilters',
+      'grid.exportExcel',
+      'catalog.clearWbsSelection',
+    ],
+    primaryActionIds: ['catalog.toggleWbsSidebar'],
+  },
+})
+
 const toggleWbsSidebar = () => {
   if (!sidebarVisible.value) {
     setActiveModule('wbs')
@@ -286,31 +302,29 @@ const toggleWbsSidebar = () => {
 
 const fetchCatalogRows = async (params: DataGridFetchParams) => {
   const sortModel = params.sortModel?.[0] as { colId?: string; sort?: 'asc' | 'desc' } | undefined
-  
-  // Map grid filters to query Params
-  const wbs6 = [] as string[];
-  const wbs7 = [] as string[];
-  // Extract WBS filters from params.filterModel if present (custom logic might be needed if complex)
-  // Current implementation uses custom applyWbsFilter which sets `wbs6_code` and `wbs7_code` in filterModel.
-  
-  const filters: any = params.filterModel || {};
-  if (filters.wbs6_code) wbs6.push(filters.wbs6_code.filter);
-  if (filters.wbs7_code) wbs7.push(filters.wbs7_code.filter);
 
-  const response = await queryApi.fetch(QueryKeys.CATALOG_ROWS_PAGED, {
-    page: params.page,
-    limit: params.pageSize,
-    search: params.quickFilter,
-    sort: sortModel ? (sortModel.sort === 'desc' ? '-' : '') + sortModel.colId : undefined,
-    wbs6: wbs6.length ? wbs6 : undefined,
-    wbs7: wbs7.length ? wbs7 : undefined,
-    // Add business_unit key if filtered?
+  const filters = params.filterModel && Object.keys(params.filterModel).length
+    ? JSON.stringify(params.filterModel)
+    : undefined
+
+  const response = await $fetch<{ data: ApiPriceListItem[]; total: number }>('/api/catalog', {
+    query: {
+      page: params.page,
+      pageSize: params.pageSize,
+      search: params.quickFilter,
+      sort: sortModel?.colId,
+      order: sortModel?.sort,
+      filters,
+    },
   })
-  
-  serverTotal.value = response.total
+
+  const total = response.total ?? 0
+  serverTotal.value = total
   return {
-     rows: response.items,
-     total: response.total
+    data: response.data ?? [],
+    total,
+    page: params.page,
+    pageSize: params.pageSize,
   }
 }
 
@@ -378,14 +392,6 @@ watch(selectedWbsNode, (node) => {
     </template>
 
 
-    <!-- Header Actions: Primary Page Actions -->
-    <template #actions>
-      <ActionList
-        layout="toolbar"
-        :action-ids="['catalog.toggleWbsSidebar']"
-      />
-    </template>
-
     <!-- Toolbar: Search & Grid Actions -->
     <template #pre-grid>
       <ClientOnly>
@@ -412,12 +418,6 @@ watch(selectedWbsNode, (node) => {
               </UBadge>
           </template>
 
-          <template #right>
-            <ActionList
-              layout="toolbar"
-              :action-ids="['catalog.resetFilters', 'grid.exportExcel']"
-            />
-          </template>
         </PageToolbar>
         </Teleport>
       </ClientOnly>

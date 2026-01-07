@@ -23,6 +23,7 @@ export const useProjectTree = (
     if (!project) return []
 
     const estimates = project.estimates ?? []
+    console.log('[Debug] useProjectTree - Generating nodes for project:', project.id, 'Estimate count:', estimates.length);
 
     // Build detailed hierarchical structure for each estimate
     const estimateNodes: TreeNode[] = estimates.map((est) => {
@@ -40,7 +41,7 @@ export const useProjectTree = (
           id: `docs-${est.id}`,
           label: 'Documenti preventivo',
           icon: 'heroicons:folder-open',
-          defaultOpen: isActive,
+          defaultOpen: false,
           children: [
             {
               id: `detail-${est.id}`,
@@ -61,12 +62,12 @@ export const useProjectTree = (
           id: `tenders-${est.id}`,
           label: 'Gare e offerta',
           icon: 'heroicons:shopping-bag',
-          defaultOpen: isActive,
+          defaultOpen: false,
           children: rounds.map((round, idx) => ({
             id: `round-${est.id}-${round.id || idx}`,
             label: round.name ? `Gara: ${round.name}` : `Gara: Round ${idx + 1}`,
             icon: 'heroicons:flag',
-            defaultOpen: isActive,
+            defaultOpen: false,
             children: (round.companies || companies).map((company, cIdx) => ({
               id: `company-${est.id}-${round.id || idx}-${company.id || cIdx}`,
               label: company.name ? `Impresa: ${company.name}` : `Impresa ${cIdx + 1}`,
@@ -98,7 +99,7 @@ export const useProjectTree = (
         label: est.name || 'Preventivo',
         icon: isActive ? 'heroicons:document-check' : 'heroicons:document-text',
         to: estId ? `/projects/${project.id}/estimate/${estId}` : undefined,
-        defaultOpen: isActive,
+        defaultOpen: false,
         count: roundCount || companyCount ? Math.max(roundCount, companyCount) : undefined,
         children: estimateChildren,
       }

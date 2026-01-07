@@ -9,14 +9,19 @@
  * [Divider?]
  * [Toolbar Slot?]
  */
+import Breadcrumb from './Breadcrumb.vue'
 
 withDefaults(defineProps<{
   title: string
   meta?: string
   divider?: boolean
+  showBreadcrumb?: boolean
+  breadcrumbRootMode?: 'text' | 'icon' | 'hidden'
 }>(), {
   meta: undefined,
-  divider: true
+  divider: true,
+  showBreadcrumb: true,
+  breadcrumbRootMode: 'icon'
 })
 
 defineSlots<{
@@ -38,10 +43,15 @@ defineSlots<{
         <slot name="leftSlot" />
       </div>
 
-      <!-- Title & Meta - Notion style: simple, not heavy -->
-      <div class="flex items-center gap-3 flex-1 min-w-0">
-        <!-- Title -->
-        <h1 class="text-base font-semibold text-[hsl(var(--foreground))] truncate">
+      <!-- Breadcrumb + Meta -->
+      <div class="flex flex-col gap-1 flex-1 min-w-0">
+        <Breadcrumb
+          v-if="showBreadcrumb"
+          :current-label="title"
+          variant="title"
+          :root-mode="breadcrumbRootMode"
+        />
+        <h1 v-else class="text-base font-semibold text-[hsl(var(--foreground))] truncate">
           {{ title }}
         </h1>
 

@@ -8,7 +8,7 @@
 
 import MainPage from './MainPage.vue'
 import PageHeader from './PageHeader.vue'
-import type { DataGridConfig } from '~/types/data-grid'
+import type { DataGridConfig, DataGridRowActions } from '~/types/data-grid'
 import type { GridReadyEvent } from 'ag-grid-community'
 
 defineOptions({
@@ -38,9 +38,17 @@ interface Props {
   rowAriaLabel?: string
   stickyHeader?: boolean
 
-  // Toolbar
   toolbarPlaceholder?: string
   exportFilename?: string
+
+  // Selection
+  enableRowSelection?: boolean
+  selectionMode?: 'single' | 'multiple'
+
+  // Row actions + row id
+  rowActions?: DataGridRowActions
+  getRowId?: string | ((row: Record<string, unknown>) => string)
+  onSelectionChange?: (selectedIds: string[], selectedRows: Record<string, unknown>[]) => void
 }
 
 const _props = withDefaults(defineProps<Props>(), {
@@ -59,7 +67,9 @@ const _props = withDefaults(defineProps<Props>(), {
   emptyStateSecondaryActionIcon: 'i-heroicons-plus',
   rowClickable: false,
   rowAriaLabel: undefined,
-  stickyHeader: true
+  stickyHeader: true,
+  enableRowSelection: true,
+  selectionMode: 'single'
 })
 
 const emit = defineEmits<{
@@ -117,6 +127,11 @@ const onGridReady = (params: GridReadyEvent<Record<string, unknown>>) => {
           :row-clickable="rowClickable"
           :row-aria-label="rowAriaLabel"
           :sticky-header="stickyHeader"
+          :enable-row-selection="enableRowSelection"
+          :selection-mode="selectionMode"
+          :row-actions="rowActions"
+          :get-row-id="getRowId"
+          :on-selection-change="onSelectionChange"
           @grid-ready="onGridReady"
         />
       </div>

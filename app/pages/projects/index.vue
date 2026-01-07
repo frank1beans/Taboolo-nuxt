@@ -11,8 +11,8 @@ import { useActionsStore } from '~/stores/actions';
 import { useSelectionStore } from '~/stores/selection';
 import type { Action } from '~/types/actions';
 import * as XLSX from 'xlsx';
-import { queryApi } from '~/utils/queries';
-import { QueryKeys } from '~/types/queries';
+import SidebarActionsModule from '~/components/sidebar/modules/SidebarActionsModule.vue';
+
 
 definePageMeta({
   title: 'Progetti',
@@ -23,12 +23,39 @@ const router = useRouter();
 const { currentProject } = useCurrentContext();
 const lastActiveProjectId = ref<string | null>(null);
 
-// Query-based data fetching
-const { data: projectsData, status: projectsStatus, refresh: refreshProjects } = await useAsyncData('projects-list', () => 
-  queryApi.fetch(QueryKeys.PROJECT_LIST, { sort: 'updated_at:desc' })
+const fetchAllProjects = async () => {
+  const pageSize = 200
+  let page = 1
+  let total = 0
+  let all: Project[] = []
+
+  while (true) {
+    const response = await $fetch<{ data: Project[]; total: number }>('/api/projects', {
+      query: {
+        page,
+        pageSize,
+        sort: 'updated_at',
+        order: 'desc',
+      },
+    })
+
+    if (page === 1) total = response.total ?? 0
+    all = all.concat(response.data || [])
+
+    if (!response.data || response.data.length < pageSize) break
+    if (total && all.length >= total) break
+    page += 1
+  }
+
+  return { data: all, total }
+}
+
+const { data: projectsData, status: projectsStatus, refresh: refreshProjects } = await useAsyncData(
+  'projects-list',
+  fetchAllProjects,
 )
 
-const rowData = computed(() => (projectsData.value?.items || []) as unknown as Project[]);
+const rowData = computed(() => (projectsData.value?.data || []) as unknown as Project[]);
 const loading = computed(() => projectsStatus.value === 'pending');
 
 const {
@@ -42,6 +69,7 @@ const actionsStore = useActionsStore();
 const actionOwner = 'page:projects-index';
 const selectionStore = useSelectionStore();
 const selectedProjects = computed(() => selectionStore.getSelection('projects') as Project[]);
+const selectedCount = computed(() => selectedProjects.value.length);
 
 // Modal form state
 const { showModal, formMode, form, openCreateModal, openEditModal, closeModal } = useProjectForm();
@@ -53,7 +81,8 @@ const loadProjects = async () => {
 // Load initial data
 onMounted(async () => {
   try {
-    // Hide default sidebar (project tree) on list page
+    // Assets tree hidden by disableDefaultSidebar: true
+
 
     // Capture last active project before clearing
     if (currentProject.value?.id) {
@@ -72,6 +101,25 @@ onBeforeUnmount(() => {
   clearRowClickTimeout();
   actionsStore.unregisterOwner(actionOwner);
 });
+
+// Register Sidebar Actions
+usePageSidebarModule({
+  id: 'actions',
+  label: 'Azioni',
+  icon: 'heroicons:command-line',
+  component: SidebarActionsModule,
+  props: {
+    actionIds: [
+      'project.create',
+      'grid.exportExcel',
+      'projects.exportSelected',
+      'projects.deleteSelected',
+    ],
+    primaryActionIds: ['project.create'],
+    selectionCount: selectedCount,
+    showDisabled: false,
+  },
+})
 
 // Debounced navigation to avoid firing alongside double-click edit
 const rowClickTimeout = ref<number | null>(null);
@@ -194,7 +242,7 @@ onMounted(() => {
     label: 'Esporta in Excel',
     description: 'Esporta dati in Excel',
     category: 'Tabelle',
-    scope: 'selection',
+    scope: 'global',
     icon: 'i-heroicons-arrow-down-tray',
     keywords: ['export', 'excel', 'tabella'],
     handler: () => exportToXlsx('progetti-commesse'),
@@ -256,20 +304,16 @@ onMounted(() => {
     >
       <template #header-meta>
         <div class="flex items-center gap-2">
-          <CountBadge :count="rowData.length" label="Totali" icon="i-heroicons-folder" />
-          <CountBadge :count="activeCount" label="In corso" icon="i-heroicons-play-circle" color="primary" />
-          <CountBadge :count="setupCount" label="Setup" icon="i-heroicons-cog-6-tooth" />
-          <CountBadge v-if="warningCount > 0" :count="warningCount" label="Attenzione" icon="i-heroicons-exclamation-triangle" color="warning" />
+          <CountBadge :value="rowData.length" label="Totali" icon="i-heroicons-folder" />
+          <CountBadge :value="activeCount" label="In corso" icon="i-heroicons-play-circle" color="primary" />
+          <CountBadge :value="setupCount" label="Setup" icon="i-heroicons-cog-6-tooth" />
+          <CountBadge v-if="warningCount > 0" :value="warningCount" label="Attenzione" icon="i-heroicons-exclamation-triangle" color="warning" />
         </div>
       </template>
 
-      <!-- Toolbar Actions -->
+      <!-- Toolbar Actions (Moved to Sidebar) -->
       <template #toolbar-actions>
-        <ActionList
-          layout="toolbar"
-          :action-ids="['grid.exportExcel', 'project.create']"
-          :primary-action-ids="['project.create']"
-        />
+         <!-- Empty -->
       </template>
     </ProjectsTable>
 

@@ -27,6 +27,8 @@ export interface SidebarModule {
     group?: 'primary' | 'secondary'
     /** Props to pass to the component */
     props?: Record<string, unknown>
+    /** Force auto-activation on register (page modules only) */
+    autoActivate?: boolean
 }
 
 // Internal module with ownership tracking
@@ -255,6 +257,10 @@ export function useSidebarModules() {
  * Helper composable for page-level sidebar modules.
  * Automatically registers module on setup and handles cleanup.
  * 
+ * NOTE: By default, only modules with order=0 will auto-activate.
+ * You can override this by setting autoActivate.
+ * This ensures Assets (layout module) stays active when WBS is added.
+ * 
  * Usage:
  * ```ts
  * usePageSidebarModule({
@@ -269,14 +275,22 @@ export function useSidebarModules() {
 export function usePageSidebarModule(module: SidebarModule) {
     const { registerPageModule, unregisterModule, setActiveModule, showSidebar } = useSidebarModules()
 
+    // Only auto-activate if this is a primary module (order = 0)
+    // This prevents WBS from stealing focus from Assets
+    const shouldAutoActivate = module.autoActivate ?? (module.order ?? 100) === 0
+
     // Register immediately
     registerPageModule(module)
-    setActiveModule(module.id)
+    if (shouldAutoActivate) {
+        setActiveModule(module.id)
+    }
 
     // Also register on mounted (in case of HMR)
     onMounted(() => {
         registerPageModule(module)
-        setActiveModule(module.id)
+        if (shouldAutoActivate) {
+            setActiveModule(module.id)
+        }
     })
 
     // Cleanup on unmount (backup, route watcher is primary)

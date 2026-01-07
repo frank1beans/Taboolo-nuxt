@@ -37,24 +37,27 @@ export async function createOffer(data: unknown) {
     ...validData,
     project_id: new Types.ObjectId(validData.project_id),
   };
+  if (validData.estimate_id) payload.estimate_id = new Types.ObjectId(validData.estimate_id);
   if (validData.price_list_id) payload.price_list_id = new Types.ObjectId(validData.price_list_id);
   if (validData.source_preventivo_id) payload.source_preventivo_id = new Types.ObjectId(validData.source_preventivo_id);
 
   return OfferRepository.create(payload);
 }
 
-export async function updateOffer(id: string, data: unknown) {
+export async function updateOffer(projectId: string, id: string, data: unknown) {
+  const validProjectId = objectIdSchema.parse(projectId);
   const validId = objectIdSchema.parse(id);
   const validData = UpdateOfferSchema.parse(data);
 
   // Map partial update payload
   const payload: any = { ...validData };
   if (validData.project_id) payload.project_id = new Types.ObjectId(validData.project_id);
+  if (validData.estimate_id) payload.estimate_id = new Types.ObjectId(validData.estimate_id);
   if (validData.price_list_id) payload.price_list_id = new Types.ObjectId(validData.price_list_id);
   if (validData.source_preventivo_id) payload.source_preventivo_id = new Types.ObjectId(validData.source_preventivo_id);
 
   // Check existence? Repository.update usually returns null if not found
-  const updated = await OfferRepository.update(validId, payload);
+  const updated = await OfferRepository.update(validId, payload, validProjectId);
   if (!updated) {
     throw AppError.notFound(`Offer with id ${id} not found`);
   }

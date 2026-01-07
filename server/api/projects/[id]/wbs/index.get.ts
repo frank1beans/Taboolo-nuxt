@@ -1,16 +1,11 @@
-import { defineEventHandler, createError, getQuery } from 'h3';
-import { WbsNode } from '#models';
+import { defineEventHandler, createError } from 'h3';
 import { serializeDocs } from '#utils/serialize';
 import { listWbsNodes } from '#services/WbsService';
-import { requireObjectIdParam, toObjectId } from '#utils/validate';
+import { requireObjectIdParam, requireObjectIdQuery } from '#utils/validate';
 
 export default defineEventHandler(async (event) => {
   const projectId = requireObjectIdParam(event, 'id', 'Project ID');
-  const estimateId = getQuery(event).estimate_id?.toString();
-
-  if (!estimateId) {
-    throw createError({ statusCode: 400, statusMessage: 'Estimate ID required' });
-  }
+  const estimateId = requireObjectIdQuery(event, 'estimate_id', 'Estimate ID');
 
   try {
     // The original WbsNode.find filters by project_id and estimate_id.
@@ -34,6 +29,7 @@ export default defineEventHandler(async (event) => {
 
     return {
       project_id: projectId,
+      estimate_id: estimateId,
       spatial: serializeDocs(spatial),
       wbs6: serializeDocs(wbs6),
       wbs7: serializeDocs(wbs7),

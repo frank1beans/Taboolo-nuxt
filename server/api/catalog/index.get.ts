@@ -200,8 +200,9 @@ export default defineEventHandler(async (event) => {
   }
 
   const allowedSort = new Set(['code', 'description', 'long_description', 'extended_description', 'unit', 'price', 'created_at', 'updated_at']);
-  const rawSort = queryParams.sort ? String(queryParams.sort) : 'created_at';
-  const sortField = allowedSort.has(rawSort) ? rawSort : 'created_at';
+  const defaultSortField = 'code';
+  const rawSort = queryParams.sort ? String(queryParams.sort) : defaultSortField;
+  const sortField = allowedSort.has(rawSort) ? rawSort : defaultSortField;
   const sortOrder = queryParams.order === 'asc' ? 1 : -1;
 
   const dataPipeline: PipelineStage[] = [
@@ -303,7 +304,7 @@ export default defineEventHandler(async (event) => {
       },
     });
 
-    const [result] = await PriceListItem.aggregate(pipeline, { allowDiskUse: true });
+    const [result] = await PriceListItem.aggregate(pipeline).allowDiskUse(true);
     const data = serializeDocs(result?.data ?? []);
     const total = result?.total?.[0]?.value ?? 0;
     const totalPages = pageSize > 0 ? Math.ceil(total / pageSize) : 0;
@@ -311,6 +312,6 @@ export default defineEventHandler(async (event) => {
   }
 
   pipeline.push(...dataPipeline);
-  const items = await PriceListItem.aggregate(pipeline, { allowDiskUse: true });
+  const items = await PriceListItem.aggregate(pipeline).allowDiskUse(true);
   return serializeDocs(items);
 });

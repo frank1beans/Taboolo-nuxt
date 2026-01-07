@@ -9,11 +9,12 @@ export interface DataGridColumn {
   filter?: boolean | 'agTextColumnFilter' | 'agNumberColumnFilter' | string;
   floatingFilter?: boolean;
   sortable?: boolean;
-  valueFormatter?: (params: { value: unknown; data?: unknown }) => string;
-  cellRenderer?: string | Record<string, unknown>;
-  cellClass?: string;
+  valueFormatter?: (params: any) => string;
+  cellRenderer?: string | Record<string, unknown> | ((params: any) => any);
+  cellRendererParams?: any;
+  cellClass?: string | string[] | ((params: any) => string | string[]);
   headerClass?: string;
-  headerComponent?: string | Record<string, unknown>;
+  headerComponent?: string | Record<string, any> | ((params: any) => any);
   headerComponentParams?: Record<string, unknown>;
   hide?: boolean;
   valueGetter?: (params: { data?: unknown }) => unknown;
@@ -76,7 +77,25 @@ export interface DataGridConfig {
     [cssClassName: string]: string | ((params: { data?: unknown }) => boolean);
   };
   getRowClass?: (params: { data?: unknown }) => string | string[];
+  enableRowSelection?: boolean;
+  selectionMode?: 'single' | 'multiple' | 'singleRow' | 'multiRow';
 }
+
+export interface DataGridRowAction<T = Record<string, unknown>> {
+  id: string;
+  label: string;
+  icon?: string;
+  tooltip?: string;
+  color?: 'red' | 'gray' | 'white' | 'primary' | 'black';
+  primary?: boolean;
+  visible?: boolean | ((row?: T) => boolean);
+  disabled?: boolean | ((row?: T) => boolean);
+  onClick?: (row?: T) => void;
+}
+
+export type DataGridRowActions<T = Record<string, unknown>> =
+  | DataGridRowAction<T>[]
+  | ((row?: T) => DataGridRowAction<T>[]);
 
 export interface PaginationConfig {
   mode: 'server' | 'client';

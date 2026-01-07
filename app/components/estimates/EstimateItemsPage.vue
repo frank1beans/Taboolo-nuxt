@@ -14,6 +14,9 @@ import { useCurrentContext } from '~/composables/useCurrentContext'
 import { useSidebarModules } from '~/composables/useSidebarModules'
 import { useSidebarLayout } from '~/composables/useSidebarLayout'
 import WbsModule from '~/components/sidebar/modules/WbsModule.vue'
+import AssetsModule from '~/components/sidebar/modules/AssetsModule.vue'
+import { useProjectTree } from '~/composables/useProjectTree'
+import PriceSummaryDisplay from '~/components/common/PriceSummaryDisplay.vue'
 import { formatCurrency } from '~/lib/formatters'
 
 interface Props {
@@ -33,7 +36,7 @@ const route = useRoute()
 const projectId = computed(() => route.params.id as string)
 const estimateId = computed(() => route.params.estimateId as string)
 const colorMode = useColorMode()
-const { setCurrentEstimate } = useCurrentContext()
+const { setCurrentEstimate, currentProject, currentEstimate } = useCurrentContext()
 
 await setCurrentEstimate(estimateId.value).catch((err) => console.error('Failed to set current estimate', err))
 
@@ -50,16 +53,16 @@ watch(
 const hasValidIds = computed(() => Boolean(projectId.value && estimateId.value))
 
 const { data: estimate, status: estimateStatus, refresh: refreshEstimate } = await useFetch(
-  () => projectId.value && estimateId.value 
+  () => (projectId.value && estimateId.value 
     ? `/api/projects/${projectId.value}/estimate/${estimateId.value}` 
-    : null,
+    : ''),
   { immediate: hasValidIds.value }
 )
 
 const { data: items, status: itemsStatus, refresh: refreshItems } = await useFetch<EstimateItem[]>(
-  () => projectId.value && estimateId.value 
+  () => (projectId.value && estimateId.value 
     ? `/api/projects/${projectId.value}/estimate/${estimateId.value}/items` 
-    : null,
+    : ''),
   {
     query: computed(() => route.query),
     watch: [() => route.query, projectId, estimateId],
@@ -76,7 +79,7 @@ watch(hasValidIds, (valid) => {
 })
 
 const loading = computed(() => estimateStatus.value === 'pending' || itemsStatus.value === 'pending')
-const rowData = computed(() => items.value || [])
+const rowData = computed<EstimateItem[]>(() => items.value || [])
 
 const { wbsNodes, selectedWbsNode, filteredRowData, onWbsNodeSelected } = useWbsTree(rowData)
 const { registerModule, unregisterModule, toggleVisibility, isVisible: sidebarVisible, setActiveModule, showSidebar } = useSidebarModules()
@@ -87,11 +90,12 @@ const gridApiRef = ref<GridApi<EstimateItem> | null>(null)
 
 const calculateFromGrid = () => {
   if (!gridApiRef.value) {
-    totalAmount.value = filteredRowData.value.reduce((sum, item) => sum + (item.project?.amount || 0), 0)
+    totalAmount.value = filteredRowData.value.reduce((sum: number, item: EstimateItem) => sum + (item.project?.amount || 0), 0)
     return
   }
   let sum = 0
-  gridApiRef.value.forEachNodeAfterFilter((node: RowNode<EstimateItem>) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  gridApiRef.value.forEachNodeAfterFilter((node: any) => {
     if (node.data && node.data.project && typeof node.data.project.amount === 'number') {
       sum += node.data.project.amount
     }
@@ -99,7 +103,12 @@ const calculateFromGrid = () => {
   totalAmount.value = sum
 }
 
-const onGridReady = (params: GridReadyEvent<EstimateItem>) => {
+const grandTotal = computed(() => {
+  return (items.value || []).reduce((sum: number, item: EstimateItem) => sum + (item.project?.amount || 0), 0) || 0
+})
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const onGridReady = (params: GridReadyEvent<any>) => {
   gridApiRef.value = params.api
   params.api.addEventListener('modelUpdated', calculateFromGrid)
   calculateFromGrid()
@@ -125,6 +134,7 @@ onMounted(() => {
     id: 'wbs',
     label: 'WBS',
     icon: 'heroicons:squares-2x2',
+    order: 1,
     component: WbsModule,
     props: {
       nodes: wbsNodes,
@@ -132,11 +142,29 @@ onMounted(() => {
       onNodeSelected: (node: typeof selectedWbsNode.value | null) => onWbsNodeSelected(node),
     },
   })
-  setActiveModule('wbs')
+
+  // Register Assets Module
+  const { treeNodes: contextNodes } = useProjectTree(currentProject, currentEstimate)
+  registerModule({
+      id: 'assets',
+      label: 'Assets',
+      icon: 'heroicons:folder-open',
+      order: 0,
+      component: AssetsModule,
+      props: {
+          nodes: contextNodes,
+          hasProject: computed(() => !!currentProject.value),
+          activeNodeId: computed(() => estimateId.value ? `detail-${estimateId.value}` : null),
+          loading: computed(() => false)
+      }
+  })
+
+  setActiveModule('assets')
 })
 
 onUnmounted(() => {
   unregisterModule('wbs')
+  unregisterModule('assets')
 })
 
 const pageTitle = computed(() => {
@@ -154,7 +182,7 @@ const pageTitle = computed(() => {
     :title="pageTitle"
     :subtitle="subtitle"
     :grid-config="gridConfig"
-    :row-data="filteredRowData"
+    :row-data="filteredRowData as any"
     :loading="loading"
     :toolbar-placeholder="toolbarPlaceholder"
     :export-filename="exportFilename"
@@ -193,17 +221,10 @@ const pageTitle = computed(() => {
         {{ filteredRowData.length }} voci
       </UBadge>
 
-      <div
-        :class="[
-          'flex items-center gap-2 px-4 py-2 rounded-lg font-bold text-lg',
-          colorMode.value === 'dark'
-            ? 'bg-[hsl(var(--success)/0.2)] text-[hsl(var(--success))] border border-[hsl(var(--success)/0.3)]'
-            : 'bg-[hsl(var(--success-light))] text-[hsl(var(--success))] border border-[hsl(var(--success)/0.2)]'
-        ]"
-      >
-        <Icon name="heroicons:currency-euro" class="w-5 h-5" />
-        <span>Totale: {{ formattedTotal }}</span>
-      </div>
+      <PriceSummaryDisplay 
+        :current="totalAmount" 
+        :total="grandTotal" 
+      />
     </template>
 
   </DataGridPage>

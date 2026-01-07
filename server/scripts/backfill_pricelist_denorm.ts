@@ -35,7 +35,7 @@ async function main() {
 
     let processed = 0;
     let updated = 0;
-    let cursor = PriceListItem.find({}).cursor();
+    const cursor = PriceListItem.find({}).cursor();
 
     const bulkOps: any[] = [];
 
@@ -62,7 +62,7 @@ async function main() {
             let foundWbs7 = false;
 
             for (const wbsId of doc.wbs_ids) {
-                let node = wbsMap.get(wbsId.toString());
+                const node = wbsMap.get(wbsId.toString());
                 if (!node) continue;
 
                 // Trace up if needed, or check current node category

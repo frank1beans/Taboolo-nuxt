@@ -6,18 +6,22 @@ const props = defineProps<{
 }>()
 
 const actionIds = [
+  'conflicts.applyAllPrices',
+  'conflicts.refresh',
+  'conflicts.openPending',
+  'conflicts.openAddendum',
   'conflicts.batchResolve',
   'conflicts.batchIgnore',
   'conflicts.batchApplyPrices',
 ]
+
+const primaryActionIds = ['conflicts.applyAllPrices']
 </script>
 
 <template>
   <SidebarActionsModule
-    title="Azioni rapide"
-    icon="i-heroicons-bolt"
     :action-ids="actionIds"
     :selected-count="props.selectedCount"
-    empty-message="Seleziona uno o piu conflitti per attivare le azioni rapide"
+    :primary-action-ids="primaryActionIds"
   />
 </template>

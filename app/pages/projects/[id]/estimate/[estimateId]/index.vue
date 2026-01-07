@@ -4,8 +4,6 @@ import type { GridApi, GridReadyEvent } from 'ag-grid-community';
 import { computed, onMounted, onBeforeUnmount, reactive, ref, defineAsyncComponent } from 'vue';
 import type { DataGridConfig } from '~/types/data-grid';
 import type { ApiEstimate, ApiOfferSummary } from '~/types/api';
-import { queryApi } from '~/utils/queries';
-import { QueryKeys } from '~/types/queries';
 import { useCurrentContext } from '~/composables/useCurrentContext';
 import DataGridActions from '~/components/data-grid/DataGridActions.vue';
 import { getStatusConfig } from '~/utils/status-config';
@@ -14,8 +12,12 @@ import PageToolbar from '~/components/layout/PageToolbar.vue';
 import { formatCurrency as formatCurrencyLib, formatDelta } from '~/lib/formatters';
 import { getDeltaCellClass } from '~/utils/delta-styling';
 import { useActionsStore } from '~/stores/actions';
+import CountBadge from '~/components/ui/CountBadge.vue';
+import { usePageSidebarModule } from '~/composables/useSidebarModules';
+import SidebarActionsModule from '~/components/sidebar/modules/SidebarActionsModule.vue';
 import type { Action } from '~/types/actions';
 
+// Assets module handled by layout centrally
 // Lazy load heavy ImportWizard component (31KB)
 const ImportWizard = defineAsyncComponent(() => import('~/components/projects/ImportWizard.vue'));
 
@@ -27,13 +29,13 @@ const estimateId = route.params.estimateId as string;
 // 1. Fetch Estimate Details (Baseline Context)
 const { data: currentEstimate, status: estimateStatus, refresh: refreshEstimate } = await useAsyncData<ApiEstimate>(
     `estimate-details-${estimateId}`,
-    () => queryApi.fetch(QueryKeys.ESTIMATE_DETAILS, { id: estimateId })
+    () => $fetch<ApiEstimate>(`/api/projects/${projectId}/estimate/${estimateId}`)
 );
 
 // 2. Fetch Offers linked to this Estimate
 const { data: offersData, status: offersStatus, refresh: refreshOffers } = await useAsyncData(
     `estimate-offers-${estimateId}`,
-    () => queryApi.fetch(QueryKeys.PROJECT_OFFERS, { project_id: projectId, estimate_id: estimateId })
+    () => $fetch<{ offers: ApiOfferSummary[] }>(`/api/projects/${projectId}/offers`, { query: { estimate_id: estimateId } })
 );
 
 // 3. Keep Alert Summary legacy for now (Plan to refactor)
@@ -45,9 +47,30 @@ const { data: alertSummary, status: alertStatus, refresh: refreshAlertSummary } 
   }
 );
 
-const { setCurrentEstimate } = useCurrentContext();
+const { setCurrentEstimate, currentProject, currentEstimate: contextEstimate } = useCurrentContext();
 const actionsStore = useActionsStore();
 const actionOwner = 'page:estimate-detail';
+
+usePageSidebarModule({
+  id: 'actions',
+  label: 'Azioni',
+  icon: 'heroicons:command-line',
+  order: 2,
+  group: 'secondary',
+  autoActivate: true,
+  component: SidebarActionsModule,
+  props: {
+    actionIds: [
+      'estimate.importOffers',
+      'grid.exportExcel',
+      'estimate.compareOffers',
+      'estimate.openConflicts',
+      'grid.resetFilters',
+    ],
+    primaryActionIds: ['estimate.importOffers'],
+  },
+});
+
 
 // Ensure context matches URL
 onMounted(() => {
@@ -63,7 +86,12 @@ const loading = computed(() => estimateStatus.value === 'pending');
 const offersLoading = computed(() => offersStatus.value === 'pending');
 const alertsLoading = computed(() => alertStatus.value === 'pending');
 
-const offerRows = computed<ApiOfferSummary[]>(() => offersData.value?.items || []);
+const offerRows = computed<ApiOfferSummary[]>(() =>
+  (offersData.value?.offers || []).map((offer: any) => ({
+    ...offer,
+    id: offer.id || offer._id || offer.offer_id,
+  }))
+);
 const offersCount = computed(() => offerRows.value.length);
 
 // Baseline Total comes from the Estimate itself
@@ -149,7 +177,7 @@ const unifiedGridConfig: DataGridConfig = {
       headerName: 'Preventivo',
       flex: 2,
       minWidth: 220,
-      cellRenderer: (params: { value?: string }): string => {
+      cellRenderer: (params: any): string => {
         return `<span class="font-medium">${params.value || ''}</span>`;
       },
     },
@@ -158,7 +186,7 @@ const unifiedGridConfig: DataGridConfig = {
       headerName: 'Round',
       width: 100,
       cellClass: 'ag-right-aligned-cell',
-      valueFormatter: (params: { value: number | null }) => params.value !== null ? `R${params.value}` : '-',
+      valueFormatter: (params: any) => params.value !== null ? `R${params.value}` : '-',
     },
     {
       field: 'company_name',
@@ -170,7 +198,7 @@ const unifiedGridConfig: DataGridConfig = {
       field: 'status',
       headerName: 'Stato',
       width: 140,
-      cellRenderer: (params: { value?: string }): string => {
+      cellRenderer: (params: any): string => {
         const rawStatus = params.value;
         if (!rawStatus) return '';
         const config = getStatusConfig(rawStatus);
@@ -185,14 +213,14 @@ const unifiedGridConfig: DataGridConfig = {
       headerName: 'Importo',
       width: 150,
       cellClass: 'ag-right-aligned-cell font-semibold',
-      valueFormatter: (params: { value: number | string }): string => formatCurrency(params.value as number),
+      valueFormatter: (params: any): string => formatCurrency(params.value as number),
     },
     {
       field: 'deltaAmount',
       headerName: 'Δ Importo',
       width: 140,
       cellClass: 'ag-right-aligned-cell',
-      cellRenderer: (params: { value: number | null; data?: { isBaseline?: boolean } }): string => {
+      cellRenderer: (params: any): string => {
         const value = params.value;
         if (value === null || value === undefined || params.data?.isBaseline) return '-';
         const formatted = formatCurrency(value);
@@ -205,7 +233,7 @@ const unifiedGridConfig: DataGridConfig = {
       headerName: 'Δ %',
       width: 100,
       cellClass: 'ag-right-aligned-cell',
-      cellRenderer: (params: { value: number | null; data?: { isBaseline?: boolean } }): string => {
+      cellRenderer: (params: any): string => {
         const value = params.value;
         if (value === null || value === undefined || params.data?.isBaseline) return '-';
         const formatted = formatDeltaPerc(value);
@@ -218,7 +246,7 @@ const unifiedGridConfig: DataGridConfig = {
       headerName: 'Alert',
       width: 110,
       cellClass: 'ag-right-aligned-cell',
-      cellRenderer: (params: { value?: number; data?: { isBaseline?: boolean } }): string => {
+      cellRenderer: (params: any): string => {
         if (params.data?.isBaseline) return '-';
         const count = Number(params.value || 0);
         if (!count) return '-';
@@ -246,7 +274,7 @@ const unifiedGridConfig: DataGridConfig = {
   rowHeight: 48,
   enableQuickFilter: true,
   enableExport: true,
-  getRowClass: (params: { data?: { isBaseline?: boolean; isBest?: boolean } }) => {
+  getRowClass: (params: any) => {
     if (params.data?.isBaseline) return 'bg-[hsl(var(--info-light))]';
     if (params.data?.isBest) return 'bg-[hsl(var(--success-light))]';
     return '';
@@ -306,32 +334,49 @@ type OfferRow = {
   isBaseline?: boolean;
 };
 
+const isBaselineRow = (row: OfferRow | null | undefined) => {
+  if (!row) return true;
+  if (row.isBaseline) return true;
+  if (row.rowType === 'project') return true;
+  if (row.id === 'project-baseline') return true;
+  return false;
+};
+
+const getOfferId = (row: OfferRow | null | undefined) => {
+  if (!row) return undefined;
+  return row.id || (row as any).offer_id || (row as any)._id;
+};
+
 const navigateToPricelist = (row: OfferRow | null | undefined) => {
   if (!row) return;
   const params = new URLSearchParams();
-  // Using query 'estimateId' equal to the current estimate, but maybe pricelist needs specific offer context?
-  // Actually, 'Listino' usually implies seeing the items.
-  // The pricelist page uses `estimateId` query param to load items.
-  // If we want to see a specific offer's items, we should pass that context.
-  // The pricelist logic (checked before) uses `estimateId` query param. 
-  // Wait, `selectedEstimateId` in pricelist page defaults to query param.
-  // But here we are listing OFFERS (which are technically estimates/returns?)
-  // If `row.isBaseline`, it is the project baseline.
-  // If `row.rowType === 'offer'`, it is a return.
-  
-  // Assuming pricelist page can filter by round/company or just show the estimate content.
-  // If I want to see the items of THIS offer:
-  // Navigate to /projects/.../pricelist?estimateId=[estimateId]&round=[row.round]&company=[row.company]
-  
+
   params.set('estimateId', estimateId);
-  if (row.round_number !== undefined && row.round_number !== null) params.set('round', String(row.round_number));
-  if (row.company_name) params.set('company', row.company_name);
-  
+
+  if (!isBaselineRow(row)) {
+    const offerId = getOfferId(row);
+    if (offerId) params.set('offerId', offerId);
+    if (row.round_number !== null && row.round_number !== undefined) {
+      params.set('round', String(row.round_number));
+    }
+    if (row.company_name) {
+      params.set('company', String(row.company_name));
+    }
+    if (row.deltaPerc !== null && row.deltaPerc !== undefined) {
+      const deltaPerc = Number(row.deltaPerc);
+      if (!Number.isNaN(deltaPerc)) params.set('deltaPerc', String(deltaPerc));
+    }
+    if (row.deltaAmount !== null && row.deltaAmount !== undefined) {
+      const deltaAmount = Number(row.deltaAmount);
+      if (!Number.isNaN(deltaAmount)) params.set('deltaAmount', String(deltaAmount));
+    }
+  }
+
   navigateTo(`/projects/${projectId}/pricelist?${params.toString()}`);
 };
 
 const openOfferDetail = (row: OfferRow | null | undefined) => {
-   if (!row || row.isBaseline) return;
+   if (!row || isBaselineRow(row)) return;
    const params = new URLSearchParams();
    if (row.round_number !== undefined) params.set('round', String(row.round_number));
    if (row.company_name) params.set('company', row.company_name);
@@ -339,7 +384,7 @@ const openOfferDetail = (row: OfferRow | null | undefined) => {
 };
 
 const openEditOffer = (row: OfferRow | null | undefined) => {
-  if (!row || row.isBaseline) return;
+  if (!row || isBaselineRow(row)) return;
   editForm.id = row.id;
   editForm.name = row.name || '';
   editForm.company_name = row.company_name || '';
@@ -390,7 +435,7 @@ const offerToDelete = ref<OfferRow | null>(null);
 
 const openDeleteModal = (row: any | null | undefined) => {
   console.log('openDeleteModal called', { row, id: row?.id, isBaseline: row?.isBaseline });
-  if (!row?.id || row.isBaseline) {
+  if (!row?.id || isBaselineRow(row)) {
     console.log('openDeleteModal early return - no id or isBaseline');
     return;
   }
@@ -446,11 +491,27 @@ const gridContext = computed(() => ({
     viewPricelist: (row: OfferRow) => navigateToPricelist(row),
     viewOffer: (row: OfferRow) => openOfferDetail(row),
     resolve: () => navigateTo(`/projects/${projectId}/conflicts?estimateId=${estimateId}`), // Should filter by offer?
-    edit: (row: OfferRow) => row?.isBaseline ? null : openEditOffer(row),
-    remove: (row: OfferRow) => row?.isBaseline ? deleteEstimate() : openDeleteModal(row),
+    edit: (row: OfferRow) => isBaselineRow(row) ? null : openEditOffer(row),
+    remove: (row: OfferRow) => isBaselineRow(row) ? deleteEstimate() : openDeleteModal(row),
   },
   // Helper to determine if resolution is needed
-  hasAlerts: (row: OfferRow) => (alertSummaryMap.value[row.id] || 0) > 0
+  hasAlerts: (row: OfferRow) => (alertSummaryMap.value[row.id] || 0) > 0,
+  // Dynamic visibility logic
+  isActionVisible: (action: string, row: OfferRow | undefined) => {
+    if (!row) return false;
+    const isBaseline = isBaselineRow(row);
+    
+    switch (action) {
+      case 'viewOffer': // Prevent viewing document for baseline (it's virtual/aggregated)
+      case 'edit':      // Prevent editing baseline row from here
+        return !isBaseline;
+      case 'remove':    // Allow removing both offers and the estimate itself (via baseline)
+      case 'viewPricelist': // Allow viewing pricelist for both
+      case 'resolve':   // Allow resolving alerts for both (if alerts exist)
+      default:
+        return true;
+    }
+  }
 }));
 
 // Toolbar State
@@ -491,7 +552,7 @@ onMounted(() => {
     scope: 'estimate',
     icon: 'i-heroicons-arrows-right-left',
     keywords: ['confronto', 'offerte'],
-    handler: () => navigateTo(`/projects/${projectId}/estimate/${estimateId}/comparison`),
+    handler: () => { navigateTo(`/projects/${projectId}/estimate/${estimateId}/comparison`) },
   });
 
   registerAction({
@@ -526,7 +587,7 @@ onMounted(() => {
     scope: 'estimate',
     icon: 'i-heroicons-exclamation-triangle',
     keywords: ['conflitti', 'alert'],
-    handler: () => navigateTo(`/projects/${projectId}/conflicts?estimateId=${estimateId}`),
+    handler: () => { navigateTo(`/projects/${projectId}/conflicts?estimateId=${estimateId}`) },
   })
 });
 
@@ -562,18 +623,10 @@ const handleImportSuccess = async () => {
       <!-- Meta: Estimate Name + Count -->
       <template #header-meta>
          <div class="flex items-center gap-2">
-            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]">
-                {{ currentEstimate?.name || 'Dettaglio Gare' }}
-            </span>
-            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]">
-                <Icon name="heroicons:document-text" class="w-3.5 h-3.5" />
-                {{ offersCount }} offerte
-            </span>
+            <CountBadge :value="formatCurrency(baselineTotal)" label="Importo Baseline" icon="i-heroicons-banknotes" color="primary" />
+            <CountBadge :value="offersCount" label="Offerte" icon="i-heroicons-document-text" />
          </div>
       </template>
-
-      <!-- Actions removed (moved to Topbar) -->
-      <template #actions/>
 
       <!-- Toolbar -->
       <template #pre-grid>
@@ -587,7 +640,7 @@ const handleImportSuccess = async () => {
               </div>
               <div class="h-4 w-px bg-[hsl(var(--border))]" />
               <UButton
-                size="2xs"
+                size="xs"
                 color="warning"
                 variant="solid"
                 label="Risoluzione Alert"
@@ -604,19 +657,8 @@ const handleImportSuccess = async () => {
               v-model="searchText"
               search-placeholder="Filtra per preventivo, impresa o round..."
               class="!py-0"
+              centered
             >
-              <template #right>
-                <ActionList
-                  layout="toolbar"
-                  :action-ids="[
-                    'grid.resetFilters',
-                    'grid.exportExcel',
-                    'estimate.importOffers',
-                    'estimate.compareOffers',
-                  ]"
-                  :primary-action-ids="['estimate.compareOffers']"
-                />
-              </template>
             </PageToolbar>
           </Teleport>
         </ClientOnly>

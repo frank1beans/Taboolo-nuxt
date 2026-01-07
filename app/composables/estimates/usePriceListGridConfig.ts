@@ -78,6 +78,10 @@ export const usePriceListGridConfig = (_rowData: Ref<ApiPriceListItem[]>) => {
                 width: 130,
                 cellClass: 'ag-right-aligned-cell',
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                valueGetter: (params: any) => {
+                    return params.data?.offer_unit_price ?? params.data?.price;
+                },
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 valueFormatter: (params: any) => formatCurrency(params.value, { fallback: '-' }),
                 filter: 'agNumberColumnFilter',
             },

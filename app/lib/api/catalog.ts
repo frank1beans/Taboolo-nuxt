@@ -17,12 +17,12 @@ export const catalogApi = {
         options: { estimateId: string | number; usedOnly?: boolean },
     ): Promise<ApiPriceListItem[]> {
         const suffix = buildQueryString({
-            estimate_id: options.estimateId,
             used_only: options.usedOnly ? "true" : undefined,
         });
-        return apiFetch<ApiPriceListItem[]>(
-            `/projects/${projectId}/estimates/${options.estimateId}/price-list${suffix}`
+        const res = await apiFetch<{ items: ApiPriceListItem[] }>(
+            `/projects/${projectId}/estimates/${options.estimateId}/items${suffix}`
         );
+        return res.items ?? [];
     },
 
     async getGlobal(options?: {

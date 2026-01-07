@@ -47,6 +47,8 @@
           :components="components"
           :context="context"
           :row-selection="rowSelectionProp"
+          :get-row-id="getRowIdFn"
+          :suppress-row-click-selection="true"
           :header-height="config.headerHeight || 48"
           :group-header-height="config.groupHeaderHeight || 40"
           :row-height="config.rowHeight || 44"
@@ -131,8 +133,9 @@ import 'ag-grid-community/styles/ag-grid.css';
 import 'ag-grid-community/styles/ag-theme-quartz.css';
 import '~/assets/css/styles/ag-grid-custom.css';
 
-import type { DataGridConfig, FilterPanelConfig } from '~/types/data-grid';
+import type { DataGridConfig, DataGridRowAction, DataGridRowActions, FilterPanelConfig } from '~/types/data-grid';
 import DataGridHeader from './DataGridHeader.vue';
+import DataGridRowActionsCell from './DataGridRowActions.vue';
 import ColumnFilterPopover from './ColumnFilterPopover.vue';
 import ColumnVisibilityPopover from './ColumnVisibilityPopover.vue';
 import { useSelectionStore } from '~/stores/selection';
@@ -141,6 +144,20 @@ import { useSelectionStore } from '~/stores/selection';
 ModuleRegistry.registerModules([AllCommunityModule]);
 
 type RowData = Record<string, unknown>;
+type ContextRowActions = {
+  open?: (row?: RowData) => void;
+  viewPricelist?: (row?: RowData) => void;
+  viewOffer?: (row?: RowData) => void;
+  resolve?: (row?: RowData) => void;
+  edit?: (row?: RowData) => void;
+  remove?: (row?: RowData) => void;
+};
+
+type ContextActionExtras = {
+  rowActions?: ContextRowActions;
+  hasAlerts?: (row?: RowData) => boolean;
+  isActionVisible?: (action: string, row?: RowData) => boolean;
+};
 
 const props = withDefaults(
   defineProps<{
@@ -181,6 +198,11 @@ const props = withDefaults(
     }>;
     cacheBlockSize?: number;
     maxBlocksInCache?: number;
+    enableRowSelection?: boolean;
+    selectionMode?: 'single' | 'multiple';
+    rowActions?: DataGridRowActions;
+    getRowId?: string | ((row: RowData) => string);
+    onSelectionChange?: (selectedIds: string[], selectedRows: RowData[]) => void;
   }>(),
   {
     rowData: () => [],
@@ -208,6 +230,8 @@ const props = withDefaults(
     fetchRows: undefined,
     cacheBlockSize: undefined,
     maxBlocksInCache: undefined,
+    enableRowSelection: true,
+    selectionMode: 'single',
   }
 );
 
@@ -216,6 +240,7 @@ const emit = defineEmits<{
   'row-click': [row: RowData];
   'row-dblclick': [row: RowData];
   'selection-changed': [rows: RowData[]];
+  'selection-change': [selectedIds: string[], selectedRows: RowData[]];
   'filter-changed': [filterModel: Record<string, unknown>];
   'sort-changed': [sortModel: unknown[]];
   'grid-ready': [params: GridReadyEvent];
@@ -230,23 +255,30 @@ const isDark = computed(() => colorMode.value === 'dark');
 const themeClass = computed(() => (isDark.value ? 'ag-theme-quartz-dark' : 'ag-theme-quartz'));
 // Key to force re-render when theme changes
 const gridKey = computed(() => `grid-${isDark.value ? 'dark' : 'light'}`);
+const missingRowIdWarned = ref(false);
 
 // Use composables
 const { gridApi, onGridReady: onGridReadyBase } = useDataGrid(props.config);
 
+const resolvedSelectionMode = computed<'single' | 'multiple'>(() => {
+  if (props.rowSelection && typeof props.rowSelection === 'object' && 'mode' in props.rowSelection) {
+    return props.rowSelection.mode === 'multiRow' ? 'multiple' : 'single';
+  }
+  if (typeof props.rowSelection === 'string' && props.rowSelection !== 'singleRow') {
+    if (props.rowSelection === 'multiple' || props.rowSelection === 'multiRow') return 'multiple';
+    if (props.rowSelection === 'single') return 'single';
+  }
+  return props.selectionMode;
+});
+
 const rowSelectionProp = computed(() => {
-  if (typeof props.rowSelection === 'string') {
-    if (props.rowSelection === 'single' || props.rowSelection === 'singleRow') {
-      return { mode: 'singleRow' as const, checkboxes: false, headers: false }
-    }
-    if (props.rowSelection === 'multiple' || props.rowSelection === 'multiRow') {
-      return { mode: 'multiRow' as const, checkboxes: false, headers: false }
-    }
-  }
+  const mode = resolvedSelectionMode.value === 'multiple' ? 'multiRow' as const : 'singleRow' as const;
+  
   if (props.rowSelection && typeof props.rowSelection === 'object') {
-    return props.rowSelection
+    return { ...props.rowSelection, mode };
   }
-  return { mode: 'singleRow' as const, checkboxes: false, headers: false }
+  
+  return { mode, checkboxes: false, headers: false, enableClickSelection: false };
 })
 
 const isServerSide = computed(() => typeof props.fetchRows === 'function');
@@ -337,15 +369,226 @@ const resetColumnVisibility = () => {
 
 const { createColumnDefs, getDefaultColDef } = useDataGridColumns();
 
+const warnMissingRowId = () => {
+  if (missingRowIdWarned.value) return;
+  missingRowIdWarned.value = true;
+  console.warn('[DataGrid] Row id missing or unstable. Provide getRowId or ensure row.id/_id exists.');
+};
+
+const resolveRowId = (row?: RowData) => {
+  if (!row) return undefined;
+  if (typeof props.getRowId === 'function') {
+    const id = props.getRowId(row);
+    if (id !== undefined && id !== null && id !== '') return String(id);
+  }
+  if (typeof props.getRowId === 'string') {
+    const key = props.getRowId;
+    const value = (row as Record<string, unknown>)[key];
+    if (value !== undefined && value !== null && value !== '') return String(value);
+  }
+  const fallback = (row as Record<string, unknown>).id ?? (row as Record<string, unknown>)._id ?? (row as Record<string, unknown>).colId;
+  if (fallback !== undefined && fallback !== null && fallback !== '') return String(fallback);
+  return undefined;
+};
+
+const getRowIdFn = (params: { data?: RowData }) => {
+  const id = resolveRowId(params.data);
+  if (!id) warnMissingRowId();
+  return id;
+};
+
+const getRowActionsFromContext = (row?: RowData): DataGridRowAction[] => {
+  const extras = props.contextExtras as ContextActionExtras | undefined;
+  const handlers = extras?.rowActions;
+  if (!handlers) return [];
+
+  const isVisible = (key: string) => {
+    if (!extras?.isActionVisible) return true;
+    return extras.isActionVisible(key, row);
+  };
+
+  const actions: DataGridRowAction[] = [];
+
+  if (handlers.open && isVisible('open')) {
+    actions.push({
+      id: 'open',
+      label: 'Apri',
+      icon: 'i-heroicons-arrow-right-circle',
+      tooltip: 'Apri dettagli',
+      primary: true,
+      onClick: () => handlers.open?.(row),
+    });
+  }
+  if (handlers.viewPricelist && isVisible('viewPricelist')) {
+    actions.push({
+      id: 'viewPricelist',
+      label: 'Vedi Listino',
+      icon: 'i-heroicons-list-bullet',
+      onClick: () => handlers.viewPricelist?.(row),
+    });
+  }
+  if (handlers.viewOffer && isVisible('viewOffer')) {
+    actions.push({
+      id: 'viewOffer',
+      label: 'Vedi Documento',
+      icon: 'i-heroicons-document-text',
+      onClick: () => handlers.viewOffer?.(row),
+    });
+  }
+  if (handlers.resolve && extras?.hasAlerts?.(row) && isVisible('resolve')) {
+    actions.push({
+      id: 'resolve',
+      label: 'Risolvi conflitti',
+      icon: 'i-heroicons-wrench-screwdriver',
+      color: 'primary',
+      onClick: () => handlers.resolve?.(row),
+    });
+  }
+  if (handlers.edit && isVisible('edit')) {
+    actions.push({
+      id: 'edit',
+      label: 'Modifica',
+      icon: 'i-heroicons-pencil-square',
+      onClick: () => handlers.edit?.(row),
+    });
+  }
+  if (handlers.remove && isVisible('remove')) {
+    actions.push({
+      id: 'remove',
+      label: 'Elimina',
+      icon: 'i-heroicons-trash',
+      color: 'red',
+      onClick: () => handlers.remove?.(row),
+    });
+  }
+
+  return actions;
+};
+
+const buildDefaultOpenAction = (row?: RowData): DataGridRowAction => ({
+  id: 'open',
+  label: 'Apri',
+  icon: 'i-heroicons-arrow-right-circle',
+  tooltip: 'Apri dettagli',
+  primary: true,
+  onClick: () => {
+    emit('row-dblclick', row as RowData);
+  },
+});
+
+const normalizeRowActions = (actions: DataGridRowAction[], row?: RowData) => {
+  const list = actions.map(action => ({ ...action }));
+  const hasOpen = list.some(action => action.id === 'open');
+  if (!hasOpen) list.unshift(buildDefaultOpenAction(row));
+  if (!list.some(action => action.primary)) {
+    const open = list.find(action => action.id === 'open');
+    if (open) open.primary = true;
+  }
+  return list;
+};
+
+const getRowActions = (row?: RowData): DataGridRowAction[] => {
+  let actions: DataGridRowAction[] = [];
+
+  if (props.rowActions) {
+    actions = typeof props.rowActions === 'function' ? (props.rowActions(row) || []) : props.rowActions;
+  } else {
+    actions = getRowActionsFromContext(row);
+  }
+
+  if (!actions.length) {
+    return [buildDefaultOpenAction(row)];
+  }
+
+  return normalizeRowActions(actions, row);
+};
+
 // Generate column definitions with valuesGetter and custom header
 const columnDefs = computed(() => {
   const defs = createColumnDefs(props.config.columns, props.rowData) as ColDef[];
-  return defs.map((col) => ({
+
+  let existingActionsCol: ColDef | null = null;
+  const cleanedDefs = defs.filter((col) => {
+    if ((col as any).children) return true;
+
+    const colId = col.colId || col.field;
+    const isSelectionCol = Boolean((col as any).checkboxSelection)
+      || colId === 'selection'
+      || colId === '_selection'
+      || col.field === '_selection';
+    const isActionsCol = colId === 'actions' || col.field === 'actions';
+
+    if (isSelectionCol) return false;
+    if (isActionsCol && !existingActionsCol) {
+      existingActionsCol = col;
+      return false;
+    }
+    return true;
+  });
+
+  const mappedDefs = cleanedDefs.map((col) => ({
     ...col,
     headerComponent: col.headerComponent !== undefined
       ? col.headerComponent
-      : (!col.children ? 'dataGridHeader' : undefined),
+      : (!(col as any).children ? 'dataGridHeader' : undefined),
   }));
+
+  const pinnedCols: ColDef[] = [];
+
+  if (props.enableRowSelection) {
+    pinnedCols.push({
+      colId: 'selection',
+      headerName: '',
+      width: 48,
+      minWidth: 44,
+      maxWidth: 56,
+      pinned: 'left',
+      lockPosition: 'left',
+      suppressMovable: true,
+      suppressSizeToFit: true,
+      sortable: false,
+      filter: false,
+      resizable: false,
+      checkboxSelection: true,
+      headerCheckboxSelection: resolvedSelectionMode.value === 'multiple',
+      headerCheckboxSelectionFilteredOnly: true,
+      headerCheckboxSelectionCurrentPageOnly: true,
+      headerClass: 'data-grid-utility-header',
+      cellClass: 'data-grid-selection-cell flex items-center justify-center',
+    });
+  }
+
+  const rawRenderer = existingActionsCol?.cellRenderer;
+  let overflowRenderer: unknown;
+  if (typeof rawRenderer === 'string') {
+    overflowRenderer = props.customComponents?.[rawRenderer] || rawRenderer;
+  } else if (typeof rawRenderer === 'object') {
+    overflowRenderer = rawRenderer;
+  }
+
+  pinnedCols.push({
+    colId: 'row-actions',
+    headerName: '',
+    width: 64,
+    minWidth: 56,
+    maxWidth: 72,
+    pinned: 'right',
+    lockPosition: 'right',
+    suppressMovable: true,
+    suppressSizeToFit: true,
+    sortable: false,
+    filter: false,
+    resizable: false,
+    suppressMenu: true,
+    headerClass: 'data-grid-utility-header',
+    cellClass: 'data-grid-actions-cell overflow-visible flex items-center justify-center',
+    cellRenderer: 'dataGridRowActions',
+    cellRendererParams: {
+      overflowRenderer,
+    },
+  });
+
+  return [...pinnedCols, ...mappedDefs];
 });
 
 const defaultColDef = computed(() => ({
@@ -371,6 +614,7 @@ const DataGridHeaderComponent = defineComponent({
 
 const components = computed(() => ({
   dataGridHeader: DataGridHeaderComponent,
+  dataGridRowActions: DataGridRowActionsCell,
   ...(props.customComponents || {}),
 }));
 
@@ -380,6 +624,8 @@ const context = computed(() => ({
     openFilterPanel(config);
   },
   getCurrentFilter: (field: string) => getCurrentFilter(field),
+  selectionMode: resolvedSelectionMode.value,
+  getRowActions,
   ...(props.contextExtras || {}),
 }));
 
@@ -451,7 +697,7 @@ const handleRowClick = (event: RowClickedEvent<RowData>) => {
   const domEvent = event.event as Event | undefined;
   if (domEvent instanceof Event) {
     const target = domEvent.target as HTMLElement | null;
-    if (target?.closest('button, a, [role="button"], input, select, textarea, [data-stop-row-click]')) {
+    if (target?.closest('button, a, [role="button"], input, select, textarea, [data-stop-row-click], .ag-selection-checkbox, .data-grid-row-actions')) {
       return;
     }
   }
@@ -463,8 +709,25 @@ const handleRowDoubleClick = (event: RowDoubleClickedEvent<RowData>) => {
 };
 
 const handleSelectionChange = (event: SelectionChangedEvent<RowData>) => {
-  const selectedRows = event.api.getSelectedRows() as RowData[];
+  const selectedNodes = event.api.getSelectedNodes();
+  const selectedRows = selectedNodes.map(node => node.data as RowData).filter(Boolean);
+  const selectedIds = selectedNodes.map((node) => {
+    const row = node.data as RowData | undefined;
+    const id = resolveRowId(row) ?? (node.id !== undefined && node.id !== null ? String(node.id) : undefined);
+    if (!id) {
+      warnMissingRowId();
+      return 'row-unknown';
+    }
+    if (!props.getRowId && !(row && (row as Record<string, unknown>).id) && !(row && (row as Record<string, unknown>)._id)) {
+      warnMissingRowId();
+    }
+    return id;
+  });
+  
   emit('selection-changed', selectedRows);
+  emit('selection-change', selectedIds, selectedRows);
+  props.onSelectionChange?.(selectedIds, selectedRows);
+  
   if (props.selectionKey) {
     selectionStore.setSelection(props.selectionKey, selectedRows);
   }
@@ -522,6 +785,17 @@ defineExpose({
 :deep(.ag-theme-quartz-dark .ag-cell) {
   padding-top: 0;
   padding-bottom: 0;
+}
+
+:deep(.ag-cell.data-grid-selection-cell),
+:deep(.ag-cell.data-grid-actions-cell) {
+  padding-left: 0;
+  padding-right: 0;
+  justify-content: center;
+}
+
+:deep(.data-grid-utility-header .ag-header-cell-label) {
+  justify-content: center;
 }
 
 :deep(.data-grid--sticky-header .ag-header) {

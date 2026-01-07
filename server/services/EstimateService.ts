@@ -132,58 +132,20 @@ export async function upsertEstimatesBatch(
   project_id: string,
   mode: 'project' | 'offer' = 'project'
 ) {
-  const results = [];
-
-  // Validate project_id
   const validProjectId = objectIdSchema.parse(project_id);
+  if (!Array.isArray(estimates) || estimates.length === 0) return [];
 
-  // We can also validate `estimates` array if we want strictly typed inputs here
-  // For now we assume the caller passes objects that match the schema, 
-  // but individual create/update inside might trigger validation schema logic if we enforce it.
-
-  // Note: The logic below is quite complex and mixed. 
-  //Ideally we would parse each estimate with CreateEstimateSchema.
-
-  for (const estData of (estimates as any[])) {
-    // Validate with Zod before processing (partial validation since it's upsert)
-    // If it's a new estimate, we need required fields. If update, only partial.
-    // This existing logic relies on `estData._id` presence.
-
-    const estId = estData._id || estData.id;
-
-    // Ensure we strictly validate the input data
-    // Adapting the schema parsing to allow "upsert" style data
-    // This might require a more flexible schema or branching logic
-
-    // For now, let's keep the logic flow but introduce basic validation
-    if (!estData.name) throw AppError.badRequest('Estimate name is required');
-
-    // ... existing logic ...
-    // To strictly apply Zod here requires mapped types which might be too disruptive 
-    // given the 'any' usage in the original code. 
-    // I will focus on standardizing the repository calls and errors first.
-
-    const payload: any = {
-      // ... (preserve existing mapping logic)
-      project_id: validProjectId, // ensure validated ID is used
-      name: estData.name,
+  const results = [];
+  for (const estData of estimates) {
+    if (!estData || typeof estData !== 'object') continue;
+    const payload = {
+      ...(estData as Record<string, unknown>),
       type: mode,
-      description: estData.description, // Mapped from input
-      // ... checks for other fields
-      is_baseline: estData.is_baseline ?? false,
-      // ...
-    }
-
-    // Let's defer full rewrite of this complex batch function to avoid regression
-    // and focus on `deleteEstimateCascade` and simple CRUD if exists.
-
-    // Reverting to simply wrapping the legacy logic with try/catch/AppError might be safer 
-    // for this specific complex function unless I see the full body to replace.
+    } as EstimateInput;
+    const saved = await upsertEstimate(validProjectId, payload);
+    results.push(saved);
   }
 
-  // The previous implementation of this function was massive (lines 38-190).
-  // I should probably read the file first to ensure I don't wipe out the logic.
-  // I'll adopt a strategy of updating the SMALLER functions first.
   return results;
 }
 

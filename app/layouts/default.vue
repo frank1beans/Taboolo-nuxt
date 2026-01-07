@@ -3,7 +3,7 @@ import { computed, onMounted, onUnmounted, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import Sidebar from '~/components/layout/Sidebar.vue'
 import Topbar from '~/components/layout/Topbar.vue'
-import Breadcrumb from '~/components/layout/Breadcrumb.vue'
+
 import AppShell from '~/components/layout/AppShell.vue'
 import SidebarShell from '~/components/sidebar/SidebarShell.vue'
 import AssetsModule from '~/components/sidebar/modules/AssetsModule.vue'
@@ -16,7 +16,7 @@ import { useNavigation } from '~/composables/useNavigation'
 import { useProjectTree } from '~/composables/useProjectTree'
 import { useCommandPaletteStore } from '~/stores/commandPalette'
 
-const { hasModules, registerLayoutModule, unregisterModule } = useSidebarModules()
+const { hasModules, registerLayoutModule, unregisterModule, setActiveModule, activeModuleId } = useSidebarModules()
 const route = useRoute()
 const {
   isCollapsed,
@@ -39,28 +39,43 @@ const { isOpen: isPaletteOpen } = storeToRefs(commandPaletteStore)
 // Use useProjectTree for detailed tree structure
 const { treeNodes: contextNodes } = useProjectTree(currentProject, currentEstimate)
 
-onMounted(() => {
-  hydrateFromApi()
-  if (showDefaultSidebar.value) {
+// Determine if we're in a project route - Assets should ALWAYS be registered for project routes
+const isProjectRoute = computed(() => route.path.includes('/projects/'))
+
+// Register Assets for project routes immediately and persistently
+const registerAssetsForProjects = () => {
+  if (isProjectRoute.value) {
     registerAssetsModule()
   }
+}
+
+onMounted(() => {
+  hydrateFromApi()
+  registerAssetsForProjects()
   if (import.meta.client) {
     window.addEventListener('keydown', onCommandPaletteShortcut)
   }
 })
 
-watch([hasModules, showDefaultSidebar], ([modulesAvailable, showDefault]) => {
-  if (!modulesAvailable && !showDefault) {
-    collapse()
+// Keep Assets registered whenever we're in a project route
+watch([isProjectRoute, currentProject], async ([isProject, project]) => {
+  if (isProject && project) {
+    registerAssetsModule()
+    // Default to Assets only when nothing else is active
+    await nextTick()
+    if (!activeModuleId.value || activeModuleId.value === assetsModuleId) {
+      setActiveModule(assetsModuleId)
+    }
+  } else if (!isProject) {
+    unregisterModule(assetsModuleId)
   }
 })
 
-watch(showDefaultSidebar, (showDefault) => {
-  if (showDefault) {
-    registerAssetsModule()
-    return
+// Collapse sidebar only if no modules AND not in a project route
+watch([hasModules, isProjectRoute], ([modulesAvailable, isProject]) => {
+  if (!modulesAvailable && !isProject) {
+    collapse()
   }
-  unregisterModule(assetsModuleId)
 })
 
 onUnmounted(() => {
@@ -92,11 +107,16 @@ const activeNodeId = computed(() => {
   const currentQuery = route.query
   const candidates: { id: string; score: number }[] = []
 
+  const normalizePath = (p: string) => p.replace(/\/+$/, '')
+
   const traverse = (nodes: NavNode[]) => {
     for (const node of nodes) {
       if (node.to) {
-        const [nodePathString] = node.to.split('?')
-        if (nodePathString === currentPath) {
+        const nodePathString = node.to.split('?')[0] || ''
+        
+        // Validate exact path match (ignoring trailing slash)
+        if (normalizePath(nodePathString) === normalizePath(currentPath)) {
+          console.log('[Sidebar] Checking candidate:', node.id, 'Path:', nodePathString)
           const nodeParams = getQueryParams(node.to)
           let isMatch = true
           let score = 0
@@ -107,7 +127,10 @@ const activeNodeId = computed(() => {
             }
             score++
           }
-          if (isMatch) candidates.push({ id: node.id, score })
+          if (isMatch) {
+             console.log('[Sidebar] Match confirmed:', node.id, 'Score:', score)
+             candidates.push({ id: node.id, score })
+          }
         }
       }
       if (node.children?.length) traverse(node.children)
@@ -224,12 +247,7 @@ function onCommandPaletteShortcut(event: KeyboardEvent) {
            </div>
         </template>
 
-        <!-- Bottombar Center - Breadcrumb -->
-        <template #bottombar-center>
-           <div class="whitespace-nowrap overflow-hidden text-ellipsis">
-             <Breadcrumb class="!text-xs" />
-           </div>
-        </template>
+
 
         <template #bottombar-right>
            <div id="app-bottombar-right" class="flex items-center h-full px-4"/>
@@ -237,6 +255,9 @@ function onCommandPaletteShortcut(event: KeyboardEvent) {
       </AppShell>
 
       <CommandPalette />
+      
+
+
     </UApp>
   </div>
 </template>

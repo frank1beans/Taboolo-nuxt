@@ -18,10 +18,14 @@ defineProps<Props>()
     <!-- Main Content Area -->
     <div class="flex-1 min-w-0 min-h-0 flex flex-col h-full">
       <!-- Header Slot - Notion style: clean, simple padding -->
-      <!-- Header Slot - Notion style: clean, simple padding -->
-      <div v-if="$slots.header" class="surface-card page-header-sticky px-[var(--workspace-gutter-x)] py-2 flex-shrink-0">
-        <slot name="header"/>
-      </div>
+      <!-- Header Slot - Teleported to AppShell row -->
+      <ClientOnly>
+        <Teleport to="#page-header-portal">
+           <div v-if="$slots.header" class="surface-card w-full h-full flex flex-col justify-center px-[var(--workspace-gutter-x)] py-2 border-b border-[hsl(var(--border))]">
+             <slot name="header"/>
+           </div>
+        </Teleport>
+      </ClientOnly>
 
       <!-- Body Content -->
       <!-- Uses workspace-body-fill pattern: flex-1 min-h-0 for proper vertical fill -->

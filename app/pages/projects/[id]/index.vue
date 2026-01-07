@@ -11,28 +11,29 @@ import type { ApiOfferSummary } from '~/types/api';
 import type { Estimate, Project } from '#types';
 import { formatCurrency as formatCurrencyLib, formatDelta } from '~/lib/formatters';
 import { useActionsStore } from '~/stores/actions';
+import { usePageSidebarModule } from '~/composables/useSidebarModules';
+import SidebarActionsModule from '~/components/sidebar/modules/SidebarActionsModule.vue';
 import type { Action } from '~/types/actions';
-import { queryApi } from '~/utils/queries';
-import { QueryKeys } from '~/types/queries';
+import CountBadge from '~/components/ui/CountBadge.vue';
 
 const route = useRoute();
 const projectId = route.params.id as string;
 
 // Fetch Project Context
-const { data: projectDetails, status: projectStatus } = await useAsyncData(`project-${projectId}-details`, () => 
-  queryApi.fetch(QueryKeys.PROJECT_GET, { id: projectId })
+const { data: projectDetails, status: projectStatus } = await useAsyncData(
+  `project-${projectId}-details`,
+  () => $fetch<Project>(`/api/projects/${projectId}`),
 )
 
 // Fetch Estimates
-const { data: estimatesData, status: estimatesStatus, refresh: refreshEstimates } = await useAsyncData(`project-${projectId}-estimates`, () => 
-  queryApi.fetch(QueryKeys.PROJECT_ESTIMATES, { project_id: projectId, type: 'project' })
+const { data: estimatesData, status: estimatesStatus, refresh: refreshEstimates } = await useAsyncData(
+  `project-${projectId}-estimates`,
+  () => $fetch<Estimate[]>(`/api/projects/${projectId}/project-estimates`),
 )
 
 const alertSummary = ref<any>(null); // Placeholder for alerts query if needed or use old API for now if not ported
 const alertStatus = ref('idle');
 
-// TODO: Port alerts summary to queryApi. For now keeping it specific or assuming separate handling.
-// Actually, let's keep the old alerts fetch for now to minimize breakage until we make that query.
 const { data: alertSummaryRaw, status: alertStatusRaw, refresh: refreshAlertSummary } = await useFetch(
   `/api/projects/${projectId}/offers/alerts/summary`,
   {
@@ -49,12 +50,33 @@ const loading = computed(() => projectStatus.value === 'pending' || estimatesSta
 const project = computed(() => projectDetails.value as unknown as Project);
 
 // Helper to map EstimateListItem to Estimate type expected by UI
-const estimates = computed(() => (estimatesData.value?.items || []) as unknown as Estimate[]);
+const estimates = computed(() =>
+  (estimatesData.value || []).filter((est) => est.type === 'project') as unknown as Estimate[]
+);
 
 const { setProjectState, currentEstimate } = useCurrentContext();
 const actionsStore = useActionsStore();
 const actionOwner = 'page:projects-detail';
 const activeEstimateId = computed(() => currentEstimate.value?.id);
+
+usePageSidebarModule({
+  id: 'actions',
+  label: 'Azioni',
+  icon: 'heroicons:command-line',
+  order: 2,
+  group: 'secondary',
+  autoActivate: true,
+  component: SidebarActionsModule,
+  props: {
+    actionIds: [
+      'project.importOffers',
+      'grid.exportExcel',
+      'project.openConflicts',
+      'grid.resetFilters',
+    ],
+    primaryActionIds: ['project.importOffers'],
+  },
+})
 
 type EstimateRow = Estimate & {
   bestOffer: number | null;
@@ -65,6 +87,7 @@ type EstimateRow = Estimate & {
 // Enforce project context (clears active estimate) using direct hydration
 onMounted(() => {
     if (projectDetails.value) {
+        console.log('[Debug] index.vue onMounted - Project:', projectDetails.value.id, 'Estimates:', (projectDetails.value as any).estimates?.length);
         setProjectState(projectDetails.value as unknown as Project, null);
     }
 });
@@ -79,6 +102,8 @@ const statsMap = ref<Record<string, {
   bestRound?: number | null;
   deltaAbs?: number | null;
   deltaPerc?: number | null;
+  roundsCount?: number;
+  companiesCount?: number;
 }>>({});
 const statsLoading = ref(false);
 const alertsLoading = computed(() => alertStatus.value === 'pending');
@@ -94,6 +119,9 @@ const alertSummaryMap = computed<Record<string, number>>(() => {
   });
   return map;
 });
+const totalBaselineAmount = computed(() => 
+  estimates.value.reduce((sum, est) => sum + Number(est.total_amount || 0), 0)
+);
 
 const formatCurrency = (value?: number | null) => formatCurrencyLib(value ?? 0);
 const formatDeltaPerc = (value?: number | null) => (value === null || value === undefined ? '-' : formatDelta(value));
@@ -150,6 +178,8 @@ const fetchStatsForEstimates = async () => {
           bestRound: latestRound,
           deltaAbs,
           deltaPerc,
+          roundsCount: latestRound !== null ? (list.length ? new Set(list.map(o => o.round_number ?? 1)).size : 0) : 0, 
+          companiesCount: list.length ? new Set(list.map(o => o.company_name)).size : 0,
         },
       ];
     });
@@ -221,14 +251,16 @@ const gridConfig: DataGridConfig = {
     },
     {
       field: 'actions',
-      headerName: 'Azioni',
-      width: 120,
-      cellRenderer: 'actionsRenderer',
+      headerName: '',
+      width: 48,
+      minWidth: 48,
       pinned: 'right',
       sortable: false,
       filter: false,
+      resizable: false,
       suppressMenu: true,
-      cellClass: 'no-border',
+      cellRenderer: 'actionsRenderer',
+      cellClass: 'overflow-visible flex items-center justify-center',
     },
   ],
   defaultColDef: {
@@ -279,6 +311,8 @@ const gridRows = computed<EstimateRow[]>(() =>
       ...est,
       bestOffer: stats.bestOffer ?? null,
       deltaPerc: stats.deltaPerc ?? null,
+      roundsCount: stats.roundsCount ?? est.roundsCount ?? 0,
+      companiesCount: stats.companiesCount ?? est.companiesCount ?? 0,
       alertCount: alertSummaryMap.value[est.id] ?? 0,
     };
   }),
@@ -347,7 +381,7 @@ onMounted(() => {
     scope: 'project',
     icon: 'i-heroicons-arrow-up-tray',
     keywords: ['import', 'offerte', 'excel'],
-    handler: () => navigateTo(`/projects/${projectId}/import`),
+    handler: () => { navigateTo(`/projects/${projectId}/import`) },
   });
 
   registerAction({
@@ -396,12 +430,8 @@ onMounted(() => {
   >
     <template #header-meta>
        <div class="flex items-center gap-2">
-         <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]">
-            Progetto: {{ project?.name || '...' }}
-         </span>
-         <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]">
-            {{ estimates.length }} {{ estimates.length === 1 ? 'preventivo' : 'preventivi' }}
-         </span>
+         <CountBadge :value="formatCurrency(totalBaselineAmount)" label="Importo Baseline" icon="i-heroicons-banknotes" color="primary" />
+         <CountBadge :value="estimates.length" label="Preventivi" icon="i-heroicons-folder" />
        </div>
     </template>
 
@@ -414,7 +444,6 @@ onMounted(() => {
           Delta: {{ formatDeltaPerc(activeEstimateStats.deltaPerc) }}
         </span>
       </div>
-      <!-- Import button moved to Topbar -->
     </template>
 
     <!-- Toolbar Slot -->
@@ -446,13 +475,8 @@ onMounted(() => {
               v-model="searchText"
               search-placeholder="Cerca preventivo..."
               class="!py-0"
+              centered
             >
-          <template #right>
-            <ActionList
-              layout="toolbar"
-              :action-ids="['grid.resetFilters', 'grid.exportExcel', 'project.importOffers']"
-            />
-          </template>
             </PageToolbar>
           </Teleport>
         </ClientOnly>

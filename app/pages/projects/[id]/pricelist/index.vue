@@ -9,7 +9,7 @@
 
 import { useRoute, useRouter } from 'vue-router'
 import { usePriceListGridConfig } from '~/composables/estimates/usePriceListGridConfig'
-import type { ApiPriceListItem } from '~/types/api'
+import type { ApiOfferSummary, ApiPriceListItem } from '~/types/api'
 import type { Project } from '#types'
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import type { GridApi, GridReadyEvent, RowNode } from 'ag-grid-community'
@@ -18,6 +18,7 @@ import { useWbsTree, type WithWbsHierarchy } from '~/composables/useWbsTree'
 import { useSidebarModules, usePageSidebarModule } from '~/composables/useSidebarModules'
 import { useSidebarLayout } from '~/composables/useSidebarLayout'
 import WbsModule from '~/components/sidebar/modules/WbsModule.vue'
+import SidebarActionsModule from '~/components/sidebar/modules/SidebarActionsModule.vue'
 import DataGridPage from '~/components/layout/DataGridPage.vue'
 import PageToolbar from '~/components/layout/PageToolbar.vue'
 import { formatCurrency } from '~/lib/formatters'
@@ -28,7 +29,7 @@ import type { Action } from '~/types/actions'
 // Layout & Page Meta
 // ---------------------------------------------------------------------------
 definePageMeta({
-  disableDefaultSidebar: true,
+  // Assets managed by layout centrally
 })
 
 const route = useRoute()
@@ -100,17 +101,40 @@ watch(
 // ---------------------------------------------------------------------------
 // Data Fetching
 // ---------------------------------------------------------------------------
+const offerRound = computed(() => route.query.round ? Number(route.query.round) : undefined)
+const offerCompany = computed(() => route.query.company as string | undefined)
+
+const { data: estimateOffers } = await useFetch<{ offers: ApiOfferSummary[] }>(`/api/projects/${projectId}/offers`, {
+  query: computed(() => ({ estimate_id: activeEstimateId.value })),
+  immediate: !!activeEstimateId.value,
+  watch: [activeEstimateId],
+})
+
+const resolvedOfferId = computed(() => {
+  if (route.query.offerId && route.query.offerId !== 'null') {
+    return route.query.offerId as string
+  }
+
+  const r = offerRound.value
+  const c = offerCompany.value
+  const offersList = estimateOffers.value?.offers || []
+  if (r !== undefined && c && offersList.length) {
+    const found = offersList.find((o) => o.round_number === r && o.company_name === c)
+    return found?.id || (found as { _id?: string })?._id
+  }
+  return null
+})
+
 const priceListUrl = computed(() => {
-  if (!activeEstimateId.value) return ''
-  const base = `/api/projects/${projectId}/estimates/${activeEstimateId.value}/price-list`
-  
-  // Forward query params for rounds/companies
-  const query = new URLSearchParams()
-  if (route.query.round) query.set('round', route.query.round as string)
-  if (route.query.company) query.set('company', route.query.company as string)
-  
-  const suffix = query.toString() ? `?${query.toString()}` : ''
-  return `${base}${suffix}`
+  if (resolvedOfferId.value) {
+    return `/api/projects/${projectId}/offers/${resolvedOfferId.value}/items`
+  }
+
+  if (activeEstimateId.value) {
+    return `/api/projects/${projectId}/estimates/${activeEstimateId.value}/items`
+  }
+
+  return ''
 })
 
 const {
@@ -318,11 +342,31 @@ usePageSidebarModule({
   id: 'wbs',
   label: 'WBS',
   icon: 'heroicons:squares-2x2',
+  order: 1, // Secondary module - won't auto-activate, Assets stays active
   component: WbsModule,
   props: {
     nodes: wbsNodes,
     selectedNodeId: computed(() => selectedWbsNode.value?.id ?? null),
     onNodeSelected: (node: typeof selectedWbsNode.value | null) => onWbsNodeSelected(node),
+  },
+})
+
+usePageSidebarModule({
+  id: 'actions',
+  label: 'Azioni',
+  icon: 'heroicons:command-line',
+  order: 2,
+  group: 'secondary',
+  autoActivate: true,
+  component: SidebarActionsModule,
+  props: {
+    actionIds: [
+      'pricelist.toggleWbsSidebar',
+      'grid.exportExcel',
+      'grid.resetFilters',
+      'pricelist.clearWbsSelection',
+    ],
+    primaryActionIds: ['pricelist.toggleWbsSidebar'],
   },
 })
 
@@ -366,14 +410,6 @@ const toggleWbsSidebar = () => {
             {{ formattedTotalAmount }}
          </span>
        </div>
-    </template>
-
-    <!-- Header Actions (WBS/View Controls) -->
-    <template #actions>
-      <ActionList
-        layout="toolbar"
-        :action-ids="['pricelist.toggleWbsSidebar']"
-      />
     </template>
 
     <!-- Toolbar Slot -->
@@ -431,13 +467,6 @@ const toggleWbsSidebar = () => {
                   @click="actionsStore.executeAction('pricelist.clearWbsSelection')"
                 />
               </UBadge>
-          </template>
-
-          <template #right>
-            <ActionList
-              layout="toolbar"
-              :action-ids="['grid.resetFilters', 'grid.exportExcel']"
-            />
           </template>
         </PageToolbar>
           </Teleport>

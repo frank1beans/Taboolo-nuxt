@@ -16,10 +16,11 @@ export async function getProjectOverview(id: string) {
     // Validate ID
     const validId = objectIdSchema.parse(id);
 
-    const project = await ProjectRepository.findById(validId);
-    if (!project) {
+    const projectDoc = await ProjectRepository.findById(validId);
+    if (!projectDoc) {
         throw AppError.notFound(`Project with id ${id} not found`);
     }
+    const project = (projectDoc as any).toObject ? (projectDoc as any).toObject() : projectDoc;
 
     // Fetch associated estimates
     const estimates = await listEstimates(validId);
@@ -41,11 +42,9 @@ export async function getProjectOverview(id: string) {
     // Note: We are doing this transformation here in the Service to keep the API layer thin.
     // Ideally, we might want typed interfaces for these enriched structures if reused elsewhere.
     const enrichedEstimates = estimates.map((est) => {
-        // EstimateRepository returns standard IEstimate objects (plain JS objects)
-        // If they come from Mongoose.lean(), they might still have _id if not serialized.
-        // Let's check safely. Defaulting to 'id' if '_id' is absent or vice-versa.
-        const estAny = est as any;
-        const estId = estAny._id?.toString() || estAny.id;
+        // Ensure est is a plain object to avoid spreading Mongoose document internals
+        const estimateObj = (est as any).toObject ? (est as any).toObject() : est;
+        const estId = estimateObj._id?.toString() || estimateObj.id;
         const estOffers = offersByEstimate[estId] || [];
 
         // Extract unique rounds
@@ -57,7 +56,8 @@ export async function getProjectOverview(id: string) {
         const companies = uniqueCompanies.map((c: string) => ({ id: c, name: c }));
 
         return {
-            ...est,
+            ...estimateObj,
+            id: estId,
             rounds,
             companies,
             roundsCount: rounds.length,

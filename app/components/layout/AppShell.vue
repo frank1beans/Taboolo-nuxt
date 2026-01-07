@@ -80,12 +80,12 @@ const gridColumns = computed(() => {
       'grid-template-columns': gridColumns
     }"
   >
-    <!-- Rail - Spans full height (Row 1-3) -->
+    <!-- Rail - Spans full height (Row 1-4) -->
     <div class="app-shell-rail">
       <slot name="rail" />
     </div>
 
-    <!-- Topbar - Spans remaining columns -->
+    <!-- Topbar - Spans remaining columns (Row 1) -->
     <div class="app-shell-topbar-area">
       <slot name="header">
         <AppTopbar>
@@ -102,19 +102,24 @@ const gridColumns = computed(() => {
       </slot>
     </div>
 
-    <!-- Left Sidebar (Context) - Only render if not hidden -->
+    <!-- Page Header Portal Area (Row 2, Column 2/-1) -->
+    <div id="page-header-portal" class="app-shell-page-header">
+       <!-- Content teleported here from pages -->
+    </div>
+
+    <!-- Left Sidebar (Context) - Row 3 -->
     <aside v-if="!sidebarHidden" class="app-shell-sidebar-left">
       <div class="app-shell-sidebar-inner">
         <slot name="sidebar" />
       </div>
     </aside>
 
-    <!-- Main ContentWrapper -->
+    <!-- Main ContentWrapper - Row 3 -->
     <div class="app-shell-main">
       <slot />
     </div>
 
-    <!-- Right Sidebar (optional) -->
+    <!-- Right Sidebar (optional) - Row 3 -->
     <aside 
       v-if="rightSidebarVisible && rightSidebarWidth > 0" 
       class="app-shell-sidebar-right"
@@ -122,7 +127,7 @@ const gridColumns = computed(() => {
       <slot name="sidebar-right" />
     </aside>
 
-    <!-- Bottombar - Spans Rail to Right -->
+    <!-- Bottombar - Row 4 -->
     <div class="app-shell-bottombar-area">
       <AppBottombar>
         <template #left>
@@ -142,8 +147,8 @@ const gridColumns = computed(() => {
 <style scoped>
 .app-shell {
   display: grid;
-  /* Rows: Topbar | Content | Bottombar */
-  grid-template-rows: var(--topbar-height, 56px) 1fr var(--bottombar-height, 32px);
+  /* Rows: Topbar | PageHeader | Content | Bottombar */
+  grid-template-rows: var(--topbar-height, 56px) min-content 1fr var(--bottombar-height, 32px);
   height: 100vh;
   width: 100vw;
   overflow: hidden;
@@ -167,9 +172,18 @@ const gridColumns = computed(() => {
   align-items: center;
 }
 
+/* Page Header area spans from column 2 to end */
+.app-shell-page-header {
+  grid-column: 2 / -1;
+  grid-row: 2;
+  z-index: 35;
+  min-height: 0; /* allows collapsing if empty? maybe min-height: 0 */
+}
+/* If empty, min-content is 0. */
+
 .app-shell-sidebar-left {
   grid-column: 2;
-  grid-row: 2; /* Below topbar */
+  grid-row: 3; /* Below Page Header */
   overflow: hidden;
   height: 100%;
   background: hsl(var(--sidebar-surface, var(--card)));
@@ -182,8 +196,8 @@ const gridColumns = computed(() => {
 }
 
 .app-shell-main {
-  grid-column: 3; /* Column 3 in normal 4-column layout */
-  grid-row: 2;
+  grid-column: 3;
+  grid-row: 3;
   overflow: hidden;
   min-width: 0;
   position: relative;
@@ -196,14 +210,14 @@ const gridColumns = computed(() => {
 
 .app-shell-sidebar-right {
   grid-column: 4;
-  grid-row: 2;
+  grid-row: 3;
   overflow: hidden;
 }
 
 /* Bottombar spans from column 2 to end */
 .app-shell-bottombar-area {
   grid-column: 2 / -1;
-  grid-row: 3;
+  grid-row: 4;
   z-index: 40;
 }
 </style>
